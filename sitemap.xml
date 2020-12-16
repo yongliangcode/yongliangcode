@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://yongliangcode.github.io/posts/7b3f0619/</loc>
+    
+    <lastmod>2020-12-16</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://yongliangcode.github.io/tags/index.html</loc>
     
     <lastmod>2020-12-13</lastmod>
@@ -24,13 +31,6 @@
   
   <url>
     <loc>https://yongliangcode.github.io/posts/224209b4/</loc>
-    
-    <lastmod>2020-12-13</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://yongliangcode.github.io/posts/7b3f0619/</loc>
     
     <lastmod>2020-12-13</lastmod>
     
@@ -69,7 +69,7 @@
 
   
   <url>
-    <loc>https://yongliangcode.github.io/categories/%E7%A8%8B%E5%BA%8F%E4%BA%BA%E7%94%9F/</loc>
+    <loc>https://yongliangcode.github.io/categories/%E8%80%81%E6%A2%81%E9%9A%8F%E8%AE%B0/</loc>
     <lastmod>2020-12-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -77,6 +77,13 @@
   
   <url>
     <loc>https://yongliangcode.github.io/categories/%E7%94%9F%E6%B4%BB%E9%9A%8F%E8%AE%B0/</loc>
+    <lastmod>2020-12-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://yongliangcode.github.io/categories/%E8%80%81%E6%A2%81%E9%9A%8F%E8%AE%B0/%E7%A8%8B%E5%BA%8F%E4%BA%BA%E7%94%9F/</loc>
     <lastmod>2020-12-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>

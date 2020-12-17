@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>10年IT老兵给职场新人的一些建议</title>
-    <url>/posts/7b3f0619/</url>
-    <content><![CDATA[<div id="vip-container"><p>2020年04年01，对我来说一个非常值得纪念的日子，因为10年前的今天我从一个<strong>普通二类本科</strong>的大学毕业生正式步入职场，开启了我人生的新篇章。</p>
-<p>经过10年的成长，我从一个青涩少年依然蜕变为一个“中年大叔”了，也取得了一定的成绩，为了突破“中年危机”，将持续努力。</p>
-<p>首先先来一个自我介绍：丁威，《RocketMQ技术内幕》作者、『中间件兴趣圈』公众号维护者、2019年RocketMQ社区优秀布道师评选斩获第一名、2019年度CSDN博客之星TOP10获得者，目前就任中通科技技术平台部担任资深架构师，负责消息中间件与全链路压测在科技中心的落地与实施工作。</p>
-<a id="more"></a>
+    <title>RocketMQ Connection命令</title>
+    <url>/posts/6957c801/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="1-消费端连接信息"><a href="#1-消费端连接信息" class="headerlink" title="1.消费端连接信息"></a>1.消费端连接信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerConnection -g T_SCANRECORD_NEW_GROUP -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 127.0.0.1@60190 192.168.2.x:50104 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">002 127.0.0.1@7454 192.168.7.x:27692 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">003 127.0.0.1@31600 192.168.21.x:40243 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">004 127.0.0.1@21322 192.168.21.x:31416 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">005 127.0.0.1@39557 192.168.2.x:45959 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">006 127.0.0.1@24765 192.168.7.x:15166 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">007 127.0.0.1@26993 192.168.7.x:57864 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">008 127.0.0.1@652 192.168.21.x:59261 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">009 127.0.0.1@10388 192.168.21.x:1671 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">Below is subscription:001 Topic: %RETRY%T_SCANRECORD_NEW_GROUP SubExpression: *</span><br><span class="line"></span><br><span class="line">002 Topic: T_SCANRECORD_NEW SubExpression: 1||2||3||4 || 5 || -5||7 || 45</span><br><span class="line"></span><br><span class="line">ConsumeType: CONSUME_PASSIVELY</span><br><span class="line"></span><br><span class="line">MessageModel: CLUSTERING</span><br><span class="line"></span><br><span class="line">ConsumeFromWhere: CONSUME_FROM_FIRST_OFFSET</span><br></pre></td></tr></table></figure>
 
-<p>回想这10年的工作经历，我个人觉得有很多点可以和大家一起来分享分享。</p>
-<p>首先我职业生涯的前面四年，是呆在一家国企控股公司，主要从事的业务是电子政务方面的业务，是一个传统行业，虽然我很努力，解决工作中的问题显得得心应手，在公司所在的部门也能得到领导的赏识、同事们的认可，但受限于所在平台的局限性以及公司的规模，薪资无法得到较大幅度的提升，萌生了离开的想法。但让我所料不及的是我满怀信心去找工作的时候让我备受打击，阿里系企业直接将我秒杀，诸如HashMap的内存结构是什么？HashMap为什么不是线程安全的，什么大数据、高并发这些场景更是连想都没有相关，后面就选择一家外部公司，开始了探究互联网相关的技能。</p>
-<p><strong>回想这段经验，我有如下感悟与建议</strong><br><strong>1、第一份工作真的很重要，如果有好的学历背景，找工作时不能将就。</strong><br><strong>2、如果没有好的学历背景，也无需气馁，要一开始就为自己树立一个远大的目标：一定要凭着自己的努力，励志要进入一线互联网企业。</strong><br><strong>3、有了目标，在工作的第一年主要还是要扩大知识面，点到为止，以便功能好的完成工作，进入工作第二年后，就要开始打牢基础，探究原理，快速成长。</strong></p>
-<p>那如何打牢基础，探究原理，快速成长呢？</p>
-<p>在经过阿里系面试打击后，我决定先离开工作了4年的环境，寻找了一家有机会接触互联网相关技术的公司，开始打拼，这个时候，在完成工作的情况下，我会利用业余时间进行学习，越努力越幸运，我的运气还不错，认识了MyCat社区的负责人，为我指明了方向，融入开源社区，但那个时候的我发现我无看懂MyCat的源码，也就无法深层次参与其开源建设，那如何破解。</p>
-<p>后面痛定思痛，既然没有能力看懂MyCat源码，那就从JAVA的基础开始，故与2016年9月正式开通CSDN博客，从源码分析Java集合、JUC(Java并发包)、Java NIO、Netty，经过了半年源码研究分析，基础终于打牢，一鼓作气在CSDNS上发表了源码分析MyCat专栏，并且还对MyCat开源社区贡献过代码，在MyCat形成了一定的社区影响力。</p>
-<p>正式由于在MyCat社区活跃的表现，终于迎来职业生涯一个非常重要的转折点：一家公司在生产环境大规模使用MyCat，但缺乏专业人士对其进行维护，故通过MyCat社区的介绍，我正式入职该公司，从此正式进入亿级数据规模，我所学的知识终于有了用武之地，而且能应付自如，在一家拥有300号人的科技公司崭露头角。</p>
-<p><strong>回顾这段经验，有如下感悟我觉得可以分享一下。<br>如果当我们没有一个好的平台，无法接触高并发，大数据这样的场景时，我们该如何破解，无需气馁，努力学习高并发、大数据相关的基础知识，例如Java并发、Netty网络，各主流中间件的原理、以及JVM诊断的理论基础，相信总会有伯乐找到你，让你的能力得到施展。</strong></p>
-<p>在成功进入好的平台后，不能松懈，继续在工作之余学习了互联网架构中中主流的中间件，陆续发表了源码研究RocketMQ、Dubbo、ElasticJob等专栏。越努力越幸运，由于源码分析RocketMQ专栏总共发表了40余篇，成体系的剖析了RocketMQ的实现原理，被出版社相中，邀请我出书，最终成功出版了《RocketMQ技术内幕》一书，并且获得了广大读者朋友一致好评，并受我其中一个读者的邀请，最终入职了中通科技，进入更加广阔的平台，继续努力打拼。</p>
-<p><strong>这段建议给我的感悟就是：越努力越幸运，唯有坚持不懈。</strong></p>
+
+
+<h1 id="2-生产连接信息"><a href="#2-生产连接信息" class="headerlink" title="2.生产连接信息"></a>2.生产连接信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin producerConnection -t T_SCANRECORD_NEW -g producetGroup -n 192.168.1.x:9876</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
 </div>
 
 			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
@@ -36,74 +33,30 @@
 			</script>
 		]]></content>
       <categories>
-        <category>老梁随记</category>
-        <category>程序人生</category>
+        <category>RocketMQ</category>
       </categories>
-      <tags>
-        <tag>程序人生</tag>
-        <tag>职场感悟</tag>
-      </tags>
   </entry>
   <entry>
-    <title>仰望星空</title>
-    <url>/posts/224209b4/</url>
-    <content><![CDATA[<div id="vip-container"><h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
-<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
-<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
-<p>嗯，不是谁都能当老板。</p>
-<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-<a id="more"></a>
-
-<h4 id="多看看历史星空中的星星"><a href="#多看看历史星空中的星星" class="headerlink" title="多看看历史星空中的星星"></a>多看看历史星空中的星星</h4><p>明正统十四年（1449年）八月，明英宗朱祁镇率军50万御驾亲征瓦刺，命弟弟朱祁钰留守京城。</p>
-<p>皇上这年22岁，还是一个容易被蛊惑的年轻人，说是御驾亲征，实际由太监王振指挥。</p>
-<p>王振不懂军事，一通乱指挥后，被瓦刺首领也先在今河北省张家口市怀来县境内的土木堡围猎。</p>
-<p>20万大军损失大半，精锐尽失，皇上也被瓦刺掳走了，跟随出征的高官阵亡五十余人。</p>
-<p>国不可一日无君，八月十八日皇太后命朱祁钰监国，八月二十九日百官拥立朱祁钰为帝，即景帝。</p>
-<p>这一个月的变化真是太大了，而且瓦刺马上就要打到北京了，大明危在旦夕。</p>
-<p>景帝命于谦为兵部尚书，原来的尚书邝埜呢？也在土木堡阵亡了。然而主战还是南迁成了争论的焦点。</p>
-<p>以徐珵为代表的大臣主张南迁，北京守不住，原因很简单，精锐部队都埋葬在土木堡了，拿什么守！</p>
-<p>于谦主战认为“京师天下根本，一动则大事去矣”。呵斥 “言南迁者，可斩也”。</p>
-<p>于谦的建议得到了吏部尚书等人的支持，廷议最后决定固守北京，皇上把北京守卫重任交给了于谦。</p>
-<p>皇上心里也没底，守说着容易，20万都打没了，现在京城不到10万军队还都是老弱病残居多。</p>
-<p>有兵的话还廷议个啥，直接打就完了，这不是没兵嘛。</p>
-<p>没了精锐就拿后备军凑，于谦命令各地备操军、备倭军、运粮军按时到京城布防，违令者斩！</p>
-<p>嗯，清一色后备役。。。</p>
-<p>这些后备役差不多有10万人，并要求途径通州粮仓把粮食顺便带到京城。</p>
-<p>九月初，各路人马总算集合完毕，二十二万人，粮食问题也解决了。</p>
-<p>十月十一日瓦刺军队来了，他们只用了11天就打到了北京城下，更增加了他们拿下北京的信心。</p>
-<p>“京城必破，大元必兴”！</p>
-<p>于谦召集将领召开战前会议，聊如何退敌。</p>
-<p>大将石享提出敌军实力远超明军，应该坚壁清野，等待敌军疲惫后自然退兵。</p>
-<p>大家比较赞同这个，但是一个人反对，这个是于谦，他是总指挥，是说了算的人。</p>
-<p>找你们来，不是跟你们商量的，让你们来听令的！他的军令：</p>
-<p>“大军全部开出九门之外，列阵迎敌”</p>
-<p>“锦衣卫巡查城内，但凡查到有盔甲军士不出城作战者，格杀勿论！”</p>
-<p>“九门是京城门户，若有丢失立斩！”</p>
-<p>“临阵，将不顾军先退者，立斩！“</p>
-<p>“临阵，军不顾将先退者，后队斩前队！”</p>
-<p>“敢违军令者，格杀勿论！”</p>
-<p>“大军开战之日，众将率军出城之后，立即关闭九门，有敢擅自放入城者立斩！”</p>
-<p>嗯，在玩命！不玩命，大明就完了，这次输不起。</p>
-<p>最终于谦带领着这只大部分的后备役军队逼退了瓦刺军，取得了北京保卫战的胜利。</p>
-<p>于谦有大明再造之功！下面是他老人家的一首《石灰吟》，感受下他的风骨：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">千锤万凿出深山，烈火焚烧若等闲。</span><br><span class="line"></span><br><span class="line">粉骨碎身浑不怕，要留清白在人间。</span><br></pre></td></tr></table></figure>
+    <title>RocketMQ Consumer命令</title>
+    <url>/posts/e790de00/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="1-创建订阅组"><a href="#1-创建订阅组" class="headerlink" title="1.创建订阅组"></a>1.创建订阅组</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer</span><br></pre></td></tr></table></figure>
 
 
 
-<p>他那是历史星空中耀眼的一颗星星，每次翻开这段历史，总是那么明亮，让人充满敬意！</p>
-<h4 id="多发现工作生活中的星星"><a href="#多发现工作生活中的星星" class="headerlink" title="多发现工作生活中的星星"></a>多发现工作生活中的星星</h4><p>我们在写ORK目标时，经常提到打造业界领先的、对齐业界一流的某些能力！</p>
-<p>这些业界领先的东西就是我们的星星，需要时常抬头仰望，好让我们跟的紧一点。</p>
-<p>工作中优秀的人，需要时常抬头仰望，好让我们与优秀者同行。</p>
-<p>比如老梁吧，平时工作比较忙，基本上是995的节凑，周末还得抽出时间看源码写文章，不写不行吗？</p>
-<p>也想不写，也想懈怠，但是抬头仰望星空，老梁看到了啥？老梁看到了丁威，那家伙又输出很多东西。</p>
-<p>输出倒逼输入，输入倒逼输出，不断输入输出让自己能力提升。</p>
-<p>这家伙不知疲倦，笔耕不戳！典型的湖南人性格，耐得烦、吃得苦、霸得蛮！</p>
-<p>还特别有恒心，一坚持就7、8年，没一点停的意思！你说气人不气人。</p>
-<p>能咋办？喝口水，擦把汗，接着干呗。。。</p>
-<h4 id="最后说两句"><a href="#最后说两句" class="headerlink" title="最后说两句"></a>最后说两句</h4><p>当你生活不如意时看看以前和周围的人和事，在历史长河中，你的那点事其实没多大点事，不值得怨天尤人、寻死觅活。</p>
-<p>当你春风得意时看看以前和周围的人和事，在历史长河中，你再大的成就不过沧海一粟，不值得骄傲自大、目中无人。</p>
-<p>当你遇到无论什么样的困惑时，多仰望星空，历史的星星、身边的星星会给你照前进的路。</p>
+<h1 id="2-删除订阅组"><a href="#2-删除订阅组" class="headerlink" title="2.删除订阅组"></a>2.删除订阅组</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c AdpMqCluster -g CODCANCELSIGN</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from NameServer success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from NameServer success.</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="3-查看消费组情况及IP地址"><a href="#3-查看消费组情况及IP地址" class="headerlink" title="3.查看消费组情况及IP地址"></a>3.查看消费组情况及IP地址</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerStatus -g TraceToCaiNiao -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 192.168.12.122@25063 V3_5_8 1539756615406&#x2F;192.168.x.x@25063</span><br><span class="line"></span><br><span class="line">002 192.168.13.96@3351 V3_5_8 1539756615406&#x2F;192.168.x.x@3351</span><br><span class="line"></span><br><span class="line">003 192.168.x.x@13385 V3_5_8 1539756615406&#x2F;192.168.x.x@13385</span><br><span class="line"></span><br><span class="line">004 192.168.x.x@6691 V3_5_8 1539756615406&#x2F;192.168.x.x@6691</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="4-查看消费组情况"><a href="#4-查看消费组情况" class="headerlink" title="4.查看消费组情况"></a>4.查看消费组情况</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerProgress -n 192.168.1.x:9876 -g SortComplementConsumer</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Topic Broker Name QID Broker Offset Consumer Offset Diff LastTime</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-a 0 1 1 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-b 0 2 2 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-c 0 2 2 0 2018-10-22 12:43:28</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-d 0 2 2 0 2018-10-22 12:44:33</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 0 39717505 39717502 3 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 1 39721504 39721502 2 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 2 39733704 39733703 1 2018-10-22 13:53:21</span><br></pre></td></tr></table></figure>
+
+
+
+
+
 </div>
 
 			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
@@ -122,94 +75,7 @@
 			</script>
 		]]></content>
       <categories>
-        <category>生活随记</category>
+        <category>RocketMQ</category>
       </categories>
-      <tags>
-        <tag>生活随记</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>仰望星空</title>
-    <url>/posts/224209b4/</url>
-    <content><![CDATA[<div id="vip-container"><h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
-<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
-<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
-<p>嗯，不是谁都能当老板。</p>
-<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-<a id="more"></a>
-
-<h4 id="多看看历史星空中的星星"><a href="#多看看历史星空中的星星" class="headerlink" title="多看看历史星空中的星星"></a>多看看历史星空中的星星</h4><p>明正统十四年（1449年）八月，明英宗朱祁镇率军50万御驾亲征瓦刺，命弟弟朱祁钰留守京城。</p>
-<p>皇上这年22岁，还是一个容易被蛊惑的年轻人，说是御驾亲征，实际由太监王振指挥。</p>
-<p>王振不懂军事，一通乱指挥后，被瓦刺首领也先在今河北省张家口市怀来县境内的土木堡围猎。</p>
-<p>20万大军损失大半，精锐尽失，皇上也被瓦刺掳走了，跟随出征的高官阵亡五十余人。</p>
-<p>国不可一日无君，八月十八日皇太后命朱祁钰监国，八月二十九日百官拥立朱祁钰为帝，即景帝。</p>
-<p>这一个月的变化真是太大了，而且瓦刺马上就要打到北京了，大明危在旦夕。</p>
-<p>景帝命于谦为兵部尚书，原来的尚书邝埜呢？也在土木堡阵亡了。然而主战还是南迁成了争论的焦点。</p>
-<p>以徐珵为代表的大臣主张南迁，北京守不住，原因很简单，精锐部队都埋葬在土木堡了，拿什么守！</p>
-<p>于谦主战认为“京师天下根本，一动则大事去矣”。呵斥 “言南迁者，可斩也”。</p>
-<p>于谦的建议得到了吏部尚书等人的支持，廷议最后决定固守北京，皇上把北京守卫重任交给了于谦。</p>
-<p>皇上心里也没底，守说着容易，20万都打没了，现在京城不到10万军队还都是老弱病残居多。</p>
-<p>有兵的话还廷议个啥，直接打就完了，这不是没兵嘛。</p>
-<p>没了精锐就拿后备军凑，于谦命令各地备操军、备倭军、运粮军按时到京城布防，违令者斩！</p>
-<p>嗯，清一色后备役。。。</p>
-<p>这些后备役差不多有10万人，并要求途径通州粮仓把粮食顺便带到京城。</p>
-<p>九月初，各路人马总算集合完毕，二十二万人，粮食问题也解决了。</p>
-<p>十月十一日瓦刺军队来了，他们只用了11天就打到了北京城下，更增加了他们拿下北京的信心。</p>
-<p>“京城必破，大元必兴”！</p>
-<p>于谦召集将领召开战前会议，聊如何退敌。</p>
-<p>大将石享提出敌军实力远超明军，应该坚壁清野，等待敌军疲惫后自然退兵。</p>
-<p>大家比较赞同这个，但是一个人反对，这个是于谦，他是总指挥，是说了算的人。</p>
-<p>找你们来，不是跟你们商量的，让你们来听令的！他的军令：</p>
-<p>“大军全部开出九门之外，列阵迎敌”</p>
-<p>“锦衣卫巡查城内，但凡查到有盔甲军士不出城作战者，格杀勿论！”</p>
-<p>“九门是京城门户，若有丢失立斩！”</p>
-<p>“临阵，将不顾军先退者，立斩！“</p>
-<p>“临阵，军不顾将先退者，后队斩前队！”</p>
-<p>“敢违军令者，格杀勿论！”</p>
-<p>“大军开战之日，众将率军出城之后，立即关闭九门，有敢擅自放入城者立斩！”</p>
-<p>嗯，在玩命！不玩命，大明就完了，这次输不起。</p>
-<p>最终于谦带领着这只大部分的后备役军队逼退了瓦刺军，取得了北京保卫战的胜利。</p>
-<p>于谦有大明再造之功！下面是他老人家的一首《石灰吟》，感受下他的风骨：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">千锤万凿出深山，烈火焚烧若等闲。</span><br><span class="line"></span><br><span class="line">粉骨碎身浑不怕，要留清白在人间。</span><br></pre></td></tr></table></figure>
-
-
-
-<p>他那是历史星空中耀眼的一颗星星，每次翻开这段历史，总是那么明亮，让人充满敬意！</p>
-<h4 id="多发现工作生活中的星星"><a href="#多发现工作生活中的星星" class="headerlink" title="多发现工作生活中的星星"></a>多发现工作生活中的星星</h4><p>我们在写ORK目标时，经常提到打造业界领先的、对齐业界一流的某些能力！</p>
-<p>这些业界领先的东西就是我们的星星，需要时常抬头仰望，好让我们跟的紧一点。</p>
-<p>工作中优秀的人，需要时常抬头仰望，好让我们与优秀者同行。</p>
-<p>比如老梁吧，平时工作比较忙，基本上是995的节凑，周末还得抽出时间看源码写文章，不写不行吗？</p>
-<p>也想不写，也想懈怠，但是抬头仰望星空，老梁看到了啥？老梁看到了丁威，那家伙又输出很多东西。</p>
-<p>输出倒逼输入，输入倒逼输出，不断输入输出让自己能力提升。</p>
-<p>这家伙不知疲倦，笔耕不戳！典型的湖南人性格，耐得烦、吃得苦、霸得蛮！</p>
-<p>还特别有恒心，一坚持就7、8年，没一点停的意思！你说气人不气人。</p>
-<p>能咋办？喝口水，擦把汗，接着干呗。。。</p>
-<h4 id="最后说两句"><a href="#最后说两句" class="headerlink" title="最后说两句"></a>最后说两句</h4><p>当你生活不如意时看看以前和周围的人和事，在历史长河中，你的那点事其实没多大点事，不值得怨天尤人、寻死觅活。</p>
-<p>当你春风得意时看看以前和周围的人和事，在历史长河中，你再大的成就不过沧海一粟，不值得骄傲自大、目中无人。</p>
-<p>当你遇到无论什么样的困惑时，多仰望星空，历史的星星、身边的星星会给你照前进的路。</p>
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		]]></content>
-      <categories>
-        <category>生活随记</category>
-      </categories>
-      <tags>
-        <tag>生活随记</tag>
-      </tags>
   </entry>
 </search>

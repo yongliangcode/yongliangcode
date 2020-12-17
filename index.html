@@ -125,11 +125,6 @@
     <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
 
   </li>
-        <li class="menu-item menu-item-tags">
-
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
-
-  </li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -184,7 +179,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/224209b4/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6957c801/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +193,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/224209b4/" class="post-title-link" itemprop="url">仰望星空</a>
+            <a href="/posts/6957c801/" class="post-title-link" itemprop="url">RocketMQ Connection命令</a>
         </h2>
 
         <div class="post-meta">
@@ -208,14 +203,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-14 11:10:01" itemprop="dateCreated datePublished" datetime="2020-12-14T11:10:01+08:00">2020-12-14</time>
+              <time title="创建时间：2018-08-14 11:10:01" itemprop="dateCreated datePublished" datetime="2018-08-14T11:10:01+08:00">2018-08-14</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-13 13:32:38" itemprop="dateModified" datetime="2020-12-13T13:32:38+08:00">2020-12-13</time>
+                <time title="修改时间：2020-12-17 23:16:03" itemprop="dateModified" datetime="2020-12-17T23:16:03+08:00">2020-12-17</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -223,7 +218,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E7%94%9F%E6%B4%BB%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">生活随记</span></a>
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
                 </span>
             </span>
 
@@ -238,20 +233,35 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
-<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
-<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
-<p>嗯，不是谁都能当老板。</p>
-<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/224209b4/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+          <div id="vip-container"><h1 id="1-消费端连接信息"><a href="#1-消费端连接信息" class="headerlink" title="1.消费端连接信息"></a>1.消费端连接信息</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerConnection -g T_SCANRECORD_NEW_GROUP -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 127.0.0.1@60190 192.168.2.x:50104 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">002 127.0.0.1@7454 192.168.7.x:27692 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">003 127.0.0.1@31600 192.168.21.x:40243 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">004 127.0.0.1@21322 192.168.21.x:31416 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">005 127.0.0.1@39557 192.168.2.x:45959 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">006 127.0.0.1@24765 192.168.7.x:15166 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">007 127.0.0.1@26993 192.168.7.x:57864 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">008 127.0.0.1@652 192.168.21.x:59261 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">009 127.0.0.1@10388 192.168.21.x:1671 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">Below is subscription:001 Topic: %RETRY%T_SCANRECORD_NEW_GROUP SubExpression: *</span><br><span class="line"></span><br><span class="line">002 Topic: T_SCANRECORD_NEW SubExpression: 1||2||3||4 || 5 || -5||7 || 45</span><br><span class="line"></span><br><span class="line">ConsumeType: CONSUME_PASSIVELY</span><br><span class="line"></span><br><span class="line">MessageModel: CLUSTERING</span><br><span class="line"></span><br><span class="line">ConsumeFromWhere: CONSUME_FROM_FIRST_OFFSET</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="2-生产连接信息"><a href="#2-生产连接信息" class="headerlink" title="2.生产连接信息"></a>2.生产连接信息</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin producerConnection -t T_SCANRECORD_NEW -g producetGroup -n 192.168.1.x:9876</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
       
     </div>
 
@@ -270,7 +280,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/224209b4/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/e790de00/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -284,7 +294,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/224209b4/" class="post-title-link" itemprop="url">仰望星空</a>
+            <a href="/posts/e790de00/" class="post-title-link" itemprop="url">RocketMQ Consumer命令</a>
         </h2>
 
         <div class="post-meta">
@@ -294,14 +304,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-14 11:10:01" itemprop="dateCreated datePublished" datetime="2020-12-14T11:10:01+08:00">2020-12-14</time>
+              <time title="创建时间：2018-08-14 11:10:01" itemprop="dateCreated datePublished" datetime="2018-08-14T11:10:01+08:00">2018-08-14</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-13 13:32:38" itemprop="dateModified" datetime="2020-12-13T13:32:38+08:00">2020-12-13</time>
+                <time title="修改时间：2020-12-17 23:15:45" itemprop="dateModified" datetime="2020-12-17T23:15:45+08:00">2020-12-17</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -309,7 +319,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E7%94%9F%E6%B4%BB%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">生活随记</span></a>
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
                 </span>
             </span>
 
@@ -324,107 +334,41 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
-<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
-<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
-<p>嗯，不是谁都能当老板。</p>
-<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/224209b4/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
+          <div id="vip-container"><h1 id="1-创建订阅组"><a href="#1-创建订阅组" class="headerlink" title="1.创建订阅组"></a>1.创建订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer</span><br></pre></td></tr></table></figure>
 
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/7b3f0619/">
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
+<h1 id="2-删除订阅组"><a href="#2-删除订阅组" class="headerlink" title="2.删除订阅组"></a>2.删除订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c AdpMqCluster -g CODCANCELSIGN</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from NameServer success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from NameServer success.</span><br></pre></td></tr></table></figure>
 
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/7b3f0619/" class="post-title-link" itemprop="url">10年IT老兵给职场新人的一些建议</a>
-        </h2>
 
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-07 20:37:01" itemprop="dateCreated datePublished" datetime="2020-12-07T20:37:01+08:00">2020-12-07</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-16 23:26:09" itemprop="dateModified" datetime="2020-12-16T23:26:09+08:00">2020-12-16</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%80%81%E6%A2%81%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">老梁随记</span></a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%80%81%E6%A2%81%E9%9A%8F%E8%AE%B0/%E7%A8%8B%E5%BA%8F%E4%BA%BA%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">程序人生</span></a>
-                </span>
-            </span>
+<h1 id="3-查看消费组情况及IP地址"><a href="#3-查看消费组情况及IP地址" class="headerlink" title="3.查看消费组情况及IP地址"></a>3.查看消费组情况及IP地址</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerStatus -g TraceToCaiNiao -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 192.168.12.122@25063 V3_5_8 1539756615406&#x2F;192.168.x.x@25063</span><br><span class="line"></span><br><span class="line">002 192.168.13.96@3351 V3_5_8 1539756615406&#x2F;192.168.x.x@3351</span><br><span class="line"></span><br><span class="line">003 192.168.x.x@13385 V3_5_8 1539756615406&#x2F;192.168.x.x@13385</span><br><span class="line"></span><br><span class="line">004 192.168.x.x@6691 V3_5_8 1539756615406&#x2F;192.168.x.x@6691</span><br></pre></td></tr></table></figure>
 
-          
 
-        </div>
-      </header>
 
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
+<h1 id="4-查看消费组情况"><a href="#4-查看消费组情况" class="headerlink" title="4.查看消费组情况"></a>4.查看消费组情况</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerProgress -n 192.168.1.x:9876 -g SortComplementConsumer</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Topic Broker Name QID Broker Offset Consumer Offset Diff LastTime</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-a 0 1 1 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-b 0 2 2 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-c 0 2 2 0 2018-10-22 12:43:28</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-d 0 2 2 0 2018-10-22 12:44:33</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 0 39717505 39717502 3 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 1 39721504 39721502 2 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 2 39733704 39733703 1 2018-10-22 13:53:21</span><br></pre></td></tr></table></figure>
 
-      
-          <p>2020年04年01，对我来说一个非常值得纪念的日子，因为10年前的今天我从一个<strong>普通二类本科</strong>的大学毕业生正式步入职场，开启了我人生的新篇章。</p>
-<p>经过10年的成长，我从一个青涩少年依然蜕变为一个“中年大叔”了，也取得了一定的成绩，为了突破“中年危机”，将持续努力。</p>
-<p>首先先来一个自我介绍：丁威，《RocketMQ技术内幕》作者、『中间件兴趣圈』公众号维护者、2019年RocketMQ社区优秀布道师评选斩获第一名、2019年度CSDN博客之星TOP10获得者，目前就任中通科技技术平台部担任资深架构师，负责消息中间件与全链路压测在科技中心的落地与实施工作。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/7b3f0619/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+
+
+
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
       
     </div>
 
@@ -505,21 +449,15 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">1</span>
         <span class="site-state-item-name">分类</span></a>
-      </div>
-      <div class="site-state-item site-state-tags">
-            <a href="/tags/">
-          
-        <span class="site-state-item-count">3</span>
-        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>

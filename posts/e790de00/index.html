@@ -21,19 +21,18 @@
     var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="仰望星空大家好，我是老梁，一个想跟大伙分享点干货的家伙。 今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。 上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。 老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。 嗯，不是谁都能当老板。 老梁仰望星空，看到那些闪闪发光的星星……">
+  <meta name="description" content="1.创建订阅组1bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer    2.删除订阅组12345678910111213141516171819202122232425bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -">
 <meta property="og:type" content="article">
-<meta property="og:title" content="仰望星空">
-<meta property="og:url" content="https://yongliangcode.github.io/posts/224209b4/index.html">
+<meta property="og:title" content="RocketMQ Consumer命令">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/e790de00/index.html">
 <meta property="og:site_name" content="瓜农老梁">
-<meta property="og:description" content="仰望星空大家好，我是老梁，一个想跟大伙分享点干货的家伙。 今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。 上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。 老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。 嗯，不是谁都能当老板。 老梁仰望星空，看到那些闪闪发光的星星……">
+<meta property="og:description" content="1.创建订阅组1bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer    2.删除订阅组12345678910111213141516171819202122232425bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2020-12-14T03:10:01.000Z">
-<meta property="article:modified_time" content="2020-12-13T05:32:38.187Z">
-<meta property="article:tag" content="生活随记">
+<meta property="article:published_time" content="2018-08-14T03:10:01.000Z">
+<meta property="article:modified_time" content="2020-12-17T15:15:45.810Z">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://yongliangcode.github.io/posts/224209b4/">
+<link rel="canonical" href="https://yongliangcode.github.io/posts/e790de00/">
 
 
 <script id="page-configurations">
@@ -46,7 +45,7 @@
   };
 </script>
 
-  <title>仰望星空 | 瓜农老梁</title>
+  <title>RocketMQ Consumer命令 | 瓜农老梁</title>
   
 
 
@@ -130,11 +129,6 @@
     <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
 
   </li>
-        <li class="menu-item menu-item-tags">
-
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
-
-  </li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -190,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/224209b4/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/e790de00/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -203,7 +197,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          仰望星空
+          RocketMQ Consumer命令
         </h1>
 
         <div class="post-meta">
@@ -213,14 +207,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-14 11:10:01" itemprop="dateCreated datePublished" datetime="2020-12-14T11:10:01+08:00">2020-12-14</time>
+              <time title="创建时间：2018-08-14 11:10:01" itemprop="dateCreated datePublished" datetime="2018-08-14T11:10:01+08:00">2018-08-14</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-13 13:32:38" itemprop="dateModified" datetime="2020-12-13T13:32:38+08:00">2020-12-13</time>
+                <time title="修改时间：2020-12-17 23:15:45" itemprop="dateModified" datetime="2020-12-17T23:15:45+08:00">2020-12-17</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -228,7 +222,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E7%94%9F%E6%B4%BB%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">生活随记</span></a>
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
                 </span>
             </span>
 
@@ -243,63 +237,24 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <div id="vip-container"><h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
-<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
-<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
-<p>嗯，不是谁都能当老板。</p>
-<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-<a id="more"></a>
-
-<h4 id="多看看历史星空中的星星"><a href="#多看看历史星空中的星星" class="headerlink" title="多看看历史星空中的星星"></a>多看看历史星空中的星星</h4><p>明正统十四年（1449年）八月，明英宗朱祁镇率军50万御驾亲征瓦刺，命弟弟朱祁钰留守京城。</p>
-<p>皇上这年22岁，还是一个容易被蛊惑的年轻人，说是御驾亲征，实际由太监王振指挥。</p>
-<p>王振不懂军事，一通乱指挥后，被瓦刺首领也先在今河北省张家口市怀来县境内的土木堡围猎。</p>
-<p>20万大军损失大半，精锐尽失，皇上也被瓦刺掳走了，跟随出征的高官阵亡五十余人。</p>
-<p>国不可一日无君，八月十八日皇太后命朱祁钰监国，八月二十九日百官拥立朱祁钰为帝，即景帝。</p>
-<p>这一个月的变化真是太大了，而且瓦刺马上就要打到北京了，大明危在旦夕。</p>
-<p>景帝命于谦为兵部尚书，原来的尚书邝埜呢？也在土木堡阵亡了。然而主战还是南迁成了争论的焦点。</p>
-<p>以徐珵为代表的大臣主张南迁，北京守不住，原因很简单，精锐部队都埋葬在土木堡了，拿什么守！</p>
-<p>于谦主战认为“京师天下根本，一动则大事去矣”。呵斥 “言南迁者，可斩也”。</p>
-<p>于谦的建议得到了吏部尚书等人的支持，廷议最后决定固守北京，皇上把北京守卫重任交给了于谦。</p>
-<p>皇上心里也没底，守说着容易，20万都打没了，现在京城不到10万军队还都是老弱病残居多。</p>
-<p>有兵的话还廷议个啥，直接打就完了，这不是没兵嘛。</p>
-<p>没了精锐就拿后备军凑，于谦命令各地备操军、备倭军、运粮军按时到京城布防，违令者斩！</p>
-<p>嗯，清一色后备役。。。</p>
-<p>这些后备役差不多有10万人，并要求途径通州粮仓把粮食顺便带到京城。</p>
-<p>九月初，各路人马总算集合完毕，二十二万人，粮食问题也解决了。</p>
-<p>十月十一日瓦刺军队来了，他们只用了11天就打到了北京城下，更增加了他们拿下北京的信心。</p>
-<p>“京城必破，大元必兴”！</p>
-<p>于谦召集将领召开战前会议，聊如何退敌。</p>
-<p>大将石享提出敌军实力远超明军，应该坚壁清野，等待敌军疲惫后自然退兵。</p>
-<p>大家比较赞同这个，但是一个人反对，这个是于谦，他是总指挥，是说了算的人。</p>
-<p>找你们来，不是跟你们商量的，让你们来听令的！他的军令：</p>
-<p>“大军全部开出九门之外，列阵迎敌”</p>
-<p>“锦衣卫巡查城内，但凡查到有盔甲军士不出城作战者，格杀勿论！”</p>
-<p>“九门是京城门户，若有丢失立斩！”</p>
-<p>“临阵，将不顾军先退者，立斩！“</p>
-<p>“临阵，军不顾将先退者，后队斩前队！”</p>
-<p>“敢违军令者，格杀勿论！”</p>
-<p>“大军开战之日，众将率军出城之后，立即关闭九门，有敢擅自放入城者立斩！”</p>
-<p>嗯，在玩命！不玩命，大明就完了，这次输不起。</p>
-<p>最终于谦带领着这只大部分的后备役军队逼退了瓦刺军，取得了北京保卫战的胜利。</p>
-<p>于谦有大明再造之功！下面是他老人家的一首《石灰吟》，感受下他的风骨：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">千锤万凿出深山，烈火焚烧若等闲。</span><br><span class="line"></span><br><span class="line">粉骨碎身浑不怕，要留清白在人间。</span><br></pre></td></tr></table></figure>
+        <div id="vip-container"><h1 id="1-创建订阅组"><a href="#1-创建订阅组" class="headerlink" title="1.创建订阅组"></a>1.创建订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer</span><br></pre></td></tr></table></figure>
 
 
 
-<p>他那是历史星空中耀眼的一颗星星，每次翻开这段历史，总是那么明亮，让人充满敬意！</p>
-<h4 id="多发现工作生活中的星星"><a href="#多发现工作生活中的星星" class="headerlink" title="多发现工作生活中的星星"></a>多发现工作生活中的星星</h4><p>我们在写ORK目标时，经常提到打造业界领先的、对齐业界一流的某些能力！</p>
-<p>这些业界领先的东西就是我们的星星，需要时常抬头仰望，好让我们跟的紧一点。</p>
-<p>工作中优秀的人，需要时常抬头仰望，好让我们与优秀者同行。</p>
-<p>比如老梁吧，平时工作比较忙，基本上是995的节凑，周末还得抽出时间看源码写文章，不写不行吗？</p>
-<p>也想不写，也想懈怠，但是抬头仰望星空，老梁看到了啥？老梁看到了丁威，那家伙又输出很多东西。</p>
-<p>输出倒逼输入，输入倒逼输出，不断输入输出让自己能力提升。</p>
-<p>这家伙不知疲倦，笔耕不戳！典型的湖南人性格，耐得烦、吃得苦、霸得蛮！</p>
-<p>还特别有恒心，一坚持就7、8年，没一点停的意思！你说气人不气人。</p>
-<p>能咋办？喝口水，擦把汗，接着干呗。。。</p>
-<h4 id="最后说两句"><a href="#最后说两句" class="headerlink" title="最后说两句"></a>最后说两句</h4><p>当你生活不如意时看看以前和周围的人和事，在历史长河中，你的那点事其实没多大点事，不值得怨天尤人、寻死觅活。</p>
-<p>当你春风得意时看看以前和周围的人和事，在历史长河中，你再大的成就不过沧海一粟，不值得骄傲自大、目中无人。</p>
-<p>当你遇到无论什么样的困惑时，多仰望星空，历史的星星、身边的星星会给你照前进的路。</p>
+<h1 id="2-删除订阅组"><a href="#2-删除订阅组" class="headerlink" title="2.删除订阅组"></a>2.删除订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c AdpMqCluster -g CODCANCELSIGN</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from NameServer success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from NameServer success.</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="3-查看消费组情况及IP地址"><a href="#3-查看消费组情况及IP地址" class="headerlink" title="3.查看消费组情况及IP地址"></a>3.查看消费组情况及IP地址</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerStatus -g TraceToCaiNiao -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 192.168.12.122@25063 V3_5_8 1539756615406&#x2F;192.168.x.x@25063</span><br><span class="line"></span><br><span class="line">002 192.168.13.96@3351 V3_5_8 1539756615406&#x2F;192.168.x.x@3351</span><br><span class="line"></span><br><span class="line">003 192.168.x.x@13385 V3_5_8 1539756615406&#x2F;192.168.x.x@13385</span><br><span class="line"></span><br><span class="line">004 192.168.x.x@6691 V3_5_8 1539756615406&#x2F;192.168.x.x@6691</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="4-查看消费组情况"><a href="#4-查看消费组情况" class="headerlink" title="4.查看消费组情况"></a>4.查看消费组情况</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerProgress -n 192.168.1.x:9876 -g SortComplementConsumer</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Topic Broker Name QID Broker Offset Consumer Offset Diff LastTime</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-a 0 1 1 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-b 0 2 2 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-c 0 2 2 0 2018-10-22 12:43:28</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-d 0 2 2 0 2018-10-22 12:44:33</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 0 39717505 39717502 3 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 1 39721504 39721502 2 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 2 39733704 39733703 1 2018-10-22 13:53:21</span><br></pre></td></tr></table></figure>
+
+
+
+
+
 </div>
 
 			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
@@ -324,22 +279,16 @@
     
 
       <footer class="post-footer">
-          <div class="post-tags">
-              <a href="/tags/%E7%94%9F%E6%B4%BB%E9%9A%8F%E8%AE%B0/" rel="tag"># 生活随记</a>
-          </div>
 
         
 
 
         
     <div class="post-nav">
+      <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="/posts/7b3f0619/" rel="prev" title="10年IT老兵给职场新人的一些建议">
-      <i class="fa fa-chevron-left"></i> 10年IT老兵给职场新人的一些建议
-    </a></div>
-      <div class="post-nav-item">
-    <a href="/posts/224209b4/" rel="next" title="仰望星空">
-      仰望星空 <i class="fa fa-chevron-right"></i>
+    <a href="/posts/6957c801/" rel="next" title="RocketMQ Connection命令">
+      RocketMQ Connection命令 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -399,7 +348,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%B0%E6%9C%9B%E6%98%9F%E7%A9%BA"><span class="nav-number">1.</span> <span class="nav-text">仰望星空</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%9A%E7%9C%8B%E7%9C%8B%E5%8E%86%E5%8F%B2%E6%98%9F%E7%A9%BA%E4%B8%AD%E7%9A%84%E6%98%9F%E6%98%9F"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">多看看历史星空中的星星</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%9A%E5%8F%91%E7%8E%B0%E5%B7%A5%E4%BD%9C%E7%94%9F%E6%B4%BB%E4%B8%AD%E7%9A%84%E6%98%9F%E6%98%9F"><span class="nav-number">1.0.0.2.</span> <span class="nav-text">多发现工作生活中的星星</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%80%E5%90%8E%E8%AF%B4%E4%B8%A4%E5%8F%A5"><span class="nav-number">1.0.0.3.</span> <span class="nav-text">最后说两句</span></a></li></ol></li></ol></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%88%9B%E5%BB%BA%E8%AE%A2%E9%98%85%E7%BB%84"><span class="nav-number">1.</span> <span class="nav-text">1.创建订阅组</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E5%88%A0%E9%99%A4%E8%AE%A2%E9%98%85%E7%BB%84"><span class="nav-number">2.</span> <span class="nav-text">2.删除订阅组</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E6%9F%A5%E7%9C%8B%E6%B6%88%E8%B4%B9%E7%BB%84%E6%83%85%E5%86%B5%E5%8F%8AIP%E5%9C%B0%E5%9D%80"><span class="nav-number">3.</span> <span class="nav-text">3.查看消费组情况及IP地址</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-%E6%9F%A5%E7%9C%8B%E6%B6%88%E8%B4%B9%E7%BB%84%E6%83%85%E5%86%B5"><span class="nav-number">4.</span> <span class="nav-text">4.查看消费组情况</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -413,21 +362,15 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">1</span>
         <span class="site-state-item-name">分类</span></a>
-      </div>
-      <div class="site-state-item site-state-tags">
-            <a href="/tags/">
-          
-        <span class="site-state-item-count">3</span>
-        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>

@@ -35,6 +35,9 @@
       <categories>
         <category>RocketMQ</category>
       </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
   </entry>
   <entry>
     <title>RocketMQ Consumer命令</title>
@@ -77,5 +80,8 @@
       <categories>
         <category>RocketMQ</category>
       </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
   </entry>
 </search>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>RocketMQ Connection命令</title>
+    <title>MQ1# RocketMQ Connection命令</title>
     <url>/posts/6957c801/</url>
     <content><![CDATA[<div id="vip-container"><h1 id="1-消费端连接信息"><a href="#1-消费端连接信息" class="headerlink" title="1.消费端连接信息"></a>1.消费端连接信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerConnection -g T_SCANRECORD_NEW_GROUP -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 127.0.0.1@60190 192.168.2.x:50104 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">002 127.0.0.1@7454 192.168.7.x:27692 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">003 127.0.0.1@31600 192.168.21.x:40243 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">004 127.0.0.1@21322 192.168.21.x:31416 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">005 127.0.0.1@39557 192.168.2.x:45959 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">006 127.0.0.1@24765 192.168.7.x:15166 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">007 127.0.0.1@26993 192.168.7.x:57864 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">008 127.0.0.1@652 192.168.21.x:59261 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">009 127.0.0.1@10388 192.168.21.x:1671 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">Below is subscription:001 Topic: %RETRY%T_SCANRECORD_NEW_GROUP SubExpression: *</span><br><span class="line"></span><br><span class="line">002 Topic: T_SCANRECORD_NEW SubExpression: 1||2||3||4 || 5 || -5||7 || 45</span><br><span class="line"></span><br><span class="line">ConsumeType: CONSUME_PASSIVELY</span><br><span class="line"></span><br><span class="line">MessageModel: CLUSTERING</span><br><span class="line"></span><br><span class="line">ConsumeFromWhere: CONSUME_FROM_FIRST_OFFSET</span><br></pre></td></tr></table></figure>
 
@@ -40,7 +40,7 @@
       </tags>
   </entry>
   <entry>
-    <title>RocketMQ Consumer命令</title>
+    <title>MQ2# RocketMQ Consumer命令</title>
     <url>/posts/e790de00/</url>
     <content><![CDATA[<div id="vip-container"><h1 id="1-创建订阅组"><a href="#1-创建订阅组" class="headerlink" title="1.创建订阅组"></a>1.创建订阅组</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer</span><br></pre></td></tr></table></figure>
 

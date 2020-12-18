@@ -44,9 +44,14 @@
       </tags>
   </entry>
   <entry>
-    <title>MQ3# RocketMQ Cluster命令</title>
-    <url>/posts/a3779249/</url>
-    <content><![CDATA[<div id="vip-container"><h1 id="查看集群信息"><a href="#查看集群信息" class="headerlink" title="查看集群信息"></a>查看集群信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n localhost:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Cluster Name Broker Name BID Addr Version InTPS OutTPS</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-a 0 192.168.1.x:10911 V3_4_6 2819.22 1077.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-b 0 192.168.1.x:10911 V3_4_6 2839.42 1070.89</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-c 0 192.168.1.x:10919 V3_4_6 2800.12 1058.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-d 0 192.168.1.x:10915 V3_4_6 2897.04 1126.04</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-e 0 192.168.1.x:10919 V3_4_6 2987.20 1181.88</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-f 0 192.168.1.x:10915 V3_4_6 3010.40 1187.08</span><br></pre></td></tr></table></figure>
+    <title>MQ10# RocketMQ查询死信队列中的消息内容</title>
+    <url>/posts/cad2b239/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h1><p>RocketMQ中当重试消息超过最大重试次数（默认16次），会被发送到%DLQ%开头的死信队列，默认死信队列为只写权限。在有些情况下，想看看死信队列里的内容。</p>
+<h1 id="更改死信队列权限"><a href="#更改死信队列权限" class="headerlink" title="更改死信队列权限"></a>更改死信队列权限</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateTopicPerm -c ClusterB -t %DLQ%online-tst -p 6 -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">注：将死信队列只写权限更改为读写权限</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="查询死信队列状态"><a href="#查询死信队列状态" class="headerlink" title="查询死信队列状态"></a>查询死信队列状态</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicStatus -n 192.168.1.x:9876 -t %DLQ%online-tst</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Broker Name QID Min Offset Max Offset Last Updated</span><br><span class="line"></span><br><span class="line">broker-a 0 0 109 2018-12-10 18:03:08,732</span><br><span class="line"></span><br><span class="line">broker-a 1 0 109 2018-12-10 18:03:08,740</span><br><span class="line"></span><br><span class="line">broker-a 2 0 110 2018-12-10 18:03:08,750</span><br><span class="line"></span><br><span class="line">broker-a 3 0 109 2018-12-10 18:03:08,728</span><br></pre></td></tr></table></figure>
 
 
 
@@ -54,11 +59,169 @@
 
 
 
-<h1 id="创建Topic"><a href="#创建Topic" class="headerlink" title="创建Topic"></a>创建Topic</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateTopic -n localhost:9876 -c DefaultCluster -t zto-example</span><br></pre></td></tr></table></figure>
+<h1 id="根据offset查询消息内容"><a href="#根据offset查询消息内容" class="headerlink" title="根据offset查询消息内容"></a>根据offset查询消息内容</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgByOffset -n localhost:9876 -t %DLQ%online-tst -b broker-a -i 0 -o 108</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">OffsetID: 0A090F2800002A9F000000D70519DD35</span><br><span class="line"></span><br><span class="line">OffsetID: 0A090F2800002A9F000000D70519DD35</span><br><span class="line"></span><br><span class="line">Topic: %DLQ%online-tst</span><br><span class="line"></span><br><span class="line">Tags: [null]</span><br><span class="line"></span><br><span class="line">Keys: [null]</span><br><span class="line"></span><br><span class="line">Queue ID: 0</span><br><span class="line"></span><br><span class="line">Queue Offset: 108</span><br><span class="line"></span><br><span class="line">CommitLog Offset: 923503549749</span><br><span class="line"></span><br><span class="line">Reconsume Times: 0</span><br><span class="line"></span><br><span class="line">Born Timestamp: 2018-12-10 17:59:24,731</span><br><span class="line"></span><br><span class="line">Store Timestamp: 2018-12-10 18:03:08,732</span><br><span class="line"></span><br><span class="line">Born Host: 10.10.128.183:51889</span><br><span class="line"></span><br><span class="line">Store Host: 10.9.15.40:10911</span><br><span class="line"></span><br><span class="line">System Flag: 0</span><br><span class="line"></span><br><span class="line">Properties: &#123;MIN_OFFSET&#x3D;0, MAX_OFFSET&#x3D;109, UNIQ_KEY&#x3D;0A0A80B78DE818B4AAC22FA2493B01B2, WAIT&#x3D;true&#125;</span><br><span class="line"></span><br><span class="line">Message Body Path: &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;0A0A80B78DE818B4AAC22FA2493B01B2</span><br><span class="line"></span><br><span class="line">注：使用打印命令消息临时存储在&#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys</span><br></pre></td></tr></table></figure>
+
+<h1 id="查看消息内容"><a href="#查看消息内容" class="headerlink" title="查看消息内容"></a>查看消息内容</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">cat &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;0A0A80B78DE818B4AAC22FA2490F01AE</span><br><span class="line"></span><br><span class="line">Hello RocketMQ430</span><br></pre></td></tr></table></figure>
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ11# RocketMQ集群生产环境节点下线操作</title>
+    <url>/posts/6887b617/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="现状描述"><a href="#现状描述" class="headerlink" title="现状描述"></a>现状描述</h1><p>集群其中一台物理机未知原因导致单用户无法登陆机器，该物理机需要重启修改密码或者重装系统。该台为master节点，运行正常。</p>
+<p>配置策略为：异步刷盘 &amp; 主从异步复制</p>
+<p>如果直接下线该master，由于主从异步复制，可能导致部分消息来不及复制到slave造成消息丢失。所以该方案不可行。</p>
+<p>另一种方案选择：关闭该broker的写入权限，待该broker不再有写入和消费时，再下线该节点。</p>
+<h1 id="关闭broker写权限"><a href="#关闭broker写权限" class="headerlink" title="关闭broker写权限"></a>关闭broker写权限</h1><p>2表示只写权限，4表示只读权限，6表示读写权限</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateBrokerConfig -b 192.168.x.x:10911 -n 192.168.x.x:9876 -k brokerPermission -v 4</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">update broker config success, 192.168.x.x:10911</span><br></pre></td></tr></table></figure>
 
 
 
-<h1 id="删除Topic"><a href="#删除Topic" class="headerlink" title="删除Topic"></a>删除Topic</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteTopic -n localhost:9876 -c DefaultCluster -t zto-example</span><br></pre></td></tr></table></figure></div>
+<h1 id="观察节点流量"><a href="#观察节点流量" class="headerlink" title="观察节点流量"></a>观察节点流量</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">\#Cluster Name #Broker Name #BID #Addr #Version #InTPS(LOAD) #OutTPS(LOAD) #PCWait(ms) #Hour #SPACE</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-a 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2492.95(0,0ms) 2269.27(1,0ms) 0 137.57 0.1861</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-a 1 192.168.x.x:10911 V4_1_0_SNAPSHOT 2485.45(0,0ms) 0.00(0,0ms) 0 125.26 0.3055</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-b 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 26.47(0,0ms) 26.08(0,0ms) 0 137.24 0.1610</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-b 1 192.168.x.x:10915 V4_1_0_SNAPSHOT 20.47(0,0ms) 0.00(0,0ms) 0 125.22 0.3055</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-c 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2061.09(0,0ms) 1967.30(0,0ms) 0 125.28 0.2031</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-c 1 192.168.x.x:10911 V4_1_0_SNAPSHOT 2048.20(0,0ms) 0.00(0,0ms) 0 137.51 0.2789</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-d 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2017.40(0,0ms) 1788.32(0,0ms) 0 125.22 0.1261</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-d 1 192.168.x.x:10915 V4_1_0_SNAPSHOT 2026.50(0,0ms) 0.00(0,0ms) 0 137.61 0.2789</span><br></pre></td></tr></table></figure>
+
+
+
+<p>观察InTPS和OutTPS，理想情况都为零时，并不再变化时，则该节点可下线了。</p>
+<p>然而，在实际过程中并没有出现为零的情况，InTPS和OutTPS总是有值，有时个位数字有时是两位数字，大部分时间在20多的值。此刻要分析下broker目前的消费状态。</p>
+<a id="more"></a>
+
+
+
+<h1 id="观察broker消费状态"><a href="#观察broker消费状态" class="headerlink" title="观察broker消费状态"></a>观察broker消费状态</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin brokerConsumeStats -b 192.168.x.x:10911 -n 192.168.x.x:9876 &gt;&gt; brokerConsumeStats.tmp</span><br></pre></td></tr></table></figure>
+
+
+
+<p>查看brokerConsumeStats.tmp，主要查看#LastTime和#Diff。 发现%RETRY%重试类队列#Diff有很微小（1或者3）的数据，而其他topic均为0. LastTime时间最新也是发生在%RETRY%队列中。此时可以让该节点下线操作。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">#Topic #Group #Broker Name #QID #Broker Offset #Consumer Offset #Diff #LastTime</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 0 2171742 2171742 0 2019-04-24 23:38:09</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 1 2171756 2171756 0 2019-04-24 23:38:50</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 2 2171740 2171740 0 2019-04-24 23:42:58</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 3 2171759 2171759 0 2019-04-24 23:40:44</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 4 2171743 2171743 0 2019-04-24 23:32:48</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 5 2171740 2171740 0 2019-04-24 23:35:58</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 6 2171758 2171758 0 2019-04-24 23:36:23</span><br><span class="line"></span><br><span class="line">SV_Multi_Message ZTO_SV_EmchatWebConsumerGroup broker-b 7 2171740 2171740 0 2019-04-24 23:37:50</span><br><span class="line"></span><br><span class="line">%RETRY%ZTO_SV_EmchatWebConsumerG ZTO_SV_EmchatWebConsumerGroup broker-b 0 61876 61876 0 2019-04-24 10:09:04</span><br><span class="line"></span><br><span class="line">%RETRY%SVC_TRACK_CONSUMER SVC_TRACK_CONSUMER broker-b 0 497968 497968 0 2019-04-19 12:51:24</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 0 191710 191710 0 2019-04-24 23:44:22</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 1 191706 191706 0 2019-04-24 23:44:25</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 2 191697 191697 0 2019-04-24 23:44:44</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 3 191695 191695 0 2019-04-24 23:44:47</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 4 191688 191688 0 2019-04-24 23:44:47</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 5 191683 191683 0 2019-04-24 23:44:48</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 6 191676 191676 0 2019-04-24 23:44:49</span><br><span class="line"></span><br><span class="line">SVC_TRACK_TOPIC SVC_TRACK_CONSUMER broker-b 7 191672 191672 0 2019-04-24 23:44:49</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="borker读写权限恢复"><a href="#borker读写权限恢复" class="headerlink" title="borker读写权限恢复"></a>borker读写权限恢复</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateBrokerConfig -b 192.168.x.x:10911 -n 192.168.x.x:9876 -k brokerPermission -v 6</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="观察各节点流量是否正常"><a href="#观察各节点流量是否正常" class="headerlink" title="观察各节点流量是否正常"></a>观察各节点流量是否正常</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">\#Cluster Name #Broker Name #BID #Addr #Version #InTPS(LOAD) #OutTPS(LOAD) #PCWait(ms) #Hour #SPACE</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-a 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2492.95(0,0ms) 2269.27(1,0ms) 0 137.57 0.1861</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-a 1 192.168.x.x:10911 V4_1_0_SNAPSHOT 2485.45(0,0ms) 0.00(0,0ms) 0 125.26 0.3055</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-b 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2299.47(0,0ms) 2226.08(0,0ms) 0 137.24 0.1610</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-b 1 192.168.x.x:10915 V4_1_0_SNAPSHOT 2280.47(0,0ms) 0.00(0,0ms) 0 125.22 0.3055</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-c 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2061.09(0,0ms) 1967.30(0,0ms) 0 125.28 0.2031</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-c 1 192.168.x.x:10911 V4_1_0_SNAPSHOT 2048.20(0,0ms) 0.00(0,0ms) 0 137.51 0.2789</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-d 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2017.40(0,0ms) 1788.32(0,0ms) 0 125.22 0.1261</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-d 1 192.168.x.x:10915 V4_1_0_SNAPSHOT 2026.50(0,0ms) 0.00(0,0ms) 0 137.61 0.2789</span><br></pre></td></tr></table></figure>
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ11# RocketMQ集群生产环境节点下线操作</title>
+    <url>/posts/6887b617/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">一、系统优化</span><br><span class="line"></span><br><span class="line">1.最大文件数</span><br><span class="line"></span><br><span class="line">2.系统参数调整</span><br><span class="line"></span><br><span class="line">二、RocketMQ性能调优</span><br><span class="line"></span><br><span class="line">1.开启异步刷盘</span><br><span class="line"></span><br><span class="line">2.开启堆外内存设置</span><br><span class="line"></span><br><span class="line">3.开启文件预热</span><br><span class="line"></span><br><span class="line">4.开启Slave读权限</span><br><span class="line"></span><br><span class="line">5.关闭堆内存据传输</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="系统优化"><a href="#系统优化" class="headerlink" title="系统优化"></a>系统优化</h1><h2 id="最大文件数"><a href="#最大文件数" class="headerlink" title="最大文件数"></a>最大文件数</h2><p>limits.conf 设置用户能打开的最大文件数</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">vim &#x2F;etc&#x2F;security&#x2F;limits.conf</span><br><span class="line"></span><br><span class="line">\# End of file</span><br><span class="line"></span><br><span class="line">baseuser soft nofile 655360</span><br><span class="line"></span><br><span class="line">baseuser hard nofile 655360</span><br><span class="line"></span><br><span class="line">\* soft nofile 655360</span><br><span class="line"></span><br><span class="line">\* hard nofile 655360</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="系统参数调整"><a href="#系统参数调整" class="headerlink" title="系统参数调整"></a>系统参数调整</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sudo vim &#x2F;etc&#x2F;sysctl.conf</span><br><span class="line"></span><br><span class="line">vm.overcommit_memory&#x3D;1</span><br><span class="line"></span><br><span class="line">vm.drop_caches&#x3D;1</span><br><span class="line"></span><br><span class="line">vm.zone_reclaim_mode&#x3D;0</span><br><span class="line"></span><br><span class="line">vm.max_map_count&#x3D;655360</span><br><span class="line"></span><br><span class="line">vm.dirty_background_ratio&#x3D;50</span><br><span class="line"></span><br><span class="line">vm.dirty_ratio&#x3D;50</span><br><span class="line"></span><br><span class="line">vm.dirty_writeback_centisecs&#x3D;360000</span><br><span class="line"></span><br><span class="line">vm.page-cluster&#x3D;3</span><br><span class="line"></span><br><span class="line">vm.swappiness&#x3D;1</span><br><span class="line"></span><br><span class="line">vm.zone_reclaim_mode&#x3D;1 &#x2F;&#x2F; 主节点</span><br><span class="line"></span><br><span class="line">vm.min_free_kbytes&#x3D;512000</span><br><span class="line"></span><br><span class="line">sudo sysctl -p</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="参数说明"><a href="#参数说明" class="headerlink" title="参数说明"></a>参数说明</h2><h3 id="overcommit-memory"><a href="#overcommit-memory" class="headerlink" title="overcommit_memory"></a>overcommit_memory</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">是否允许内存的过量分配</span><br><span class="line"></span><br><span class="line">当为0的时候，当用户申请内存的时候，内核会去检查是否有这么大的内存空间</span><br><span class="line"></span><br><span class="line">当为1的时候，内核始终认为，有足够大的内存空间，直到它用完了为止</span><br><span class="line"></span><br><span class="line">当为2的时候，内核禁止任何形式的过量分配内存</span><br></pre></td></tr></table></figure>
+
+<h3 id="drop-caches"><a href="#drop-caches" class="headerlink" title="drop_caches"></a>drop_caches</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">写入的时候，内核会清空缓存，腾出内存来，相当于sync</span><br><span class="line"></span><br><span class="line">写1的时候，会清空页缓存，就是文件</span><br><span class="line"></span><br><span class="line">写2的时候，会清空inode和目录树</span><br><span class="line"></span><br><span class="line">写3的时候，都清空</span><br><span class="line"></span><br><span class="line">This is a non-destructive operation and will only free things that are completely unused.</span><br><span class="line"></span><br><span class="line">Dirty objects will continue to be in use until written out to disk and are not freeable.</span><br><span class="line"></span><br><span class="line">If you run &quot;sync&quot; first to flush them out to disk, these drop operations will tend to free more memory.</span><br></pre></td></tr></table></figure>
+
+<h3 id="zone-reclaim-mode"><a href="#zone-reclaim-mode" class="headerlink" title="zone_reclaim_mode"></a>zone_reclaim_mode</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">如果为0的话，那么系统会倾向于从其他节点分配内存</span><br><span class="line"></span><br><span class="line">如果为1的话，那么系统会倾向于从本地节点回收Cache内存多数时候</span><br></pre></td></tr></table></figure>
+
+<h3 id="max-map-count"><a href="#max-map-count" class="headerlink" title="max_map_count"></a>max_map_count</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">定义了一个进程能拥有的最多的内存区域，默认为65536</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="dirty-background-bytes-dirty-background-ratio"><a href="#dirty-background-bytes-dirty-background-ratio" class="headerlink" title="dirty_background_bytes/dirty_background_ratio"></a>dirty_background_bytes/dirty_background_ratio</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">当dirty cache到了多少的时候，就启动pdflush进程，将dirty cache写回磁盘</span><br><span class="line"></span><br><span class="line">当有dirty_background_bytes存在的时候，dirty_background_ratio是被自动计算的</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="dirty-bytes-dirty-ratio"><a href="#dirty-bytes-dirty-ratio" class="headerlink" title="dirty_bytes/dirty_ratio"></a>dirty_bytes/dirty_ratio</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">当一个进程的dirty cache到了多少的时候，启动pdflush进程，将dirty cache写回磁盘</span><br><span class="line"></span><br><span class="line">当dirty_bytes存在的时候，dirty_ratio是被自动计算的</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="dirty-writeback-centisecs"><a href="#dirty-writeback-centisecs" class="headerlink" title="dirty_writeback_centisecs"></a>dirty_writeback_centisecs</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">pdflush每隔多久，自动运行一次（单位是百分之一秒）</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="page-cluster"><a href="#page-cluster" class="headerlink" title="page-cluster"></a>page-cluster</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">每次swap in或者swap out操作多少内存页为2的指数。</span><br><span class="line"></span><br><span class="line">等于0的时候，为1页；等于1的时候，为2页；等于2的时候，为4页</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="swappiness"><a href="#swappiness" class="headerlink" title="swappiness"></a>swappiness</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">swappiness&#x3D;0 仅在内存不足的情况下，当剩余空闲内存低于vm.min_free_kbytes limit时，使用交换空间</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;1 内核版本3.5及以上、Red Hat内核版本2.6.32-303及以上，进行最少量的交换，而不禁用交换</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;10 当系统存在足够内存时，推荐设置为该值以提高性能</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;60 默认值</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;100 内核将积极的使用交换空间</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="二、RocketMQ性能调优"><a href="#二、RocketMQ性能调优" class="headerlink" title="二、RocketMQ性能调优"></a>二、RocketMQ性能调优</h1><p>线上RocketMQ的JVM未做调优，堆内存使用8G；主要从RocketMQ配置参数方面梳理下。</p>
+<h2 id="开启异步刷盘"><a href="#开启异步刷盘" class="headerlink" title="开启异步刷盘"></a>开启异步刷盘</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">flushDiskType&#x3D;ASYNC_FLUSH</span><br><span class="line"></span><br><span class="line">同步刷盘TPS过低，较难满足业务发展需求</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="开启堆外内存设置"><a href="#开启堆外内存设置" class="headerlink" title="开启堆外内存设置"></a>开启堆外内存设置</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">transientStorePoolEnable&#x3D;true</span><br><span class="line"></span><br><span class="line">消息写入到堆外内存，消费时从pageCache消费，读写分离，提升集群性能</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="开启文件预热"><a href="#开启文件预热" class="headerlink" title="开启文件预热"></a>开启文件预热</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">warmMapedFileEnable&#x3D;true</span><br><span class="line"></span><br><span class="line">开启文件预热，避免日志文件在分配内存时缺页中断</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="开启Slave读权限"><a href="#开启Slave读权限" class="headerlink" title="开启Slave读权限"></a>开启Slave读权限</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">slaveReadEnable&#x3D;true</span><br><span class="line"></span><br><span class="line">消息占用物理内存的大小通过accessMessageInMemoryMaxRatio来配置默认为40%；</span><br><span class="line"></span><br><span class="line">如果消费的消息不在内存中，开启slaveReadEnable时会从slave节点读取；提高Master内存利用率</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="关闭堆内存据传输"><a href="#关闭堆内存据传输" class="headerlink" title="关闭堆内存据传输"></a>关闭堆内存据传输</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">transferMsgByHeap默认true设置为false</span><br><span class="line"></span><br><span class="line">Broker响应消费请求时，不必将数据重新读到堆内存再发送给客户端；</span><br><span class="line"></span><br><span class="line">直接从PageCache将数据发送给客户端</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="延长发送队列等待时间"><a href="#延长发送队列等待时间" class="headerlink" title="延长发送队列等待时间"></a>延长发送队列等待时间</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">waitTimeMillsInSendQueue默认200ms；适当延长到1000ms</span><br><span class="line"></span><br><span class="line">降低由于等待超时客户端快速失败抛出[TIMEOUT_CLEAN_QUEUE]broker busy频率</span><br></pre></td></tr></table></figure>
+
+</div>
 
 			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
 			<script>
@@ -108,6 +271,45 @@
 
 
 </div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ3# RocketMQ Cluster命令</title>
+    <url>/posts/a3779249/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="查看集群信息"><a href="#查看集群信息" class="headerlink" title="查看集群信息"></a>查看集群信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n localhost:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Cluster Name Broker Name BID Addr Version InTPS OutTPS</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-a 0 192.168.1.x:10911 V3_4_6 2819.22 1077.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-b 0 192.168.1.x:10911 V3_4_6 2839.42 1070.89</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-c 0 192.168.1.x:10919 V3_4_6 2800.12 1058.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-d 0 192.168.1.x:10915 V3_4_6 2897.04 1126.04</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-e 0 192.168.1.x:10919 V3_4_6 2987.20 1181.88</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-f 0 192.168.1.x:10915 V3_4_6 3010.40 1187.08</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="创建Topic"><a href="#创建Topic" class="headerlink" title="创建Topic"></a>创建Topic</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateTopic -n localhost:9876 -c DefaultCluster -t zto-example</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="删除Topic"><a href="#删除Topic" class="headerlink" title="删除Topic"></a>删除Topic</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteTopic -n localhost:9876 -c DefaultCluster -t zto-example</span><br></pre></td></tr></table></figure></div>
 
 			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
 			<script>
@@ -196,6 +398,218 @@
 
 
 <h1 id="更新broker信息"><a href="#更新broker信息" class="headerlink" title="更新broker信息"></a>更新broker信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateBrokerConfig -b 192.168.1.x:10911 -n 192.168.1.x:9876 -k key -v value</span><br></pre></td></tr></table></figure></div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ6# RocketMQ NameSrv命令</title>
+    <url>/posts/7ee60e46/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="获取namesrv配置"><a href="#获取namesrv配置" class="headerlink" title="获取namesrv配置"></a>获取namesrv配置</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[baseuser@HZPL00xxxx rocketmq]$ sh bin&#x2F;mqadmin getNamesrvConfig -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;192.168.1.x:9876&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span><br><span class="line"></span><br><span class="line">serverChannelMaxIdleTimeSeconds &#x3D; 120</span><br><span class="line"></span><br><span class="line">listenPort &#x3D; 9876</span><br><span class="line"></span><br><span class="line">serverCallbackExecutorThreads &#x3D; 0</span><br><span class="line"></span><br><span class="line">serverAsyncSemaphoreValue &#x3D; 64</span><br><span class="line"></span><br><span class="line">serverSocketSndBufSize &#x3D; 4096</span><br><span class="line"></span><br><span class="line">rocketmqHome &#x3D; &#x2F;home&#x2F;baseuser&#x2F;rocketmq</span><br><span class="line"></span><br><span class="line">clusterTest &#x3D; false</span><br><span class="line"></span><br><span class="line">serverSelectorThreads &#x3D; 3</span><br><span class="line"></span><br><span class="line">useEpollNativeSelector &#x3D; false</span><br><span class="line"></span><br><span class="line">orderMessageEnable &#x3D; false</span><br><span class="line"></span><br><span class="line">serverPooledByteBufAllocatorEnable &#x3D; true</span><br><span class="line"></span><br><span class="line">kvConfigPath &#x3D; &#x2F;home&#x2F;baseuser&#x2F;namesrv&#x2F;kvConfig.json</span><br><span class="line"></span><br><span class="line">serverWorkerThreads &#x3D; 8</span><br><span class="line"></span><br><span class="line">serverSocketRcvBufSize &#x3D; 4096</span><br><span class="line"></span><br><span class="line">productEnvName &#x3D; center</span><br><span class="line"></span><br><span class="line">serverOnewaySemaphoreValue &#x3D; 256</span><br><span class="line"></span><br><span class="line">configStorePath &#x3D; &#x2F;home&#x2F;baseuser&#x2F;namesrv&#x2F;namesrv.properties</span><br></pre></td></tr></table></figure>
+
+<h1 id="删除nameSrv配置"><a href="#删除nameSrv配置" class="headerlink" title="删除nameSrv配置"></a>删除nameSrv配置</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin deleteKvConfig -n 192.168.1.x:9876 -s namesapce -k key</span><br><span class="line"></span><br><span class="line">Delete KV config.</span><br><span class="line"></span><br><span class="line">-s set the namespace</span><br><span class="line"></span><br><span class="line">-k key set the key name</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="更新了nameSrv配置"><a href="#更新了nameSrv配置" class="headerlink" title="更新了nameSrv配置"></a>更新了nameSrv配置</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin updateKvConfig -n 192.168.1.x:9876 -s namesapce -k key</span><br><span class="line"></span><br><span class="line">update KV config.</span><br><span class="line"></span><br><span class="line">-s set the namespace</span><br><span class="line"></span><br><span class="line">-k key set the key name</span><br><span class="line"></span><br><span class="line">-v value set the key value</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="更新nameSrv配置"><a href="#更新nameSrv配置" class="headerlink" title="更新nameSrv配置"></a>更新nameSrv配置</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin updateNamesrvConfig -n 192.168.1.x:9876 -s namesapce -k key</span><br><span class="line"></span><br><span class="line">update KV config.</span><br><span class="line"></span><br><span class="line">-k key set the key name</span><br><span class="line"></span><br><span class="line">-v value set the key value</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="取消Broker写权限"><a href="#取消Broker写权限" class="headerlink" title="取消Broker写权限"></a>取消Broker写权限</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin wipeWritePerm -n 192.168.1.x:9876 -b brokerAddr</span><br><span class="line"></span><br><span class="line">Wipe write perm of broker in all name server</span><br><span class="line"></span><br><span class="line">-b brokerName</span><br></pre></td></tr></table></figure>
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ7# RocketMQ Message相关命令</title>
+    <url>/posts/40c12a8c/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="发送测试消息"><a href="#发送测试消息" class="headerlink" title="发送测试消息"></a>发送测试消息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin checkMsgSendRT -n 192.168.x.x:9876 -t topic_online_test -s 1024</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0Broker Name           QID #Send Result      RTbroker-a             0   true          314broker-a             1   true          0broker-a             2   true          0</span><br><span class="line"></span><br><span class="line">broker-a             3   true          0</span><br><span class="line"></span><br><span class="line">broker-b             0   true          2</span><br><span class="line"></span><br><span class="line">broker-b             1   true          1</span><br><span class="line"></span><br><span class="line">broker-b             2   true          1</span><br><span class="line"></span><br><span class="line">broker-b             3   true          0</span><br><span class="line"></span><br><span class="line">broker-a             0   true          1</span><br><span class="line"></span><br><span class="line">broker-a             1   true          0</span><br><span class="line"></span><br><span class="line">broker-a             2   true          0</span><br><span class="line"></span><br><span class="line">broker-a             3   true          1</span><br><span class="line"></span><br><span class="line">broker-b             0   true          4</span><br><span class="line"></span><br><span class="line">-t topic topic name</span><br><span class="line"></span><br><span class="line">-a amount message amout | default 100</span><br><span class="line"></span><br><span class="line">-s size message size | default 128 Byte</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="print-message-by-queue"><a href="#print-message-by-queue" class="headerlink" title="print message by queue"></a>print message by queue</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin printMsgByQueue -n 192.168.1.x:9876 -b 192.168.1.x -i 0</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h1 id="打印topic中的信息"><a href="#打印topic中的信息" class="headerlink" title="打印topic中的信息"></a>打印topic中的信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin printMsg -n 192.168.1.x:9876 -t SCANRECORD</span><br><span class="line"></span><br><span class="line">&quot;t&quot;, &quot;topic&quot;, true, &quot;topic name&quot;</span><br><span class="line"></span><br><span class="line">&quot;c&quot;, &quot;charsetName &quot;, true, &quot;CharsetName(eg: UTF-8,GBK)&quot;</span><br><span class="line"></span><br><span class="line">&quot;s&quot;, &quot;subExpression &quot;, true, &quot;Subscribe Expression(eg: TagA || TagB)&quot;</span><br><span class="line"></span><br><span class="line">&quot;b&quot;, &quot;beginTimestamp &quot;, true,  Begin timestamp[currentTimeMillis|yyyy-MM-dd#HH:mm:ss:SSS]</span><br><span class="line"></span><br><span class="line">&quot;e&quot;, &quot;endTimestamp &quot;, true, End timestamp[currentTimeMillis|yyyy-MM-dd#HH:mm:ss:SSS]</span><br><span class="line"></span><br><span class="line">&quot;d&quot;, &quot;printBody &quot;, true,&quot;print body&quot;</span><br><span class="line"></span><br><span class="line">MSGID: C0A81F8166832F2C9B1953831616FB45 MessageExt [queueId&#x3D;20, storeSize&#x3D;686, queueOffset&#x3D;35052080, sysFlag&#x3D;0, bornTimestamp&#x3D;1539724299798, bornHost&#x3D;&#x2F;192.168.x.x:29781, storeTimestamp&#x3D;1539724299179, storeHost&#x3D;&#x2F;192.168.x.x:10911, msgId&#x3D;C0A801B400002A9F000005F308F9B3A5, commitLogOffset&#x3D;6541385773989, bodyCRC&#x3D;1167936923, reconsumeTimes&#x3D;0, preparedTransactionOffset&#x3D;0, toString()&#x3D;Message [topic&#x3D;SCANRECORD, flag&#x3D;0, properties&#x3D;&#123;MIN_OFFSET&#x3D;35046369, MAX_OFFSET&#x3D;40298522, KEYS&#x3D;1dd04932-b7d9-43ee-8b31-39d16dd043d4, UNIQ_KEY&#x3D;C0A81F8166832F2C9B1953831616FB45, WAIT&#x3D;true, TAGS&#x3D;2&#125;, body&#x3D;484]] BODY: &#123;&quot;billCode&quot;:&quot;640010206680&quot;,&quot;blReturnBillId&quot;:0,&quot;blUntreadPieceId&quot;:0,&quot;clazz&quot;:&quot;2&quot;,&quot;dataFrom&quot;:&quot;2&quot;,&quot;dispatchId&quot;:0,&quot;ownerBagNo&quot;:&quot;3783585805&quot;,&quot;pdaCode&quot;:&quot;S50117101164&quot;,&quot;piece&quot;:1,&quot;preOrNexStaId&quot;:14761,&quot;preOrNextStation&quot;:&quot;\u6F6E\u6C55\u4E2D\u5FC3&quot;,&quot;prepProvinceId&quot;:440000,&quot;registerDate&quot;:1539724298000,&quot;scanDate&quot;:1539724241000,&quot;scanMan&quot;:&quot;\u9648\u4E9A\u5973&quot;,&quot;scanManCode&quot;:&quot;020019.0865&quot;,&quot;scanProvinceId&quot;:440000,&quot;scanSite&quot;:&quot;\u5E7F\u5DDE\u5E7F\u56ED&quot;,&quot;scanSiteId&quot;:1051037,&quot;scanType&quot;:&quot;\u53D1\u4EF6&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="通过messageId查询消息"><a href="#通过messageId查询消息" class="headerlink" title="通过messageId查询消息"></a>通过messageId查询消息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgById -n 192.168.x.x:9876 -i C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">&quot;i&quot;, &quot;msgId&quot;, true, &quot;Message Id&quot;</span><br><span class="line"></span><br><span class="line">&quot;consumerGroup&quot;, true, &quot;consumer group name&quot;</span><br><span class="line"></span><br><span class="line">&quot;clientId&quot;, true, &quot;The consumer&#39;s client id&quot;</span><br><span class="line"></span><br><span class="line">&quot;sendMessage&quot;, true, &quot;resend message&quot;</span><br><span class="line"></span><br><span class="line">&quot;unitName&quot;, true, &quot;unit name&quot;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgById -n 192.168.x.x:9876 -i C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">OffsetID:      C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">OffsetID:      C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">Topic:        SCANRECORD</span><br><span class="line"></span><br><span class="line">Tags:        [2]</span><br><span class="line"></span><br><span class="line">Keys:        [1dd04932-b7d9-43ee-8b31-39d16dd043d4]</span><br><span class="line"></span><br><span class="line">Queue ID:      20</span><br><span class="line"></span><br><span class="line">Queue Offset:    35052080</span><br><span class="line"></span><br><span class="line">CommitLog Offset:  6541385773989</span><br><span class="line"></span><br><span class="line">Reconsume Times:   0</span><br><span class="line"></span><br><span class="line">Born Timestamp:   2018-10-17 05:11:39,798</span><br><span class="line"></span><br><span class="line">Store Timestamp:   2018-10-17 05:11:39,179</span><br><span class="line"></span><br><span class="line">Born Host:      192.168.31.129:29781</span><br><span class="line"></span><br><span class="line">Store Host:     192.168.1.180:10911</span><br><span class="line"></span><br><span class="line">System Flag:     0</span><br><span class="line"></span><br><span class="line">Properties:     &#123;KEYS&#x3D;1dd04932-b7d9-43ee-8b31-39d16dd043d4, UNIQ_KEY&#x3D;C0A81F8166832F2C9B1953831616FB45, WAIT&#x3D;true, TAGS&#x3D;2&#125;</span><br><span class="line"></span><br><span class="line">Message Body Path:  &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;C0A81F8166832F2C9B1953831616FB45</span><br><span class="line"></span><br><span class="line">MessageTrack [consumerGroup&#x3D;ZtoSignGroup, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;newOpenPartnerDeadlineJob, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;smartidivision-scanrecord-dis, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;PanguRecordGroup, trackType&#x3D;CONSUMED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;code-send-consumer, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;shenZhouOneSiteKpiConsumer, trackType&#x3D;CONSUMED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;SortComplementConsumer, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;tf_wonder_waybill_center_scanrecord, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;dpmComScanRecordConsumer, trackType&#x3D;UNKNOWN, exceptionDesc&#x3D;org.apache.rocketmq.client.exception.MQClientException: CODE: 17 DESC: No topic route info in name server for the topic: %RETRY%dpmComScanRecordConsumer</span><br><span class="line"></span><br><span class="line">See [http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;](http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;) for further details., org.apache.rocketmq.client.impl.MQClientAPIImpl.getTopicRouteInfoFromNameServer(MQClientAPIImpl.java:1212)]MessageTrack</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="根据key查询存储消息"><a href="#根据key查询存储消息" class="headerlink" title="根据key查询存储消息"></a>根据key查询存储消息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgByKey -n 192.168.x.x:9876 -t SCANRECORD -k 1dd04932-b7d9-43ee-8b31-39d16dd043d4</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Message ID                    QID                 Offset</span><br><span class="line"></span><br><span class="line">C0A81F8166832F2C9B1953831616FB45           20                 35052080</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="根据offset查询储存消息"><a href="#根据offset查询储存消息" class="headerlink" title="根据offset查询储存消息"></a>根据offset查询储存消息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgByOffset -n 192.168.x.x:9876 -t SCANRECORD -b broker-a -i 20 -o 35052080</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">OffsetID:      C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">OffsetID:      C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">Topic:        SCANRECORD</span><br><span class="line"></span><br><span class="line">Tags:        [2]</span><br><span class="line"></span><br><span class="line">Keys:        [1dd04932-b7d9-43ee-8b31-39d16dd043d4]</span><br><span class="line"></span><br><span class="line">Queue ID:      20</span><br><span class="line"></span><br><span class="line">Queue Offset:    35052080</span><br><span class="line"></span><br><span class="line">CommitLog Offset:  6541385773989</span><br><span class="line"></span><br><span class="line">Reconsume Times:   0</span><br><span class="line"></span><br><span class="line">Born Timestamp:   2018-10-17 05:11:39,798</span><br><span class="line"></span><br><span class="line">Store Timestamp:   2018-10-17 05:11:39,179</span><br><span class="line"></span><br><span class="line">Born Host:      192.168.31.129:29781</span><br><span class="line"></span><br><span class="line">Store Host:     192.168.1.180:10911</span><br><span class="line"></span><br><span class="line">System Flag:     0</span><br><span class="line"></span><br><span class="line">Properties:     &#123;MIN_OFFSET&#x3D;35046369, MAX_OFFSET&#x3D;40342481, KEYS&#x3D;1dd04932-b7d9-43ee-8b31-39d16dd043d4, UNIQ_KEY&#x3D;C0A81F8166832F2C9B1953831616FB45, WAIT&#x3D;true, TAGS&#x3D;2&#125;</span><br><span class="line"></span><br><span class="line">Message Body Path:  &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;C0A81F8166832F2C9B1953831616FB45</span><br><span class="line"></span><br><span class="line">MessageTrack [consumerGroup&#x3D;ZtoSignGroup, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;newOpenPartnerDeadlineJob, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;smartidivision-scanrecord-dis, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;PanguRecordGroup, trackType&#x3D;CONSUMED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;code-send-consumer, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;shenZhouOneSiteKpiConsumer, trackType&#x3D;CONSUMED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;SortComplementConsumer, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;tf_wonder_waybill_center_scanrecord, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;dpmComScanRecordConsumer, trackType&#x3D;UNKNOWN, exceptionDesc&#x3D;org.apache.rocketmq.client.exception.MQClientException: CODE: 17 DESC: No topic route info in name server for the topic: %RETRY%dpmComScanRecordConsumer</span><br><span class="line"></span><br><span class="line">See [http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;](http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;) for further details., org.apache.rocketmq.client.impl.MQClientAPIImpl.getTopicRouteInfoFromNameServer(MQClientAPIImpl.java:1212)]MessageTrack [</span><br><span class="line"></span><br><span class="line">&quot;t&quot;, &quot;topic&quot;, true, &quot;topic name&quot;</span><br><span class="line"></span><br><span class="line">&quot;b&quot;, &quot;brokerName&quot;, true, &quot;Broker Name&quot;</span><br><span class="line"></span><br><span class="line">&quot;i&quot;, &quot;queueId&quot;, true, &quot;Queue Id&quot;</span><br><span class="line"></span><br><span class="line">&quot;o&quot;, &quot;offset&quot;, true, &quot;Queue Offset&quot;</span><br></pre></td></tr></table></figure>
+
+<a id="more"></a>
+
+<h1 id="通过UniqueKey查询消息内容"><a href="#通过UniqueKey查询消息内容" class="headerlink" title="通过UniqueKey查询消息内容"></a>通过UniqueKey查询消息内容</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgByUniqueKey -n 192.168.x.x:9876 -t SCANRECORD -i C0A801B400002A9F000005F308F9B3A5</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Topic:        SCANRECORD</span><br><span class="line"></span><br><span class="line">Tags:        [2]</span><br><span class="line"></span><br><span class="line">Keys:        [1dd04932-b7d9-43ee-8b31-39d16dd043d4]</span><br><span class="line"></span><br><span class="line">Queue ID:      20</span><br><span class="line"></span><br><span class="line">Queue Offset:    35052080</span><br><span class="line"></span><br><span class="line">CommitLog Offset:  6541385773989</span><br><span class="line"></span><br><span class="line">Reconsume Times:   0</span><br><span class="line"></span><br><span class="line">Born Timestamp:   2018-10-17 05:11:39,798</span><br><span class="line"></span><br><span class="line">Store Timestamp:   2018-10-17 05:11:39,179</span><br><span class="line"></span><br><span class="line">Born Host:      192.168.31.129:29781</span><br><span class="line"></span><br><span class="line">Store Host:     192.168.1.180:10911</span><br><span class="line"></span><br><span class="line">System Flag:     0</span><br><span class="line"></span><br><span class="line">Properties:     &#123;KEYS&#x3D;1dd04932-b7d9-43ee-8b31-39d16dd043d4, UNIQ_KEY&#x3D;C0A81F8166832F2C9B1953831616FB45, WAIT&#x3D;true, TAGS&#x3D;2&#125;</span><br><span class="line"></span><br><span class="line">Message Body Path:  &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;C0A81F8166832F2C9B1953831616FB45</span><br><span class="line"></span><br><span class="line">MessageTrack [consumerGroup&#x3D;ZtoSignGroup, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;newOpenPartnerDeadlineJob, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;smartidivision-scanrecord-dis, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;PanguRecordGroup, trackType&#x3D;CONSUMED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;code-send-consumer, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;shenZhouOneSiteKpiConsumer, trackType&#x3D;CONSUMED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;SortComplementConsumer, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;tf_wonder_waybill_center_scanrecord, trackType&#x3D;CONSUMED_BUT_FILTERED, exceptionDesc&#x3D;null]MessageTrack [consumerGroup&#x3D;dpmComScanRecordConsumer, trackType&#x3D;UNKNOWN, exceptionDesc&#x3D;org.apache.rocketmq.client.exception.MQClientException: CODE: 17 DESC: No topic route info in name server for the topic: %RETRY%dpmComScanRecordConsumer</span><br><span class="line"></span><br><span class="line">See [http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;](http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;) for further details., org.apache.rocketmq.client.impl.MQClientAPIImpl.getTopicRouteInfoFromNameServer(MQClientAPIImpl.java:1212)]MessageTrack </span><br><span class="line"></span><br><span class="line">&quot;i&quot;, &quot;msgId&quot;, true, &quot;Message Id&quot;</span><br><span class="line"></span><br><span class="line">&quot;g&quot;, &quot;consumerGroup&quot;, true, &quot;consumer group name&quot;</span><br><span class="line"></span><br><span class="line">&quot;d&quot;, &quot;clientId&quot;, true, &quot;The consumer&#39;s client id&quot;</span><br><span class="line"></span><br><span class="line">&quot;t&quot;, &quot;topic&quot;, true, &quot;The topic of msg&quot;</span><br></pre></td></tr></table></figure>
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ8# RocketMQ Topic相关命令</title>
+    <url>/posts/48072e7/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="分配MQ"><a href="#分配MQ" class="headerlink" title="分配MQ"></a>分配MQ</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin allocateMQ -n localhost:9876 -t tst-topic -i ipList</span><br><span class="line"></span><br><span class="line">ipList 以逗号分隔</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="删除topic"><a href="#删除topic" class="headerlink" title="删除topic"></a>删除topic</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteTopic -n localhost:9876 -t zto-example -c DefultCluster</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="获取topic的cluster"><a href="#获取topic的cluster" class="headerlink" title="获取topic的cluster"></a>获取topic的cluster</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicClusterList -n 192.168.1.x:9876 -t SCANRECORD</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">ZmsClusterB</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="查看Topic列表信息"><a href="#查看Topic列表信息" class="headerlink" title="查看Topic列表信息"></a>查看Topic列表信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicList -n localhost:9876</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="查看Topic路由信息"><a href="#查看Topic路由信息" class="headerlink" title="查看Topic路由信息"></a>查看Topic路由信息</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicRoute -n 192.168.1.x:9876 -t SCANRECORD</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerDatas&quot;:[</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerAddrs&quot;:&#123;0:&quot;192.168.1.x:10911&quot;,1:&quot;192.168.1.x:10920&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-d&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerAddrs&quot;:&#123;0:&quot;192.168.1.x:10911&quot;,1:&quot;192.168.1.x:10920&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-b&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerAddrs&quot;:&#123;0:&quot;192.168.1.x:10911&quot;,1:&quot;192.168.1.x:10915&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-c&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerAddrs&quot;:&#123;0:&quot;192.168.1.x:10911&quot;,1:&quot;192.168.1.x:10915&quot;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-a&quot;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">],</span><br><span class="line"></span><br><span class="line">&quot;filterServerTable&quot;:&#123;&#125;,</span><br><span class="line"></span><br><span class="line">&quot;queueDatas&quot;:[</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-b&quot;,</span><br><span class="line"></span><br><span class="line">&quot;perm&quot;:6,</span><br><span class="line"></span><br><span class="line">&quot;readQueueNums&quot;:64,</span><br><span class="line"></span><br><span class="line">&quot;topicSynFlag&quot;:0,</span><br><span class="line"></span><br><span class="line">&quot;writeQueueNums&quot;:64</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-a&quot;,</span><br><span class="line"></span><br><span class="line">&quot;perm&quot;:6,</span><br><span class="line"></span><br><span class="line">&quot;readQueueNums&quot;:64,</span><br><span class="line"></span><br><span class="line">&quot;topicSynFlag&quot;:0,</span><br><span class="line"></span><br><span class="line">&quot;writeQueueNums&quot;:64</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-c&quot;,</span><br><span class="line"></span><br><span class="line">&quot;perm&quot;:6,</span><br><span class="line"></span><br><span class="line">&quot;readQueueNums&quot;:64,</span><br><span class="line"></span><br><span class="line">&quot;topicSynFlag&quot;:0,</span><br><span class="line"></span><br><span class="line">&quot;writeQueueNums&quot;:64</span><br><span class="line"></span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&quot;brokerName&quot;:&quot;broker-d&quot;,</span><br><span class="line"></span><br><span class="line">&quot;perm&quot;:6,</span><br><span class="line"></span><br><span class="line">&quot;readQueueNums&quot;:64,</span><br><span class="line"></span><br><span class="line">&quot;topicSynFlag&quot;:0,</span><br><span class="line"></span><br><span class="line">&quot;writeQueueNums&quot;:64</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="查看topic状态"><a href="#查看topic状态" class="headerlink" title="查看topic状态"></a>查看topic状态</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicStatus -n 192.168.1.174:9876 -t SCANRECORD</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Broker Name QID Min Offset Max Offset Last Updated</span><br><span class="line"></span><br><span class="line">broker-a 0 34757063 39718709 2018-10-22 13:54:32,526</span><br><span class="line"></span><br><span class="line">broker-a 1 34760194 39722786 2018-10-22 13:54:32,149</span><br><span class="line"></span><br><span class="line">broker-a 2 34765030 39734966 2018-10-22 13:54:32,537</span><br><span class="line"></span><br><span class="line">broker-a 3 34775398 39758820 2018-10-22 13:54:32,507</span><br><span class="line"></span><br><span class="line">broker-a 4 34804472 39800334 2018-10-22 13:54:32,511</span><br><span class="line"></span><br><span class="line">broker-a 5 34835232 39854584 2018-10-22 13:54:32,528</span><br><span class="line"></span><br><span class="line">broker-a 6 34863554 39910095 2018-10-22 13:54:32,528</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="更新orderConf"><a href="#更新orderConf" class="headerlink" title="更新orderConf"></a>更新orderConf</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin updateOrderConf -t SCANRECORD -m put -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">-m option type [eg. put|get|delete</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="更改Topic权限"><a href="#更改Topic权限" class="headerlink" title="更改Topic权限"></a>更改Topic权限</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateTopicPerm -t SCANRECORD -p put -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">-p : set topic&#39;s permission(2|4|6), intro[2:W; 4:R; 6:RW]</span><br><span class="line"></span><br><span class="line">bin&#x2F;mqadmin updateTopicPerm -c ZmsClusterB -t %DLQ%starunion-freight -p 6 -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="创建-修改Topic"><a href="#创建-修改Topic" class="headerlink" title="创建/修改Topic"></a>创建/修改Topic</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin updateTopic -c DefaultCluster -n localhost:9876 -t threezto-test -r 12 -w 12</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">create topic to x.x.x.40:10911 success.</span><br><span class="line"></span><br><span class="line">TopicConfig [topicName&#x3D;threezto-test, readQueueNums&#x3D;12, writeQueueNums&#x3D;12, perm&#x3D;RW-, topicFilterType&#x3D;SINGLE_TAG, topicSysFlag&#x3D;0, order&#x3D;false]</span><br><span class="line"></span><br><span class="line">-b brokerAddr create topic to which broker</span><br><span class="line"></span><br><span class="line">-c clusterName create topic to which cluster</span><br><span class="line"></span><br><span class="line">-t topic topic name</span><br><span class="line"></span><br><span class="line">-r readQueueNums set read queue nums</span><br><span class="line"></span><br><span class="line">-w writeQueueNums set write queue nums</span><br><span class="line"></span><br><span class="line">-p perm set topic&#39;s permission(2|4|6), intro[2:W 4:R; 6:RW]</span><br><span class="line"></span><br><span class="line">-o order set topic&#39;s order(true|false</span><br><span class="line"></span><br><span class="line">-u unit is unit topic (true|false</span><br><span class="line"></span><br><span class="line">-s hasUnitSub has unit sub (true|false</span><br></pre></td></tr></table></figure>
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MQ9# RocketMQ Offset 相关命令</title>
+    <url>/posts/5c6eeeec/</url>
+    <content><![CDATA[<div id="vip-container"><h1 id="克隆消费组的offset（同一个集群）"><a href="#克隆消费组的offset（同一个集群）" class="headerlink" title="克隆消费组的offset（同一个集群）"></a>克隆消费组的offset（同一个集群）</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin cloneGroupOffset -n 192.168.1.x:9876 -s SCANRECORD_GROUP -d my-tst-cloneoffset -t SCANRECORD</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">clone group offset success. srcGroup[SCANRECORD_GROUP], destGroup&#x3D;[my-tst-cloneoffset], topic[SCANRECORD][baseuser@HZPL001180 rocketmq]$</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin statsAll -t SCANRECORD -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Topic Consumer Group Accumulation InTPS OutTPS InMsg24Hour OutMsg24Hour</span><br><span class="line"></span><br><span class="line">SCANRECORD ZtoSignGroup 2290 3063.95 522.72 233588408 29106863</span><br><span class="line"></span><br><span class="line">SCANRECORD newOpenPartnerDeadlineJob 2641 3063.95 522.72 233588408 29052057</span><br><span class="line"></span><br><span class="line">SCANRECORD smartidivision-scanrecord-dis 3110 3063.95 399.03 233588408 30052791</span><br><span class="line"></span><br><span class="line">SCANRECORD PanguRecordGroup 574 3063.95 2041.17 233588408 174462813</span><br><span class="line"></span><br><span class="line">SCANRECORD code-send-consumer 881 3063.95 1162.63 233588408 60072932</span><br><span class="line"></span><br><span class="line">SCANRECORD shenZhouOneSiteKpiConsumer 669 3063.95 1798.57 233588408 137543100</span><br><span class="line"></span><br><span class="line">SCANRECORD SortComplementConsumer 2746 3063.95 522.72 233588408 11466488</span><br><span class="line"></span><br><span class="line">SCANRECORD **my-tst-cloneoffset** 0 3063.95 0.00 233588408 0</span><br><span class="line"></span><br><span class="line">SCANRECORD tf_wonder_waybill_center_scanrec 2516 3063.95 522.72 233588408 29056664</span><br><span class="line"></span><br><span class="line">SCANRECORD dpmComScanRecordConsumer 0 3063.95 0.00 233588408 0</span><br><span class="line"></span><br><span class="line">SCANRECORD zms_syncer_SCANRECORD 286 3063.95 3063.73 233588408 233588419</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="根据时间重置消费位点"><a href="#根据时间重置消费位点" class="headerlink" title="根据时间重置消费位点"></a>根据时间重置消费位点</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">bin&#x2F;mqadmin resetOffsetByTime -n 192.168.1.x:9876 -g ReceiveOrderGroupNew -t SCANRECORD -s now</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">rollback consumer offset by specified group[ReceiveOrderGroupNew], topic[SCANRECORD], force[true], timestamp(string)[now], timestamp(long)[1540196941761]</span><br><span class="line"></span><br><span class="line">brokerName queueId offset</span><br><span class="line"></span><br><span class="line">broker-a 20 40375806</span><br><span class="line"></span><br><span class="line">broker-b 55 40209057</span><br><span class="line"></span><br><span class="line">broker-c 24 40151853</span><br><span class="line"></span><br><span class="line">broker-b 22 40284014</span><br><span class="line"></span><br><span class="line">broker-a 53 40321569</span><br><span class="line"></span><br><span class="line">broker-d 59 39980239</span><br><span class="line"></span><br><span class="line">bin&#x2F;mqadmin resetOffsetByTime -n 192.168.1.x:9876 -g ReceiveOrderGroupNew -t SCANRECORD -s 1540196941761</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">rollback consumer offset by specified group[ReceiveOrderGroupNew], topic[SCANRECORD], force[true], timestamp(string)[1540196941761], timestamp(long)[1540196941761]</span><br><span class="line"></span><br><span class="line">brokerName queueId offset</span><br><span class="line"></span><br><span class="line">broker-a 20 40375806</span><br><span class="line"></span><br><span class="line">broker-b 55 40209057</span><br><span class="line"></span><br><span class="line">broker-c 24 40151853</span><br><span class="line"></span><br><span class="line">broker-b 22 40284014</span><br><span class="line"></span><br><span class="line">&quot;g&quot;, &quot;group&quot;, true, &quot;set the consumer group&quot;</span><br><span class="line"></span><br><span class="line">&quot;s&quot;, &quot;timestamp&quot;, true, &quot;set the timestamp[now|currentTimeMillis|yyyy-MM-dd#HH:mm:ss:SSS]&quot;</span><br><span class="line"></span><br><span class="line">&quot;f&quot;, &quot;force&quot;, true, &quot;set the force rollback by timestamp switch[true|false]&quot;</span><br><span class="line"></span><br><span class="line">&quot;c&quot;, &quot;cplus&quot;, false, &quot;reset c++ client offset&quot;</span><br></pre></td></tr></table></figure>
+
+</div>
 
 			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
 			<script>

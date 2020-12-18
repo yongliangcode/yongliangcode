@@ -21,19 +21,19 @@
     var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="创建订阅组1bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer    删除订阅组12345678910111213141516171819202122232425bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c Ad">
+  <meta name="description" content="说明RocketMQ中当重试消息超过最大重试次数（默认16次），会被发送到%DLQ%开头的死信队列，默认死信队列为只写权限。在有些情况下，想看看死信队列里的内容。 更改死信队列权限123456789101112131415bin&#x2F;mqadmin updateTopicPerm -c ClusterB -t %DLQ%online-tst -p 6 -n 192.168.1.x:9876J">
 <meta property="og:type" content="article">
-<meta property="og:title" content="MQ2# RocketMQ Consumer命令">
-<meta property="og:url" content="https://yongliangcode.github.io/posts/e790de00/index.html">
+<meta property="og:title" content="MQ10# RocketMQ查询死信队列中的消息内容">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/cad2b239/index.html">
 <meta property="og:site_name" content="瓜农老梁">
-<meta property="og:description" content="创建订阅组1bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer    删除订阅组12345678910111213141516171819202122232425bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c Ad">
+<meta property="og:description" content="说明RocketMQ中当重试消息超过最大重试次数（默认16次），会被发送到%DLQ%开头的死信队列，默认死信队列为只写权限。在有些情况下，想看看死信队列里的内容。 更改死信队列权限123456789101112131415bin&#x2F;mqadmin updateTopicPerm -c ClusterB -t %DLQ%online-tst -p 6 -n 192.168.1.x:9876J">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2020-12-17T03:10:01.000Z">
-<meta property="article:modified_time" content="2020-12-17T15:38:35.775Z">
+<meta property="article:published_time" content="2020-12-18T09:14:01.000Z">
+<meta property="article:modified_time" content="2020-12-18T02:23:18.700Z">
 <meta property="article:tag" content="RocketMQ">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://yongliangcode.github.io/posts/e790de00/">
+<link rel="canonical" href="https://yongliangcode.github.io/posts/cad2b239/">
 
 
 <script id="page-configurations">
@@ -46,7 +46,7 @@
   };
 </script>
 
-  <title>MQ2# RocketMQ Consumer命令 | 瓜农老梁</title>
+  <title>MQ10# RocketMQ查询死信队列中的消息内容 | 瓜农老梁</title>
   
 
 
@@ -190,7 +190,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/e790de00/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/cad2b239/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -203,7 +203,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          MQ2# RocketMQ Consumer命令
+          MQ10# RocketMQ查询死信队列中的消息内容
         </h1>
 
         <div class="post-meta">
@@ -214,7 +214,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2020-12-17 11:10:01 / 修改时间：23:38:35" itemprop="dateCreated datePublished" datetime="2020-12-17T11:10:01+08:00">2020-12-17</time>
+              <time title="创建时间：2020-12-18 17:14:01 / 修改时间：10:23:18" itemprop="dateCreated datePublished" datetime="2020-12-18T17:14:01+08:00">2020-12-18</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -237,11 +237,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <div id="vip-container"><h1 id="创建订阅组"><a href="#创建订阅组" class="headerlink" title="创建订阅组"></a>创建订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer</span><br></pre></td></tr></table></figure>
+        <div id="vip-container"><h1 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h1><p>RocketMQ中当重试消息超过最大重试次数（默认16次），会被发送到%DLQ%开头的死信队列，默认死信队列为只写权限。在有些情况下，想看看死信队列里的内容。</p>
+<h1 id="更改死信队列权限"><a href="#更改死信队列权限" class="headerlink" title="更改死信队列权限"></a>更改死信队列权限</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateTopicPerm -c ClusterB -t %DLQ%online-tst -p 6 -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">注：将死信队列只写权限更改为读写权限</span><br></pre></td></tr></table></figure>
 
 
 
-<h1 id="删除订阅组"><a href="#删除订阅组" class="headerlink" title="删除订阅组"></a>删除订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c AdpMqCluster -g CODCANCELSIGN</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from NameServer success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from NameServer success.</span><br></pre></td></tr></table></figure>
+<h1 id="查询死信队列状态"><a href="#查询死信队列状态" class="headerlink" title="查询死信队列状态"></a>查询死信队列状态</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicStatus -n 192.168.1.x:9876 -t %DLQ%online-tst</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Broker Name QID Min Offset Max Offset Last Updated</span><br><span class="line"></span><br><span class="line">broker-a 0 0 109 2018-12-10 18:03:08,732</span><br><span class="line"></span><br><span class="line">broker-a 1 0 109 2018-12-10 18:03:08,740</span><br><span class="line"></span><br><span class="line">broker-a 2 0 110 2018-12-10 18:03:08,750</span><br><span class="line"></span><br><span class="line">broker-a 3 0 109 2018-12-10 18:03:08,728</span><br></pre></td></tr></table></figure>
 
 
 
@@ -249,15 +250,9 @@
 
 
 
-<h1 id="查看消费组情况及IP地址"><a href="#查看消费组情况及IP地址" class="headerlink" title="查看消费组情况及IP地址"></a>查看消费组情况及IP地址</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerStatus -g TraceToCaiNiao -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 192.168.12.122@25063 V3_5_8 1539756615406&#x2F;192.168.x.x@25063</span><br><span class="line"></span><br><span class="line">002 192.168.13.96@3351 V3_5_8 1539756615406&#x2F;192.168.x.x@3351</span><br><span class="line"></span><br><span class="line">003 192.168.x.x@13385 V3_5_8 1539756615406&#x2F;192.168.x.x@13385</span><br><span class="line"></span><br><span class="line">004 192.168.x.x@6691 V3_5_8 1539756615406&#x2F;192.168.x.x@6691</span><br></pre></td></tr></table></figure>
+<h1 id="根据offset查询消息内容"><a href="#根据offset查询消息内容" class="headerlink" title="根据offset查询消息内容"></a>根据offset查询消息内容</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin queryMsgByOffset -n localhost:9876 -t %DLQ%online-tst -b broker-a -i 0 -o 108</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">OffsetID: 0A090F2800002A9F000000D70519DD35</span><br><span class="line"></span><br><span class="line">OffsetID: 0A090F2800002A9F000000D70519DD35</span><br><span class="line"></span><br><span class="line">Topic: %DLQ%online-tst</span><br><span class="line"></span><br><span class="line">Tags: [null]</span><br><span class="line"></span><br><span class="line">Keys: [null]</span><br><span class="line"></span><br><span class="line">Queue ID: 0</span><br><span class="line"></span><br><span class="line">Queue Offset: 108</span><br><span class="line"></span><br><span class="line">CommitLog Offset: 923503549749</span><br><span class="line"></span><br><span class="line">Reconsume Times: 0</span><br><span class="line"></span><br><span class="line">Born Timestamp: 2018-12-10 17:59:24,731</span><br><span class="line"></span><br><span class="line">Store Timestamp: 2018-12-10 18:03:08,732</span><br><span class="line"></span><br><span class="line">Born Host: 10.10.128.183:51889</span><br><span class="line"></span><br><span class="line">Store Host: 10.9.15.40:10911</span><br><span class="line"></span><br><span class="line">System Flag: 0</span><br><span class="line"></span><br><span class="line">Properties: &#123;MIN_OFFSET&#x3D;0, MAX_OFFSET&#x3D;109, UNIQ_KEY&#x3D;0A0A80B78DE818B4AAC22FA2493B01B2, WAIT&#x3D;true&#125;</span><br><span class="line"></span><br><span class="line">Message Body Path: &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;0A0A80B78DE818B4AAC22FA2493B01B2</span><br><span class="line"></span><br><span class="line">注：使用打印命令消息临时存储在&#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys</span><br></pre></td></tr></table></figure>
 
-
-
-<h1 id="查看消费组情况"><a href="#查看消费组情况" class="headerlink" title="查看消费组情况"></a>查看消费组情况</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerProgress -n 192.168.1.x:9876 -g SortComplementConsumer</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Topic Broker Name QID Broker Offset Consumer Offset Diff LastTime</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-a 0 1 1 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-b 0 2 2 0 2018-10-22 12:43:13</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-c 0 2 2 0 2018-10-22 12:43:28</span><br><span class="line"></span><br><span class="line">%RETRY%SortComplementConsumer broker-d 0 2 2 0 2018-10-22 12:44:33</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 0 39717505 39717502 3 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 1 39721504 39721502 2 2018-10-22 13:53:21</span><br><span class="line"></span><br><span class="line">SCANRECORD broker-a 2 39733704 39733703 1 2018-10-22 13:53:21</span><br></pre></td></tr></table></figure>
-
-
-
-
+<h1 id="查看消息内容"><a href="#查看消息内容" class="headerlink" title="查看消息内容"></a>查看消息内容</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;0A0A80B78DE818B4AAC22FA2490F01AE</span><br><span class="line"></span><br><span class="line">Hello RocketMQ430</span><br></pre></td></tr></table></figure>
 
 </div>
 
@@ -293,12 +288,12 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/posts/6957c801/" rel="prev" title="MQ1# RocketMQ Connection命令">
-      <i class="fa fa-chevron-left"></i> MQ1# RocketMQ Connection命令
+    <a href="/posts/5c6eeeec/" rel="prev" title="MQ9# RocketMQ Offset 相关命令">
+      <i class="fa fa-chevron-left"></i> MQ9# RocketMQ Offset 相关命令
     </a></div>
       <div class="post-nav-item">
-    <a href="/posts/a3779249/" rel="next" title="MQ3# RocketMQ Cluster命令">
-      MQ3# RocketMQ Cluster命令 <i class="fa fa-chevron-right"></i>
+    <a href="/posts/6887b617/" rel="next" title="MQ11# RocketMQ集群生产环境节点下线操作">
+      MQ11# RocketMQ集群生产环境节点下线操作 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -358,7 +353,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E8%AE%A2%E9%98%85%E7%BB%84"><span class="nav-number">1.</span> <span class="nav-text">创建订阅组</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E8%AE%A2%E9%98%85%E7%BB%84"><span class="nav-number">2.</span> <span class="nav-text">删除订阅组</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%B6%88%E8%B4%B9%E7%BB%84%E6%83%85%E5%86%B5%E5%8F%8AIP%E5%9C%B0%E5%9D%80"><span class="nav-number">3.</span> <span class="nav-text">查看消费组情况及IP地址</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%B6%88%E8%B4%B9%E7%BB%84%E6%83%85%E5%86%B5"><span class="nav-number">4.</span> <span class="nav-text">查看消费组情况</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AF%B4%E6%98%8E"><span class="nav-number">1.</span> <span class="nav-text">说明</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9B%B4%E6%94%B9%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97%E6%9D%83%E9%99%90"><span class="nav-number">2.</span> <span class="nav-text">更改死信队列权限</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9F%A5%E8%AF%A2%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97%E7%8A%B6%E6%80%81"><span class="nav-number">3.</span> <span class="nav-text">查询死信队列状态</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A0%B9%E6%8D%AEoffset%E6%9F%A5%E8%AF%A2%E6%B6%88%E6%81%AF%E5%86%85%E5%AE%B9"><span class="nav-number">4.</span> <span class="nav-text">根据offset查询消息内容</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%B6%88%E6%81%AF%E5%86%85%E5%AE%B9"><span class="nav-number">5.</span> <span class="nav-text">查看消息内容</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 

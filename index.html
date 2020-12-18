@@ -184,6 +184,152 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/5d180165/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/5d180165/" class="post-title-link" itemprop="url">MQ13# RocketMQ性能测试</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 19:14:01" itemprop="dateCreated datePublished" datetime="2020-12-20T19:14:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-18 13:40:19" itemprop="dateModified" datetime="2020-12-18T13:40:19+08:00">2020-12-18</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line">1.概述</span><br><span class="line"></span><br><span class="line">2.1个线程测试记录</span><br><span class="line"></span><br><span class="line">a.1个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.1个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.1个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.1个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">3.10个线程测试记录</span><br><span class="line"></span><br><span class="line">a.10个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.10个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.10个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.10个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">4.30个线程测试记录</span><br><span class="line"></span><br><span class="line">a.30个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.30个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.30个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.30个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">5.45个线程测试记录</span><br><span class="line"></span><br><span class="line">a.45个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.45个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.45个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.45个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">6.60个线程测试记录</span><br><span class="line"></span><br><span class="line">a.60个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.60个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.60个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.60个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">7.75个线程测试记录</span><br><span class="line"></span><br><span class="line">a.75个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.75个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.75个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.75个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">8.100个线程测试记录</span><br><span class="line"></span><br><span class="line">a.100个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.100个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.100个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.100个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">9.150个线程测试记录</span><br><span class="line"></span><br><span class="line">a.150个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.150个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.150个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.150个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">10.200个线程测试记录</span><br><span class="line"></span><br><span class="line">a.200个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.200个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.200个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.200个线程 消息3K 16个队列</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>目的：对生产环境RocketMQ集群进行性能测试,该集群4主4从。</p>
+<p>过程：线程数1、线程数10、线程数30、线程数60、线程数100、线程数150、线程数200对消息大小为1K、3K；队列为8个、16个分别进行测试。</p>
+<p>结果：其中最大TPS为12.6万，最小TPS为3.6万。</p>
+<h1 id="1个线程测试记录"><a href="#1个线程测试记录" class="headerlink" title="1个线程测试记录"></a>1个线程测试记录</h1><h3 id="1个线程-消息1K-8个队列"><a href="#1个线程-消息1K-8个队列" class="headerlink" title="1个线程 消息1K 8个队列"></a>1个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 1 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4281 Max RT: 299 Average RT: 0.233 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4237 Max RT: 299 Average RT: 0.236 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4533 Max RT: 299 Average RT: 0.221 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4404 Max RT: 299 Average RT: 0.227 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4360 Max RT: 299 Average RT: 0.229 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4269 Max RT: 299 Average RT: 0.234 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4319 Max RT: 299 Average RT: 0.231 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="1个线程-消息3K-8个队列"><a href="#1个线程-消息3K-8个队列" class="headerlink" title="1个线程 消息3K 8个队列"></a>1个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 1 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4120 Max RT: 255 Average RT: 0.242 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4054 Max RT: 255 Average RT: 0.246 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4010 Max RT: 255 Average RT: 0.249 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4125 Max RT: 255 Average RT: 0.242 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4093 Max RT: 255 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4093 Max RT: 255 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 3999 Max RT: 255 Average RT: 0.250 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 3957 Max RT: 255 Average RT: 0.253 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+<h3 id="1个线程-消息1K-16个队列"><a href="#1个线程-消息1K-16个队列" class="headerlink" title="1个线程 消息1K 16个队列"></a>1个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 1 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 5289 Max RT: 225 Average RT: 0.189 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5252 Max RT: 225 Average RT: 0.190 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5124 Max RT: 225 Average RT: 0.195 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5146 Max RT: 225 Average RT: 0.194 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4861 Max RT: 225 Average RT: 0.206 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4998 Max RT: 225 Average RT: 0.200 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5063 Max RT: 225 Average RT: 0.198 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5039 Max RT: 225 Average RT: 0.198 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+<h3 id="1个线程-消息3K-16个队列"><a href="#1个线程-消息3K-16个队列" class="headerlink" title="1个线程 消息3K 16个队列"></a>1个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 1 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5011 Max RT: 244 Average RT: 0.199 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4826 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4762 Max RT: 244 Average RT: 0.210 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4663 Max RT: 244 Average RT: 0.214 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4648 Max RT: 244 Average RT: 0.215 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4737 Max RT: 244 Average RT: 0.211 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4523 Max RT: 244 Average RT: 0.221 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4544 Max RT: 244 Average RT: 0.220 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4683 Max RT: 244 Average RT: 0.213 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4838 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h1 id="10个线程测试记录"><a href="#10个线程测试记录" class="headerlink" title="10个线程测试记录"></a>10个线程测试记录</h1><h3 id="10个线程-消息1K-8个队列"><a href="#10个线程-消息1K-8个队列" class="headerlink" title="10个线程 消息1K 8个队列"></a>10个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 1 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5011 Max RT: 244 Average RT: 0.199 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4826 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4762 Max RT: 244 Average RT: 0.210 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4663 Max RT: 244 Average RT: 0.214 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4648 Max RT: 244 Average RT: 0.215 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4737 Max RT: 244 Average RT: 0.211 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4523 Max RT: 244 Average RT: 0.221 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4544 Max RT: 244 Average RT: 0.220 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4683 Max RT: 244 Average RT: 0.213 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4838 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="10个线程-消息3K-8个队列"><a href="#10个线程-消息3K-8个队列" class="headerlink" title="10个线程 消息3K 8个队列"></a>10个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 10 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 40085 Max RT: 265 Average RT: 0.249 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 37710 Max RT: 265 Average RT: 0.265 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39305 Max RT: 265 Average RT: 0.254 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39881 Max RT: 265 Average RT: 0.251 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38428 Max RT: 265 Average RT: 0.260 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39280 Max RT: 265 Average RT: 0.255 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38539 Max RT: 265 Average RT: 0.259 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 40927 Max RT: 265 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="10个线程-消息1K-16个队列"><a href="#10个线程-消息1K-16个队列" class="headerlink" title="10个线程 消息1K 16个队列"></a>10个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 10 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 41301 Max RT: 243 Average RT: 0.242 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 42365 Max RT: 243 Average RT: 0.236 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 42181 Max RT: 243 Average RT: 0.237 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 42261 Max RT: 243 Average RT: 0.237 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 40831 Max RT: 243 Average RT: 0.245 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 43010 Max RT: 243 Average RT: 0.232 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 41871 Max RT: 243 Average RT: 0.239 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 40970 Max RT: 243 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="10个线程-消息3K-16个队列"><a href="#10个线程-消息3K-16个队列" class="headerlink" title="10个线程 消息3K 16个队列"></a>10个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 10 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 36245 Max RT: 237 Average RT: 0.276 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38713 Max RT: 237 Average RT: 0.258 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 36327 Max RT: 237 Average RT: 0.275 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39005 Max RT: 237 Average RT: 0.256 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 37926 Max RT: 237 Average RT: 0.264 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38804 Max RT: 237 Average RT: 0.258 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39976 Max RT: 237 Average RT: 0.250 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="30个线程测试记录"><a href="#30个线程测试记录" class="headerlink" title="30个线程测试记录"></a>30个线程测试记录</h1><h3 id="30个线程-消息1K-8个队列"><a href="#30个线程-消息1K-8个队列" class="headerlink" title="30个线程 消息1K 8个队列"></a>30个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 30 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 86259 Max RT: 309 Average RT: 0.348 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 85335 Max RT: 309 Average RT: 0.351 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 81850 Max RT: 309 Average RT: 0.366 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 87712 Max RT: 309 Average RT: 0.342 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 89288 Max RT: 309 Average RT: 0.336 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86732 Max RT: 309 Average RT: 0.346 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="30个线程-消息3K-8个队列"><a href="#30个线程-消息3K-8个队列" class="headerlink" title="30个线程 消息3K 8个队列"></a>30个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 30 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 74085 Max RT: 334 Average RT: 0.405 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 71014 Max RT: 334 Average RT: 0.422 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77792 Max RT: 334 Average RT: 0.386 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 73913 Max RT: 334 Average RT: 0.406 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77337 Max RT: 334 Average RT: 0.392 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 72184 Max RT: 334 Average RT: 0.416 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77271 Max RT: 334 Average RT: 0.388 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 75016 Max RT: 334 Average RT: 0.400 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="30个线程-消息1K-16个队列"><a href="#30个线程-消息1K-16个队列" class="headerlink" title="30个线程 消息1K 16个队列"></a>30个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 30 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 82946 Max RT: 306 Average RT: 0.362 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86902 Max RT: 306 Average RT: 0.345 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 83157 Max RT: 306 Average RT: 0.365 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86804 Max RT: 306 Average RT: 0.345 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 87009 Max RT: 306 Average RT: 0.345 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 80219 Max RT: 306 Average RT: 0.374 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="30个线程-消息3K-16个队列"><a href="#30个线程-消息3K-16个队列" class="headerlink" title="30个线程 消息3K 16个队列"></a>30个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 30 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 73864 Max RT: 329 Average RT: 0.403 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 78555 Max RT: 329 Average RT: 0.382 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 75200 Max RT: 329 Average RT: 0.406 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 73925 Max RT: 329 Average RT: 0.406 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 69955 Max RT: 329 Average RT: 0.429 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="45个线程测试记录"><a href="#45个线程测试记录" class="headerlink" title="45个线程测试记录"></a>45个线程测试记录</h1><h3 id="45个线程-消息1K-8个队列"><a href="#45个线程-消息1K-8个队列" class="headerlink" title="45个线程 消息1K 8个队列"></a>45个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 45 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 91266 Max RT: 2063 Average RT: 0.493 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 87279 Max RT: 2063 Average RT: 0.515 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 92130 Max RT: 2063 Average RT: 0.487 Send Failed: 0 Response Failed: 1</span><br><span class="line"></span><br><span class="line">Send TPS: 95227 Max RT: 2063 Average RT: 0.472 Send Failed: 0 Response Failed: 1</span><br><span class="line"></span><br><span class="line">Send TPS: 96340 Max RT: 2063 Average RT: 0.467 Send Failed: 0 Response Failed: 1</span><br><span class="line"></span><br><span class="line">Send TPS: 84272 Max RT: 2063 Average RT: 0.534 Send Failed: 0 Response Failed: 1</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="45个线程-消息3K-8个队列"><a href="#45个线程-消息3K-8个队列" class="headerlink" title="45个线程 消息3K 8个队列"></a>45个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 45 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 89334 Max RT: 462 Average RT: 0.503 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 84237 Max RT: 462 Average RT: 0.534 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86051 Max RT: 462 Average RT: 0.523 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86475 Max RT: 462 Average RT: 0.520 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86088 Max RT: 462 Average RT: 0.523 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 90403 Max RT: 462 Average RT: 0.498 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 84229 Max RT: 462 Average RT: 0.534 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="45个线程-消息1K-16个队列"><a href="#45个线程-消息1K-16个队列" class="headerlink" title="45个线程 消息1K 16个队列"></a>45个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 45 -s 1024 -n 192.168.x.:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 91724 Max RT: 604 Average RT: 0.490 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 90414 Max RT: 604 Average RT: 0.498 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 89904 Max RT: 604 Average RT: 0.500 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 100158 Max RT: 604 Average RT: 0.449 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 99658 Max RT: 604 Average RT: 0.451 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 92440 Max RT: 604 Average RT: 0.489 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="45个线程-消息3K-16个队列"><a href="#45个线程-消息3K-16个队列" class="headerlink" title="45个线程 消息3K 16个队列"></a>45个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 30 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 75159 Max RT: 436 Average RT: 0.399 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 75315 Max RT: 436 Average RT: 0.398 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77297 Max RT: 436 Average RT: 0.388 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 72188 Max RT: 436 Average RT: 0.415 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77525 Max RT: 436 Average RT: 0.387 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 71535 Max RT: 436 Average RT: 0.422 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/5d180165/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/eb676532/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1039,81 +1185,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a3779249/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/a3779249/" class="post-title-link" itemprop="url">MQ3# RocketMQ Cluster命令</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-12-17 11:12:01 / 修改时间：23:51:54" itemprop="dateCreated datePublished" datetime="2020-12-17T11:12:01+08:00">2020-12-17</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="查看集群信息"><a href="#查看集群信息" class="headerlink" title="查看集群信息"></a>查看集群信息</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n localhost:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Cluster Name Broker Name BID Addr Version InTPS OutTPS</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-a 0 192.168.1.x:10911 V3_4_6 2819.22 1077.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-b 0 192.168.1.x:10911 V3_4_6 2839.42 1070.89</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-c 0 192.168.1.x:10919 V3_4_6 2800.12 1058.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-d 0 192.168.1.x:10915 V3_4_6 2897.04 1126.04</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-e 0 192.168.1.x:10919 V3_4_6 2987.20 1181.88</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-f 0 192.168.1.x:10915 V3_4_6 3010.40 1187.08</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/a3779249/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1183,7 +1254,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

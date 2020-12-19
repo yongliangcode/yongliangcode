@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="问题思考消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题： 1.ConsumeQueue构建流程是怎样的？ 2.ConsumeQueue数据结构是怎样的？ 3.Index索引文件构建流程怎样的？ 4.Index数据结构时怎么样的？ ConsumeQueue&#x2F;Index构建概览调用链条123456">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQ34# RocketMQ--ConsumeQueue文件与Index文件">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/c4a1b302/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="问题思考消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题： 1.ConsumeQueue构建流程是怎样的？ 2.ConsumeQueue数据结构是怎样的？ 3.Index索引文件构建流程怎样的？ 4.Index数据结构时怎么样的？ ConsumeQueue&#x2F;Index构建概览调用链条123456">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143536.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143645.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143751.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143915.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219144023.png">
+<meta property="article:published_time" content="2020-12-20T12:58:01.000Z">
+<meta property="article:modified_time" content="2020-12-19T06:41:33.562Z">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143536.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/c4a1b302/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MQ34# RocketMQ--ConsumeQueue文件与Index文件 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/c4a1b302/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MQ34# RocketMQ--ConsumeQueue文件与Index文件
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:58:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 14:41:33" itemprop="dateModified" datetime="2020-12-19T14:41:33+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题：</p>
+<p>1.ConsumeQueue构建流程是怎样的？</p>
+<p>2.ConsumeQueue数据结构是怎样的？</p>
+<p>3.Index索引文件构建流程怎样的？</p>
+<p>4.Index数据结构时怎么样的？</p>
+<h1 id="ConsumeQueue-Index构建概览"><a href="#ConsumeQueue-Index构建概览" class="headerlink" title="ConsumeQueue/Index构建概览"></a>ConsumeQueue/Index构建概览</h1><h2 id="调用链条"><a href="#调用链条" class="headerlink" title="调用链条"></a>调用链条</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;Broker启动初始化</span><br><span class="line"></span><br><span class="line">@1 BrokerStartup#main</span><br><span class="line"></span><br><span class="line">start(createBrokerController(args))</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize()</span><br><span class="line"></span><br><span class="line">@2 BrokerController#initialize</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; new DefaultMessageStore</span><br><span class="line"></span><br><span class="line">@3 DefaultMessageStore#DefaultMessageStore()</span><br><span class="line"></span><br><span class="line">this.reputMessageService &#x3D; new ReputMessageService();</span><br><span class="line"></span><br><span class="line">this.dispatcherList &#x3D; new LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildConsumeQueue());</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildIndex());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;存储服务启动</span><br><span class="line"></span><br><span class="line">@4 DefaultMessageStore#start()</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;允许重复转发reputFromOffset设置为CommitLog的提交指针</span><br><span class="line"></span><br><span class="line">if (this.getMessageStoreConfig().isDuplicationEnable()) &#123;this.reputMessageService.setReputFromOffset(this.commitLog.getConfirmOffset());</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;不允许重复转发reputFromOffset设置为CommitLog内存中最大偏移量 this.reputMessageService.setReputFromOffset(this.commitLog.getMaxOffset();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.reputMessageService.start();</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：@1中分别为dispatcherList添加了CommitLogDispatcherBuildConsumeQueue和CommitLogDispatcherBuildIndex；@4中duplicationEnable默认为false即不允许重复，从CommitLog中的最大偏移量开始转发，reputMessageService线程类在Broker启动时启动，主要负责构建consumeQueue与index文件。</span><br></pre></td></tr></table></figure>
+
+<h2 id="ReputMessageService线程类职责"><a href="#ReputMessageService线程类职责" class="headerlink" title="ReputMessageService线程类职责"></a>ReputMessageService线程类职责</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143536.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：ReputMessageServicee根据构建进度reputFromOffset查找可构建的消息数据，然后逐条解析组成构建请求，并构建consumeQueue和index文件构建；如果当前Broker为Master并且长轮询模式上通过消息到达监听器通知客户端。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="ConsumeQueue构建流程及数据结构"><a href="#ConsumeQueue构建流程及数据结构" class="headerlink" title="ConsumeQueue构建流程及数据结构"></a>ConsumeQueue构建流程及数据结构</h1><p>在Broker启动时初始化了dispatcherList, 添加了分别负责ConsumeQueue文件和Index文件构建类；这部分关注ConsumeQueue构建。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">this.dispatcherList &#x3D; new LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构建ConsumeQueue</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildConsumeQueue());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构建Index</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildIndex());</span><br><span class="line"></span><br><span class="line">public void doDispatch(DispatchRequest req) &#123;</span><br><span class="line"></span><br><span class="line">for (CommitLogDispatcher dispatcher : this.dispatcherList) &#123;</span><br><span class="line"></span><br><span class="line">dispatcher.dispatch(req);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h2 id="ConsumeQueue文件构建流程"><a href="#ConsumeQueue文件构建流程" class="headerlink" title="ConsumeQueue文件构建流程"></a>ConsumeQueue文件构建流程</h2><p><strong>调用链</strong></p>
+<p>```</p>
+<p>@1 DefaultMessageStore#putMessagePositionInfo</p>
+<p>@2 ConsumeQueue#putMessagePositionInfoWrapper</p>
+<p>```</p>
+<p><strong>流程图</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143645.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：ConsumeQueue构建主要流程为构建ConsumeQueue数据结构并将其写入fileChannel落盘；第一次创建ConsumeQueue文件时进行补位，用0填充，可促使系统实际分配内存起到预热作用。</span><br></pre></td></tr></table></figure>
+
+<p><strong>补位代码</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">private void fillPreBlank(final MappedFile mappedFile, final long untilWhere) &#123;</span><br><span class="line"></span><br><span class="line">ByteBuffer byteBuffer &#x3D; ByteBuffer.allocate(CQ_STORE_UNIT_SIZE);</span><br><span class="line"></span><br><span class="line">byteBuffer.putLong(0L);</span><br><span class="line"></span><br><span class="line">byteBuffer.putInt(Integer.MAX_VALUE);</span><br><span class="line"></span><br><span class="line">byteBuffer.putLong(0L);</span><br><span class="line"></span><br><span class="line">int until &#x3D; (int) (untilWhere % this.mappedFileQueue.getMappedFileSize());</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; until; i +&#x3D; CQ_STORE_UNIT_SIZE) &#123;</span><br><span class="line"></span><br><span class="line">mappedFile.appendMessage(byteBuffer.array());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="ConsumeQueue数据结构"><a href="#ConsumeQueue数据结构" class="headerlink" title="ConsumeQueue数据结构"></a>ConsumeQueue数据结构</h2><p><strong>数据结构代码</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">this.byteBufferIndex.flip();</span><br><span class="line"></span><br><span class="line">this.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE); &#x2F;&#x2F;限定每个条目大小</span><br><span class="line"></span><br><span class="line">this.byteBufferIndex.putLong(offset); &#x2F;&#x2F;写入消息偏移量</span><br><span class="line"></span><br><span class="line">this.byteBufferIndex.putInt(size); &#x2F;&#x2F;写入消息长度</span><br><span class="line"></span><br><span class="line">this.byteBufferIndex.putLong(tagsCode); &#x2F;&#x2F;写入tag hashcode</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>数据结构图示</strong></p>
+<p>ConsumeQueue文件中每个条目占20位。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143751.png"></p>
+<h1 id="Index构建流程及数据结构"><a href="#Index构建流程及数据结构" class="headerlink" title="Index构建流程及数据结构"></a>Index构建流程及数据结构</h1><p>在Broker启动时初始化了dispatcherList, 添加了分别负责ConsumeQueue文件和Index文件构建类；这部分关注Index构建。</p>
+<p>IndexService初始化时初始化两个参数Hash槽数量hashSlotNum=5000000，索引的最大数量maxIndexNum=5000000 * 4=20000000。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">this.dispatcherList &#x3D; new LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构建ConsumeQueue</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildConsumeQueue());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构建Index</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildIndex());</span><br><span class="line"></span><br><span class="line">public void doDispatch(DispatchRequest req) &#123;</span><br><span class="line"></span><br><span class="line">for (CommitLogDispatcher dispatcher : this.dispatcherList) &#123;</span><br><span class="line"></span><br><span class="line">dispatcher.dispatch(req);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;IndexService初始化</span><br><span class="line"></span><br><span class="line">public IndexService(final DefaultMessageStore store) &#123;</span><br><span class="line"></span><br><span class="line">this.defaultMessageStore &#x3D; store;</span><br><span class="line"></span><br><span class="line">this.hashSlotNum &#x3D; store.getMessageStoreConfig().getMaxHashSlotNum();</span><br><span class="line"></span><br><span class="line">this.indexNum &#x3D; store.getMessageStoreConfig().getMaxIndexNum();</span><br><span class="line"></span><br><span class="line">this.storePath &#x3D;</span><br><span class="line"></span><br><span class="line">StorePathConfigHelper.getStorePathIndex(store.getMessageStoreConfig().getStorePathRootDir());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Index文件构建流程"><a href="#Index文件构建流程" class="headerlink" title="Index文件构建流程"></a>Index文件构建流程</h2><p><strong>调用链条</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMessageStore#CommitLogDispatcherBuildIndex#dispatch</span><br><span class="line"></span><br><span class="line">@2 IdexService#buildIndex</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>流程图</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143915.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：Index文件写入流程概要：先获取索引文件并将未写入文件的内存数据通过守护线程写入磁盘；计算要写入索引所在hash槽的位置取出原来的值；构建索引条目填充数据；最后更新索引文件头部信息。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="Index数据结构"><a href="#Index数据结构" class="headerlink" title="Index数据结构"></a>Index数据结构</h2><p><strong>写入索引数据到mappedByteBuffer代码</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;计算索引数据需要放在哪个位置</span><br><span class="line"></span><br><span class="line">int absIndexPos &#x3D;</span><br><span class="line"></span><br><span class="line">IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum * hashSlotSize</span><br><span class="line"></span><br><span class="line">\+ this.indexHeader.getIndexCount() * indexSize;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将hashcode存储在MappedByteBuffer中</span><br><span class="line"></span><br><span class="line">this.mappedByteBuffer.putInt(absIndexPos, keyHash);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将物理偏移量存储在MappedByteBuffer中</span><br><span class="line"></span><br><span class="line">this.mappedByteBuffer.putLong(absIndexPos + 4, phyOffset);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;落地时间-当前索引的起始时间差值写入MappedByteBuffer</span><br><span class="line"></span><br><span class="line">this.mappedByteBuffer.putInt(absIndexPos + 4 + 8, (int) timeDiff);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;记录前一条hash桶对应的值（Index条目下标）；注意此处用于解决Hash冲突</span><br><span class="line"></span><br><span class="line">this.mappedByteBuffer.putInt(absIndexPos + 4 + 8 + 4, slotValue);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将当前index中包含的条目数量存入到Hash槽中，将覆盖原先的值</span><br><span class="line"></span><br><span class="line">this.mappedByteBuffer.putInt(absSlotPos,this.indexHeader.getIndexCount());</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：上述代码描述索引条目的构建流程及数据结构，通过记录上一条冲突的槽值形成链表结构。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="Index数据结构图示"><a href="#Index数据结构图示" class="headerlink" title="Index数据结构图示"></a>Index数据结构图示</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219144023.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：Index索引有三部分组成IndexHeader、Hash槽位、索引条目；每块内容和所占大小如图所示；如果有Hash冲突，在每个索引条目最后记录了原来Hash槽里的值，从而形成链表结构。</span><br></pre></td></tr></table></figure></div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/9c431d59/" rel="prev" title="MQ33# RocketMQ消费--Broker端处理逻辑">
+      <i class="fa fa-chevron-left"></i> MQ33# RocketMQ消费--Broker端处理逻辑
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/a0b01b06/" rel="next" title="MQ35# RocketMQ NameServe">
+      MQ35# RocketMQ NameServe <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%80%9D%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">问题思考</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ConsumeQueue-Index%E6%9E%84%E5%BB%BA%E6%A6%82%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">ConsumeQueue&#x2F;Index构建概览</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E7%94%A8%E9%93%BE%E6%9D%A1"><span class="nav-number">2.1.</span> <span class="nav-text">调用链条</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ReputMessageService%E7%BA%BF%E7%A8%8B%E7%B1%BB%E8%81%8C%E8%B4%A3"><span class="nav-number">2.2.</span> <span class="nav-text">ReputMessageService线程类职责</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ConsumeQueue%E6%9E%84%E5%BB%BA%E6%B5%81%E7%A8%8B%E5%8F%8A%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">3.</span> <span class="nav-text">ConsumeQueue构建流程及数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ConsumeQueue%E6%96%87%E4%BB%B6%E6%9E%84%E5%BB%BA%E6%B5%81%E7%A8%8B"><span class="nav-number">3.1.</span> <span class="nav-text">ConsumeQueue文件构建流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ConsumeQueue%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">3.2.</span> <span class="nav-text">ConsumeQueue数据结构</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Index%E6%9E%84%E5%BB%BA%E6%B5%81%E7%A8%8B%E5%8F%8A%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">4.</span> <span class="nav-text">Index构建流程及数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Index%E6%96%87%E4%BB%B6%E6%9E%84%E5%BB%BA%E6%B5%81%E7%A8%8B"><span class="nav-number">4.1.</span> <span class="nav-text">Index文件构建流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Index%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">4.2.</span> <span class="nav-text">Index数据结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Index%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%9B%BE%E7%A4%BA"><span class="nav-number">4.3.</span> <span class="nav-text">Index数据结构图示</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

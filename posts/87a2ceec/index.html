@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="问题思考在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。 123451.ProcessQueue提供哪些方法？2.这些方法的作用是什么？3.哪里调用了这些方法？    ProcessQueue方法梳理isLockExpired方法12345public boolean isLockExpired() &amp;#123;	return (S">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQ32# RocketMQ客户端消费--ProcessQueue处理队列">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/87a2ceec/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="问题思考在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。 123451.ProcessQueue提供哪些方法？2.这些方法的作用是什么？3.哪里调用了这些方法？    ProcessQueue方法梳理isLockExpired方法12345public boolean isLockExpired() &amp;#123;	return (S">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-20T12:55:01.000Z">
+<meta property="article:modified_time" content="2020-12-19T06:28:59.817Z">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/87a2ceec/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MQ32# RocketMQ客户端消费--ProcessQueue处理队列 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/87a2ceec/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MQ32# RocketMQ客户端消费--ProcessQueue处理队列
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:55:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 14:28:59" itemprop="dateModified" datetime="2020-12-19T14:28:59+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1.ProcessQueue提供哪些方法？</span><br><span class="line"></span><br><span class="line">2.这些方法的作用是什么？</span><br><span class="line"></span><br><span class="line">3.哪里调用了这些方法？</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="ProcessQueue方法梳理"><a href="#ProcessQueue方法梳理" class="headerlink" title="ProcessQueue方法梳理"></a>ProcessQueue方法梳理</h1><h2 id="isLockExpired方法"><a href="#isLockExpired方法" class="headerlink" title="isLockExpired方法"></a>isLockExpired方法</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean isLockExpired() &#123;</span><br><span class="line"></span><br><span class="line">	return (System.currentTimeMillis() - this.lastLockTimestamp) &gt; REBALANCE_LOCK_MAX_LIVE_TIME;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>lastLockTimestamp(最新加锁时间戳)</strong></p>
+<p>lastLockTimestamp属性调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">@1 RebalanceImpl#lock</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;请求broker对该消费队列进行加锁</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; lockedMq &#x3D; this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">processQueue.setLocked(true);&#x2F;&#x2F;加锁</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置加锁时间戳</span><br><span class="line"></span><br><span class="line">processQueue.setLastLockTimestamp(System.currentTimeMillis());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 RebalanceImpl#lockAll</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;向broker发送该clientId所对应的messageQueue锁定请求</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; lockOKMQSet &#x3D;</span><br><span class="line"></span><br><span class="line">this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">processQueue.setLocked(true);</span><br><span class="line"></span><br><span class="line">processQueue.setLastLockTimestamp(System.currentTimeMillis());</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>isLockExpired方法调用</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageOrderlyService#ConsumeRequest</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;集群顺序消费时需要判断processQueue加锁是否过期</span><br><span class="line"></span><br><span class="line">if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())</span><br><span class="line"></span><br><span class="line">|| (this.processQueue.isLocked() &amp;&amp; !this.processQueue.isLockExpired()))</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：@1&amp;@2中可以看出lastLockTimestamp在顺序消费时向Broker请求对队列加锁成功后设置的时间戳；REBALANCE_LOCK_MAX_LIVE_TIME由参数rocketmq.client.rebalance.lockMaxLiveTime设置默认为30秒；lastLockTimestamp的含义为加锁的有效时间为30秒，超过该时间则失效；顺序消费在判断过期时延迟拉取。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="isPullExpired方法"><a href="#isPullExpired方法" class="headerlink" title="isPullExpired方法"></a>isPullExpired方法</h2><p><strong>isPullExpired方法代码</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean isPullExpired() &#123;</span><br><span class="line"></span><br><span class="line">return (System.currentTimeMillis() - this.lastPullTimestamp) &gt; PULL_MAX_IDLE_TIME;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<p><strong>lastPullTimestamp属性调用</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#pullMessage</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;每次消息拉取后更新最后一次拉取时间戳</span><br><span class="line"></span><br><span class="line">pullRequest.getProcessQueue()</span><br><span class="line"></span><br><span class="line">.setLastPullTimestamp(System.currentTimeMillis());</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">@1 RebalanceImpl#updateProcessQueueTableInRebalance</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;在负载均衡时如果拉取时间失效会将ProceeQueue丢弃</span><br><span class="line"></span><br><span class="line">else if (pq.isPullExpired()) &#123;</span><br><span class="line"></span><br><span class="line">case CONSUME_ACTIVELY:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">case CONSUME_PASSIVELY:</span><br><span class="line"></span><br><span class="line">pq.setDropped(true);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：lastPullTimestamp每次拉取消息都会更新时间戳；PULL_MAX_IDLE_TIME由rocketmq.client.pull.pullMaxIdleTime设置默认为120秒；方法在负载均衡更新ProcessQueueTable时调用如果拉取失效ProcessQueue将被丢弃。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="putMessage方法"><a href="#putMessage方法" class="headerlink" title="putMessage方法"></a>putMessage方法</h2><p>putMessage方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 消息丢入红黑树</span><br><span class="line"></span><br><span class="line">\* @param msgs</span><br><span class="line"></span><br><span class="line">\* @return</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public boolean putMessage(final List&lt;MessageExt&gt; msgs) &#123;</span><br><span class="line"></span><br><span class="line">boolean dispatchToConsume &#x3D; false;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">int validMsgCnt &#x3D; 0;</span><br><span class="line"></span><br><span class="line">for (MessageExt msg : msgs) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;消息存入红黑树key为queueOffset,value为消息</span><br><span class="line"></span><br><span class="line">MessageExt old &#x3D; msgTreeMap.put(msg.getQueueOffset(), msg);</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; old) &#123;</span><br><span class="line"></span><br><span class="line">validMsgCnt++;&#x2F;&#x2F;递增消息数量</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;记录最大queueOffset</span><br><span class="line"></span><br><span class="line">this.queueOffsetMax &#x3D; msg.getQueueOffset();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;统计消息数量</span><br><span class="line"></span><br><span class="line">msgCount.addAndGet(validMsgCnt);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;消息集合有数据可继续消费</span><br><span class="line"></span><br><span class="line">if (!msgTreeMap.isEmpty() &amp;&amp; !this.consuming) &#123;</span><br><span class="line"></span><br><span class="line">dispatchToConsume &#x3D; true;</span><br><span class="line"></span><br><span class="line">this.consuming &#x3D; true;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (!msgs.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;取出这批消息集合中的最后一条消息</span><br><span class="line"></span><br><span class="line">MessageExt messageExt &#x3D; msgs.get(msgs.size() - 1);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;获取分区最大的消息offet</span><br><span class="line"></span><br><span class="line">String property &#x3D; messageExt.getProperty(MessageConst.PROPERTY_MAX_OFFSET);</span><br><span class="line"></span><br><span class="line">if (property !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;计算还有多少消息未被消费</span><br><span class="line"></span><br><span class="line">long accTotal &#x3D; Long.parseLong(property) - messageExt.getQueueOffset();</span><br><span class="line"></span><br><span class="line">if (accTotal &gt; 0) &#123;</span><br><span class="line"></span><br><span class="line">this.msgAccCnt &#x3D; accTotal;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;putMessage exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return dispatchToConsume;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>putMessage方法调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#pullMessage</span><br><span class="line"></span><br><span class="line">boolean dispathToConsume &#x3D; processQueue.putMessage(pullResult.getMsgFoundList())</span><br><span class="line"></span><br><span class="line">@2 ConsumeMessageOrderlyService#submitConsumeRequest</span><br><span class="line"></span><br><span class="line">if (dispathToConsume) &#123; &#x2F;&#x2F;dispathToConsume顺序消费返回结果为true</span><br><span class="line"></span><br><span class="line">ConsumeRequest consumeRequest &#x3D;</span><br><span class="line"></span><br><span class="line">new ConsumeRequest(processQueue, messageQueue);</span><br><span class="line"></span><br><span class="line">this.consumeExecutor.submit(consumeRequest);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@3 PullConsumerImpl#registerPullTaskCallback</span><br><span class="line"></span><br><span class="line">pq.putMessage(pullResult.getMsgFoundList());</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在拉取消息后处理消息时，提交给ProcessQueue#putMessage中红黑树msgTreeMap存储一份数据，并统计消息的数量以及还有多少消息未被拉取；返回结果dispatchToConsume如果true表明消费集合有数据，顺序消息会据此构造消费请求继续处理。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="getMaxSpan方法"><a href="#getMaxSpan方法" class="headerlink" title="getMaxSpan方法"></a>getMaxSpan方法</h2><p>getMaxSpan方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 获取当前消息最大间隔</span><br><span class="line"></span><br><span class="line">\* 消息队列第一条消息与最后一条消息的偏移量差值</span><br><span class="line"></span><br><span class="line">\* @return</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public long getMaxSpan() &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.readLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">if (!this.msgTreeMap.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">return this.msgTreeMap.lastKey() - this.msgTreeMap.firstKey();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.readLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;getMaxSpan exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return 0;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>getMaxSpan方法调用</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#pullMessage</span><br><span class="line"></span><br><span class="line">f (!this.consumeOrderly) &#123;&#x2F;&#x2F;非顺序消费</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;并发处理的消息跨度不能超过2000，超过2000，延迟50秒进行拉去</span><br><span class="line"></span><br><span class="line">if (processQueue.getMaxSpan() &gt; this.defaultMQPushConsumer.getConsumeConcurrentlyMaxSpan()) &#123;</span><br><span class="line"></span><br><span class="line">this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);</span><br><span class="line"></span><br><span class="line">if ((flowControlTimes2++ % 1000) &#x3D;&#x3D; 0) &#123; &#x2F;&#x2F;每出发1000次打印流控日志</span><br><span class="line"></span><br><span class="line">log.warn(</span><br><span class="line"></span><br><span class="line">&quot;the queue&#39;s messages, span too long, so do flow control, minOffset&#x3D;&#123;&#125;, maxOffset&#x3D;&#123;&#125;, maxSpan&#x3D;&#123;&#125;, pullRequest&#x3D;&#123;&#125;, flowControlTimes&#x3D;&#123;&#125;&quot;,</span><br><span class="line"></span><br><span class="line">processQueue.getMsgTreeMap().firstKey(), processQueue.getMsgTreeMap().lastKey(), processQueue.getMaxSpan(),</span><br><span class="line"></span><br><span class="line">pullRequest, flowControlTimes2);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：getMaxSpan方法计算已拉取消息队列第一条消息与最后一条消息的偏移量差值，即拉取消息的数量跨度，在并发消息时调用，如果该跨度大于2000则延迟50秒再拉取数据。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="removeMessage方法"><a href="#removeMessage方法" class="headerlink" title="removeMessage方法"></a>removeMessage方法</h2><p>removeMessage方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 将消息从红黑树msgTreeMap中移除</span><br><span class="line"></span><br><span class="line">\* @param msgs</span><br><span class="line"></span><br><span class="line">\* @return</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public long removeMessage(final List&lt;MessageExt&gt; msgs) &#123;</span><br><span class="line"></span><br><span class="line">long result &#x3D; -1;</span><br><span class="line"></span><br><span class="line">final long now &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">this.lastConsumeTimestamp &#x3D; now;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">if (!msgTreeMap.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">result &#x3D; this.queueOffsetMax + 1;</span><br><span class="line"></span><br><span class="line">int removedCnt &#x3D; 0;</span><br><span class="line"></span><br><span class="line">for (MessageExt msg : msgs) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;移除消息</span><br><span class="line"></span><br><span class="line">MessageExt prev &#x3D; msgTreeMap.remove(msg.getQueueOffset());</span><br><span class="line"></span><br><span class="line">if (prev !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">removedCnt--;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">msgCount.addAndGet(removedCnt);&#x2F;&#x2F;消息总数扣除</span><br><span class="line"></span><br><span class="line">if (!msgTreeMap.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">result &#x3D; msgTreeMap.firstKey(); &#x2F;&#x2F;第一条消息的偏移量</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable t) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;removeMessage exception&quot;, t);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return result;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>removeMessage方法调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageConcurrentlyService#processConsumeResult</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;消费完毕后从ProcessQueue中清除这批消息</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;offset为清除这批偏移量后processQueue.msgTreeMap中最小的偏移量</span><br><span class="line"></span><br><span class="line">long offset &#x3D; consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());</span><br></pre></td></tr></table></figure>
+
+
+
+<p>```</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：removeMessage方法在并发消费后进行调用，消息处理完了将ProcessQueue中红黑树这批消息移除。</span><br></pre></td></tr></table></figure>
+
+<h2 id="cleanExpiredMsg方法"><a href="#cleanExpiredMsg方法" class="headerlink" title="cleanExpiredMsg方法"></a>cleanExpiredMsg方法</h2><p>cleanExpiredMsg方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* @param pushConsumer</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public void cleanExpiredMsg(DefaultMQPushConsumer pushConsumer) &#123;</span><br><span class="line"></span><br><span class="line">if (pushConsumer.getDefaultMQPushConsumerImpl().isConsumeOrderly()) &#123;</span><br><span class="line"></span><br><span class="line">return;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;每次调用最多清理16条</span><br><span class="line"></span><br><span class="line">int loop &#x3D; msgTreeMap.size() &lt; 16 ? msgTreeMap.size() : 16;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; loop; i++) &#123;</span><br><span class="line"></span><br><span class="line">MessageExt msg &#x3D; null;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.readLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;默认超过15分钟未消费的消息将延迟3个延迟级别再消费</span><br><span class="line"></span><br><span class="line">if (!msgTreeMap.isEmpty() &amp;&amp; System.currentTimeMillis() - Long.parseLong(MessageAccessor.getConsumeStartTimeStamp(msgTreeMap.firstEntry().getValue())) &gt; pushConsumer.getConsumeTimeout() * 60 * 1000) &#123;</span><br><span class="line"></span><br><span class="line">msg &#x3D; msgTreeMap.firstEntry().getValue();</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.readLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;getExpiredMsg exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;返回broker，延迟3个级别消费</span><br><span class="line"></span><br><span class="line">pushConsumer.sendMessageBack(msg, 3);</span><br><span class="line"></span><br><span class="line">log.info(&quot;send expire msg back. topic&#x3D;&#123;&#125;, msgId&#x3D;&#123;&#125;, storeHost&#x3D;&#123;&#125;, queueId&#x3D;&#123;&#125;, queueOffset&#x3D;&#123;&#125;&quot;, msg.getTopic(), msg.getMsgId(), msg.getStoreHost(), msg.getQueueId(), msg.getQueueOffset());</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">if (!msgTreeMap.isEmpty() &amp;&amp; msg.getQueueOffset() &#x3D;&#x3D; msgTreeMap.firstKey()) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将消息移出</span><br><span class="line"></span><br><span class="line">msgTreeMap.remove(msgTreeMap.firstKey());</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;send expired msg exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;getExpiredMsg exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;send expired msg exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>cleanExpiredMsg方法调用</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageConcurrentlyService#start()</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;定时任务15分钟运行一次</span><br><span class="line"></span><br><span class="line">public void start() &#123;</span><br><span class="line"></span><br><span class="line">this.cleanExpireMsgExecutors.scheduleAtFixedRate(new Runnable() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public void run() &#123;</span><br><span class="line"></span><br><span class="line">cleanExpireMsg();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;, this.defaultMQPushConsumer.getConsumeTimeout(), this.defaultMQPushConsumer.getConsumeTimeout(), TimeUnit.MINUTES);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">private void cleanExpireMsg() &#123;</span><br><span class="line"></span><br><span class="line">Iterator&lt;Map.Entry&lt;MessageQueue, ProcessQueue&gt;&gt; it &#x3D; this.defaultMQPushConsumerImpl.getRebalanceImpl().getProcessQueueTable().entrySet().iterator();</span><br><span class="line"></span><br><span class="line">while (it.hasNext()) &#123;</span><br><span class="line"></span><br><span class="line">Map.Entry&lt;MessageQueue, ProcessQueue&gt; next &#x3D; it.next();</span><br><span class="line"></span><br><span class="line">ProcessQueue pq &#x3D; next.getValue();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;清理过期消息</span><br><span class="line"></span><br><span class="line">pq.cleanExpiredMsg(this.defaultMQPushConsumer);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：cleanExpiredMsg方法在并发消费中调用，每个15分钟执行一次；该方法会对超过15分钟未被消费的数据进行清理，每次最多清理16条。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="takeMessags方法"><a href="#takeMessags方法" class="headerlink" title="takeMessags方法"></a>takeMessags方法</h2><p>takeMessags方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 从ProcessQueue中取出batchSize条消息</span><br><span class="line"></span><br><span class="line">\* @param batchSize</span><br><span class="line"></span><br><span class="line">\* @return</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public List&lt;MessageExt&gt; takeMessags(final int batchSize) &#123;</span><br><span class="line"></span><br><span class="line">List&lt;MessageExt&gt; result &#x3D; new ArrayList&lt;MessageExt&gt;(batchSize);</span><br><span class="line"></span><br><span class="line">final long now &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">this.lastConsumeTimestamp &#x3D; now;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">if (!this.msgTreeMap.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; batchSize; i++) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;消息从红黑树中取出</span><br><span class="line"></span><br><span class="line">Map.Entry&lt;Long, MessageExt&gt; entry &#x3D; this.msgTreeMap.pollFirstEntry();</span><br><span class="line"></span><br><span class="line">if (entry !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">result.add(entry.getValue());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;取出的消息在msgTreeMapTemp中存储一份</span><br><span class="line"></span><br><span class="line">msgTreeMapTemp.put(entry.getKey(), entry.getValue());</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (result.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">consuming &#x3D; false;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;take Messages exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return result;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>takeMessags方法调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageOrderlyService#ConsumeRequest</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;取出消息</span><br><span class="line"></span><br><span class="line">List&lt;MessageExt&gt; msgs &#x3D; this.processQueue.takeMessags(consumeBatchSize);</span><br><span class="line"></span><br><span class="line">if (!msgs.isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;客户端消费消息</span><br><span class="line"></span><br><span class="line">status &#x3D; messageListener.consumeMessage(Collections.unmodifiableList(msgs), context);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：顺序消费时通过ProcessQueue#takeMessags获取特定数量的消息（默认1条）并传给客户端Listener进行处理。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="rollback方法"><a href="#rollback方法" class="headerlink" title="rollback方法"></a>rollback方法</h2><p>rollback方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 将msgTreeMapTmp中所有消息重新放入到msgTreeMap并清除msgTreeMapTmp</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public void rollback() &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.msgTreeMap.putAll(this.msgTreeMapTemp);</span><br><span class="line"></span><br><span class="line">this.msgTreeMapTemp.clear();</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;rollback exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>rollback方法调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageOrderlyService#processConsumeResult</span><br><span class="line"></span><br><span class="line">case ROLLBACK:</span><br><span class="line"></span><br><span class="line">consumeRequest.getProcessQueue().rollback();</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在顺序消费客户端处理消息后，如果消息处理结果的状态为ROLLBACK，此时调用ProcessQueue#rollback方法；将msgTreeMapTmp中的消息重新写回红黑树msgTreeMap中；ROLLBACK此状态在顺序消费时已不建议使用。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="commit方法"><a href="#commit方法" class="headerlink" title="commit方法"></a>commit方法</h2><p>commit方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 将msgTreeMapTmp中的消息清除，表示成功处理了该批消息</span><br><span class="line"></span><br><span class="line">\* @return</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public long commit() &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">Long offset &#x3D; this.msgTreeMapTemp.lastKey();</span><br><span class="line"></span><br><span class="line">msgCount.addAndGet(this.msgTreeMapTemp.size() * (-1));</span><br><span class="line"></span><br><span class="line">this.msgTreeMapTemp.clear();</span><br><span class="line"></span><br><span class="line">if (offset !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">return offset + 1; &#x2F;&#x2F;返回下一条消息offset</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;commit exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return -1;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>commit方法调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageOrderlyService#processConsumeResult</span><br><span class="line"></span><br><span class="line">case SUCCESS:</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;清空msgTreeMapTemp</span><br><span class="line"></span><br><span class="line">commitOffset &#x3D; consumeRequest.getProcessQueue().commit();</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在顺序消费客户端处理消息状态为成功时，内存中消费偏移量提交即ProcessQueue#commit清空msgTreeMapTemp临时红黑树中的数据。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="makeMessageToCosumeAgain方法"><a href="#makeMessageToCosumeAgain方法" class="headerlink" title="makeMessageToCosumeAgain方法"></a>makeMessageToCosumeAgain方法</h2><p>makeMessageToCosumeAgain方法代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 重新消费该批消息</span><br><span class="line"></span><br><span class="line">\* @param msgs</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public void makeMessageToCosumeAgain(List&lt;MessageExt&gt; msgs) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">for (MessageExt msg : msgs) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将消息从msgTreeMapTemp移除</span><br><span class="line"></span><br><span class="line">this.msgTreeMapTemp.remove(msg.getQueueOffset());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将该批消息重新放入msgTreeMap</span><br><span class="line"></span><br><span class="line">this.msgTreeMap.put(msg.getQueueOffset(), msg);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; finally &#123;</span><br><span class="line"></span><br><span class="line">this.lockTreeMap.writeLock().unlock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;makeMessageToCosumeAgain exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>makeMessageToCosumeAgain方法调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">case SUSPEND_CURRENT_QUEUE_A_MOMENT:</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;重新消费该批信息</span><br><span class="line"></span><br><span class="line">onsumeRequest.getProcessQueue().makeMessageToCosumeAgain(msgs);</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：akeMessageToCosumeAgain在顺序消费客户端返回消息状态为SUSPEND_CURRENT_QUEUE_A_MOMENT时调用；将消息从msgTreeMapTemp移除，并将该批消息重新放入msgTreeMap。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>ProcessQueue作为MessageQueue在消费端的镜像，从负载均衡、消息拉取、消费状态处理、offset提交，控制着整个消费的脉搏，尤其在顺序消费中参与更多。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/dd191b8b/" rel="prev" title="MQ31# RocketMQ客户端PUSH消费--负载均衡">
+      <i class="fa fa-chevron-left"></i> MQ31# RocketMQ客户端PUSH消费--负载均衡
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/9c431d59/" rel="next" title="MQ33# RocketMQ消费--Broker端处理逻辑">
+      MQ33# RocketMQ消费--Broker端处理逻辑 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%80%9D%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">问题思考</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ProcessQueue%E6%96%B9%E6%B3%95%E6%A2%B3%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">ProcessQueue方法梳理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#isLockExpired%E6%96%B9%E6%B3%95"><span class="nav-number">2.1.</span> <span class="nav-text">isLockExpired方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#isPullExpired%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.</span> <span class="nav-text">isPullExpired方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#putMessage%E6%96%B9%E6%B3%95"><span class="nav-number">2.3.</span> <span class="nav-text">putMessage方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#getMaxSpan%E6%96%B9%E6%B3%95"><span class="nav-number">2.4.</span> <span class="nav-text">getMaxSpan方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#removeMessage%E6%96%B9%E6%B3%95"><span class="nav-number">2.5.</span> <span class="nav-text">removeMessage方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cleanExpiredMsg%E6%96%B9%E6%B3%95"><span class="nav-number">2.6.</span> <span class="nav-text">cleanExpiredMsg方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#takeMessags%E6%96%B9%E6%B3%95"><span class="nav-number">2.7.</span> <span class="nav-text">takeMessags方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rollback%E6%96%B9%E6%B3%95"><span class="nav-number">2.8.</span> <span class="nav-text">rollback方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#commit%E6%96%B9%E6%B3%95"><span class="nav-number">2.9.</span> <span class="nav-text">commit方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#makeMessageToCosumeAgain%E6%96%B9%E6%B3%95"><span class="nav-number">2.10.</span> <span class="nav-text">makeMessageToCosumeAgain方法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

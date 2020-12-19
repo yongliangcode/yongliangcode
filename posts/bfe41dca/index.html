@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="发送接口分类* 按照发送方式分类  同步发送：等待返回结果  异步发送：异步回调发送结果  一次发送：无结果返回   * 按一次发送消息数量分类  单条消息发送  批量消息发送   * 按照是否指定MessageQueue分类  随机选择发送  指定特定MessageQueue  自定义MessageQueue选择器   详细接口 |接口 |描述 | | — | — | | send(final">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQ38# RocketMQ消息发送（二）">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/bfe41dca/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="发送接口分类* 按照发送方式分类  同步发送：等待返回结果  异步发送：异步回调发送结果  一次发送：无结果返回   * 按一次发送消息数量分类  单条消息发送  批量消息发送   * 按照是否指定MessageQueue分类  随机选择发送  指定特定MessageQueue  自定义MessageQueue选择器   详细接口 |接口 |描述 | | — | — | | send(final">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-20T15:29:01.000Z">
+<meta property="article:modified_time" content="2020-12-19T06:57:46.538Z">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/bfe41dca/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MQ38# RocketMQ消息发送（二） | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bfe41dca/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MQ38# RocketMQ消息发送（二）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:29:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:29:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 14:57:46" itemprop="dateModified" datetime="2020-12-19T14:57:46+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="发送接口分类"><a href="#发送接口分类" class="headerlink" title="发送接口分类"></a>发送接口分类</h1><p>* 按照发送方式分类</p>
+<ol>
+<li><p>同步发送：等待返回结果</p>
+</li>
+<li><p>异步发送：异步回调发送结果</p>
+</li>
+<li><p>一次发送：无结果返回</p>
+</li>
+</ol>
+<p>* 按一次发送消息数量分类</p>
+<ol>
+<li><p>单条消息发送</p>
+</li>
+<li><p>批量消息发送</p>
+</li>
+</ol>
+<p>* 按照是否指定MessageQueue分类</p>
+<ol>
+<li><p>随机选择发送</p>
+</li>
+<li><p>指定特定MessageQueue</p>
+</li>
+<li><p>自定义MessageQueue选择器</p>
+</li>
+</ol>
+<p><strong>详细接口</strong></p>
+<p>|接口 |描述 |</p>
+<p>| — | — |</p>
+<p>| send(final Message msg) |同步单条消息发送 |</p>
+<p>| send(final Message msg, final long timeout) |同步单条消息发送（超时设置） |</p>
+<p>| send(final Message msg, final SendCallback sendCallback) | 异步单条消息发送 |</p>
+<p>| send(final Message msg, final SendCallback sendCallback, final long timeout) |异步单条消息发送（超时） |</p>
+<p>|sendOneway(final Message msg) | 一次单条消息发送 |</p>
+<p>| send(final Message msg, final MessageQueue mq) | 同步单条发送指定Queue |</p>
+<p>| send(final Message msg, final MessageQueue mq, final long timeout) | 同步单条发送指定 Queue（超时设置） |</p>
+<p>| send(final Message msg, final MessageQueue mq, final SendCallback sendCallback) |异步单条发送指定 Queue |</p>
+<p>| send(final Message msg, final MessageQueue mq, final SendCallback sendCallback, long timeout) |异步单条发送指定 Queue（超时设置） |</p>
+<p>| sendOneway(final Message msg, final MessageQueue mq) |一次单条发送指定 Queue |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg) |同步单条发送自定义实现Queue选择器 |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg,final long timeout) |同步单条发送自定义实现Queue选择器（超时设置） |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg, final SendCallback sendCallback) |异步单条发送自定义实现Queue选择器 |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg,final SendCallback sendCallback, final long timeout) |异步单条发送自定义实现Queue选择器（超时设置） |</p>
+<p>|sendOneway(final Message msg, final MessageQueueSelector selector, final Object arg) |一次单条发送自定义实现Queue选择器 |</p>
+<p>|send(final Collection<Message> msgs) |批量同步发送 |</p>
+<p>|send(final Collection<Message> msgs, final long timeout) |批量同步发送（超时设置） |</p>
+<p>|send(final Collection<Message> msgs, final MessageQueue mq) |批量同步指定Queue发送 |</p>
+<p>|send(final Collection<Message> msgs, final MessageQueue mq, final long timeout)|批量同步指定Queue发送（超时设置）|</p>
+<h1 id="随机发送与自定义MessageQueue选择器"><a href="#随机发送与自定义MessageQueue选择器" class="headerlink" title="随机发送与自定义MessageQueue选择器"></a>随机发送与自定义MessageQueue选择器</h1><p>* 随机发送：消息发往topic的哪个Queue是不确定的</p>
+<p>* 自定义MessageQueue发送：按照指定的算法路由到特定的MessageQueue，最常见需求，相同的key路由到相同的队列，实现发送分区有序</p>
+<p><strong>随机发送</strong></p>
+<p>* 通过自增数取模消息队列数选择队列</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> MessageQueue <span class="title">selectOneMessageQueue</span><span class="params">(<span class="keyword">final</span> TopicPublishInfo tpInfo, <span class="keyword">final</span> String lastBrokerName)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//开启高可用(开启故障延迟机制)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.sendLatencyFaultEnable) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//自增序号</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> index = tpInfo.getSendWhichQueue().getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; tpInfo.getMessageQueueList().size(); i++) &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//取模消息队列数</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (pos &lt; <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">pos = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">MessageQueue mq = tpInfo.getMessageQueueList().get(pos);</span><br><span class="line"></span><br><span class="line"><span class="comment">//判断队列是否为可用的</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (latencyFaultTolerance.isAvailable(mq.getBrokerName())) &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//正常情况下lastBrokerName==null;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//在消息重试（上次发送失败重新发送时）上次选择broker可用，优先选择</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">null</span> == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> mq;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> String notBestBroker = latencyFaultTolerance.pickOneAtLeast();</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (writeQueueNums &gt; <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> MessageQueue mq = tpInfo.selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (notBestBroker != <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line">mq.setBrokerName(notBestBroker);</span><br><span class="line"></span><br><span class="line">mq.setQueueId(tpInfo.getSendWhichQueue().getAndIncrement() % writeQueueNums);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> mq;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line">latencyFaultTolerance.remove(notBestBroker);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(<span class="string">&quot;Error occurred when selecting message queue&quot;</span>, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> tpInfo.selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//不开启高可用</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> tpInfo.selectOneMessageQueue(lastBrokerName);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> MessageQueue <span class="title">selectOneMessageQueue</span><span class="params">(<span class="keyword">final</span> String lastBrokerName)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//轮询消息队列的过程</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (lastBrokerName == <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> index = <span class="keyword">this</span>.sendWhichQueue.getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="keyword">this</span>.messageQueueList.size(); i++) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> pos = Math.abs(index++) % <span class="keyword">this</span>.messageQueueList.size();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (pos &lt; <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">pos = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">MessageQueue mq = <span class="keyword">this</span>.messageQueueList.get(pos);</span><br><span class="line"></span><br><span class="line"><span class="comment">//规避上次发送失败的broker</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!mq.getBrokerName().equals(lastBrokerName)) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> mq;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>自定义Queue选择器</strong></p>
+<p>* 分区有序：根据key进行路由选择，相同的key会路由到相同MessageQueue</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">private static MessageQueueSelector hashSelector &#x3D; new MessageQueueSelector() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public MessageQueue select(List&lt;MessageQueue&gt; mqs, Message msg, Object arg) &#123;</span><br><span class="line"></span><br><span class="line">int id &#x3D; msg.getKeys().hashCode() % mqs.size();</span><br><span class="line"></span><br><span class="line">if (id &lt; 0) &#123;</span><br><span class="line"></span><br><span class="line">return mqs.get(-id);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">return mqs.get(id);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="发送Broker容错处理"><a href="#发送Broker容错处理" class="headerlink" title="发送Broker容错处理"></a>发送Broker容错处理</h1><p><strong>两种Broker规避时长</strong></p>
+<p>* 正常发送规避时长为发送前后时间差值(endTimestamp-beginTimestampPrev)</p>
+<p>* 异常发送规避时长为30秒.</p>
+<p>为何是30秒呢? NameSrv每10秒中清理下线broker，在启动时每30秒清理broker本地缓存表</p>
+<p>* 开启故障延迟需要设置producer.setSendLatencyFaultEnable(true)，默认为false不开启</p>
+<p><strong>正常发送入参isolation为false</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">beginTimestampPrev &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">sendResult &#x3D; this.sendKernelImpl(msg, mq, communicationMode, sendCallback, topicPublishInfo, timeout);</span><br><span class="line"></span><br><span class="line">endTimestamp &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, false);</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>异常发送时入参isolation为true</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">&#125; catch (RemotingException e) &#123;</span><br><span class="line"></span><br><span class="line">endTimestamp &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, true);</span><br><span class="line"></span><br><span class="line">log.warn(String.format(&quot;sendKernelImpl exception, resend at once, InvokeID: %s, RT: %sms, Broker: %s&quot;, invokeID, endTimestamp - beginTimestampPrev, mq), e);</span><br><span class="line"></span><br><span class="line">log.warn(msg.toString());</span><br><span class="line"></span><br><span class="line">exception &#x3D; e;</span><br><span class="line"></span><br><span class="line">continue;</span><br><span class="line"></span><br><span class="line">&#125; catch (MQClientException e) &#123;</span><br><span class="line"></span><br><span class="line">endTimestamp &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, true);</span><br><span class="line"></span><br><span class="line">log.warn(String.format(&quot;sendKernelImpl exception, resend at once, InvokeID: %s, RT: %sms, Broker: %s&quot;, invokeID, endTimestamp - beginTimestampPrev, mq), e);</span><br><span class="line"></span><br><span class="line">log.warn(msg.toString());</span><br><span class="line"></span><br><span class="line">exception &#x3D; e;</span><br><span class="line"></span><br><span class="line">continue;</span><br><span class="line"></span><br><span class="line">&#125; catch (MQBrokerException e) &#123;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>容错接口方法</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;代码位置：MQFaultStrategy-&gt;updateFaultItem</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* @param brokerName</span><br><span class="line"></span><br><span class="line">\* @param currentLatency 本次消息延迟时间（发送产生异常时的时间戳-开始发送消息时的时间戳）</span><br><span class="line"></span><br><span class="line">\* @param isolation 是否隔离，true 使用默认30s来计算Broker规避时长；如果false则使用本次消息发送延迟时间来计算Broker规避时长</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public void updateFaultItem(final String brokerName, final long currentLatency, boolean isolation) &#123;</span><br><span class="line"></span><br><span class="line">if (this.sendLatencyFaultEnable) &#123;</span><br><span class="line"></span><br><span class="line">long duration &#x3D; computeNotAvailableDuration(isolation ? 30000 : currentLatency);</span><br><span class="line"></span><br><span class="line">this.latencyFaultTolerance.updateFaultItem(brokerName, currentLatency, duration);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) &#123;</span><br><span class="line"></span><br><span class="line">FaultItem old &#x3D; this.faultItemTable.get(name);</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; old) &#123;</span><br><span class="line"></span><br><span class="line">final FaultItem faultItem &#x3D; new FaultItem(name);</span><br><span class="line"></span><br><span class="line">faultItem.setCurrentLatency(currentLatency);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;startTimeStamp &#x3D; 当前系统时间+需要规避的时间</span><br><span class="line"></span><br><span class="line">faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);</span><br><span class="line"></span><br><span class="line">old &#x3D; this.faultItemTable.putIfAbsent(name, faultItem);</span><br><span class="line"></span><br><span class="line">if (old !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">old.setCurrentLatency(currentLatency);</span><br><span class="line"></span><br><span class="line">old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">old.setCurrentLatency(currentLatency);</span><br><span class="line"></span><br><span class="line">old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>发送时的容错判断</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;代码位置：MQFaultStrategy-&gt;selectOneMessageQueue</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;判断队列是否为可用的</span><br><span class="line"></span><br><span class="line">if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;正常情况下lastBrokerName&#x3D;&#x3D;null;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;在消息重试（上次发送失败重新发送时）上次选择broker可用，优先选择</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; lastBrokerName || mq.getBrokerName().equals(lastBrokerName))</span><br><span class="line"></span><br><span class="line">return mq;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public boolean isAvailable(final String name) &#123;</span><br><span class="line"></span><br><span class="line">final FaultItem faultItem &#x3D; this.faultItemTable.get(name);</span><br><span class="line"></span><br><span class="line">if (faultItem !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">return faultItem.isAvailable();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return true;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public boolean isAvailable() &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;判断broker是否可用，startTimestamp在设置时：&#x3D; 当前系统时间+需要规避的时间</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;所以此处判断当前时间与startTimestamp的大小即可</span><br><span class="line"></span><br><span class="line">return (System.currentTimeMillis() - startTimestamp) &gt;&#x3D; 0;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="发送失败时的重试次数"><a href="#发送失败时的重试次数" class="headerlink" title="发送失败时的重试次数"></a>发送失败时的重试次数</h1><p>* 同步发送和异步发送在发送失败时，会进行消息重试。一次发送没有消息重试。</p>
+<p>* 重试次数由retryTimesWhenSendFailed和retryTimesWhenSendAsyncFailed参数决定，默认2. 总共重试3次。超过次数依然失败返回异常错误</p>
+<p><strong>同步发送重试次数代码块</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;代码位置：DefaultMQProducerImpl-&gt;sendDefaultImpl()</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;同步发送默认3(1+2)次 其他1次</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;异步发送通过retryTimesWhenSendAsyncFailed来控制，在发送结果返回后再处理</span><br><span class="line"></span><br><span class="line">int timesTotal &#x3D; communicationMode &#x3D;&#x3D; CommunicationMode.SYNC ? 1 + this.defaultMQProducer.getRetryTimesWhenSendFailed() : 1;</span><br><span class="line"></span><br><span class="line">int times &#x3D; 0;</span><br><span class="line"></span><br><span class="line">String[] brokersSent &#x3D; new String[timesTotal];</span><br><span class="line"></span><br><span class="line">for (; times &lt; timesTotal; times++) &#123;</span><br><span class="line"></span><br><span class="line">String lastBrokerName &#x3D; null &#x3D;&#x3D; mq ? null : mq.getBrokerName();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;选一个MessageQueue进行发送</span><br><span class="line"></span><br><span class="line">MessageQueue tmpmq &#x3D; this.selectOneMessageQueue(topicPublishInfo, lastBrokerName);</span><br><span class="line"></span><br><span class="line">if (tmpmq !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">mq &#x3D; tmpmq;</span><br><span class="line"></span><br><span class="line">brokersSent[times] &#x3D; mq.getBrokerName();</span><br><span class="line"></span><br><span class="line">....</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>异步发送重试次数代码块</strong></p>
+<p>* 由if (needRetry &amp;&amp; tmp &lt;= timesTotal) 判断是否达到重试的阀值</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;代码位置：MQClientAPIImpl.java</span><br><span class="line"></span><br><span class="line">private void sendMessageAsync(&#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final String addr, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final String brokerName, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final Message msg, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final long timeoutMillis, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final RemotingCommand request, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendCallback sendCallback, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final TopicPublishInfo topicPublishInfo, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final MQClientInstance instance, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final int retryTimesWhenSendFailed, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final AtomicInteger times, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendMessageContext context, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final DefaultMQProducerImpl producer &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">) throws InterruptedException, RemotingException &#123;</span><br><span class="line"></span><br><span class="line">this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public void operationComplete(ResponseFuture responseFuture) &#123;</span><br><span class="line"></span><br><span class="line">RemotingCommand response &#x3D; responseFuture.getResponseCommand();</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; sendCallback &amp;&amp; response !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; MQClientAPIImpl.this.processSendResponse(brokerName, msg, response);</span><br><span class="line"></span><br><span class="line">if (context !&#x3D; null &amp;&amp; sendResult !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">context.setSendResult(sendResult);</span><br><span class="line"></span><br><span class="line">context.getProducer().executeSendMessageHookAfter(context);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), false);</span><br><span class="line"></span><br><span class="line">return;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (response !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; MQClientAPIImpl.this.processSendResponse(brokerName, msg, response);</span><br><span class="line"></span><br><span class="line">assert sendResult !&#x3D; null;</span><br><span class="line"></span><br><span class="line">if (context !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">context.setSendResult(sendResult);</span><br><span class="line"></span><br><span class="line">context.getProducer().executeSendMessageHookAfter(context);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">sendCallback.onSuccess(sendResult);</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), false);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), true);</span><br><span class="line"></span><br><span class="line">onExceptionImpl(brokerName, msg, 0L, request, sendCallback, topicPublishInfo, instance,</span><br><span class="line"></span><br><span class="line">retryTimesWhenSendFailed, times, e, context, false, producer);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), true);</span><br><span class="line"></span><br><span class="line">if (!responseFuture.isSendRequestOK()) &#123;</span><br><span class="line"></span><br><span class="line">MQClientException ex &#x3D; new MQClientException(&quot;send request failed&quot;, responseFuture.getCause());</span><br><span class="line"></span><br><span class="line">onExceptionImpl(brokerName, msg, 0L, request, sendCallback, topicPublishInfo, instance,</span><br><span class="line"></span><br><span class="line">retryTimesWhenSendFailed, times, ex, context, true, producer);</span><br><span class="line"></span><br><span class="line">&#125; else if (responseFuture.isTimeout()) &#123;</span><br><span class="line"></span><br><span class="line">MQClientException ex &#x3D; new MQClientException(&quot;wait response timeout &quot; + responseFuture.getTimeoutMillis() + &quot;ms&quot;,</span><br><span class="line"></span><br><span class="line">responseFuture.getCause());</span><br><span class="line"></span><br><span class="line">onExceptionImpl(brokerName, msg, 0L, request, sendCallback, topicPublishInfo, instance,</span><br><span class="line"></span><br><span class="line">retryTimesWhenSendFailed, times, ex, context, true, producer);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">MQClientException ex &#x3D; new MQClientException(&quot;unknow reseaon&quot;, responseFuture.getCause());</span><br><span class="line"></span><br><span class="line">onExceptionImpl(brokerName, msg, 0L, request, sendCallback, topicPublishInfo, instance,</span><br><span class="line"></span><br><span class="line">retryTimesWhenSendFailed, times, ex, context, true, producer);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">private void onExceptionImpl(final String brokerName, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final Message msg, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final long timeoutMillis, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final RemotingCommand request, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendCallback sendCallback, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final TopicPublishInfo topicPublishInfo, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final MQClientInstance instance, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final int timesTotal, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final AtomicInteger curTimes, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final Exception e, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendMessageContext context, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final boolean needRetry, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final DefaultMQProducerImpl producer &#x2F;&#x2F; 12</span><br><span class="line"></span><br><span class="line">) &#123;</span><br><span class="line"></span><br><span class="line">int tmp &#x3D; curTimes.incrementAndGet();</span><br><span class="line"></span><br><span class="line">if (needRetry &amp;&amp; tmp &lt;&#x3D; timesTotal) &#123;</span><br><span class="line"></span><br><span class="line">String retryBrokerName &#x3D; brokerName;&#x2F;&#x2F;by default, it will send to the same broker</span><br><span class="line"></span><br><span class="line">if (topicPublishInfo !&#x3D; null) &#123; &#x2F;&#x2F;select one message queue accordingly, in order to determine which broker to send</span><br><span class="line"></span><br><span class="line">MessageQueue mqChosen &#x3D; producer.selectOneMessageQueue(topicPublishInfo, brokerName);</span><br><span class="line"></span><br><span class="line">retryBrokerName &#x3D; mqChosen.getBrokerName();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">String addr &#x3D; instance.findBrokerAddressInPublish(retryBrokerName);</span><br><span class="line"></span><br><span class="line">log.info(&quot;async send msg by retry &#123;&#125; times. topic&#x3D;&#123;&#125;, brokerAddr&#x3D;&#123;&#125;, brokerName&#x3D;&#123;&#125;&quot;, tmp, msg.getTopic(), addr,</span><br><span class="line"></span><br><span class="line">retryBrokerName);</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">request.setOpaque(RemotingCommand.createNewRequestId());</span><br><span class="line"></span><br><span class="line">sendMessageAsync(addr, retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance,</span><br><span class="line"></span><br><span class="line">timesTotal, curTimes, context, producer);</span><br><span class="line"></span><br><span class="line">&#125; catch (InterruptedException e1) &#123;</span><br><span class="line"></span><br><span class="line">onExceptionImpl(retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance, timesTotal, curTimes, e1,</span><br><span class="line"></span><br><span class="line">context, false, producer);</span><br><span class="line"></span><br><span class="line">&#125; catch (RemotingConnectException e1) &#123;</span><br><span class="line"></span><br><span class="line">producer.updateFaultItem(brokerName, 3000, true);</span><br><span class="line"></span><br><span class="line">onExceptionImpl(retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance, timesTotal, curTimes, e1,</span><br><span class="line"></span><br><span class="line">context, true, producer);</span><br><span class="line"></span><br><span class="line">&#125; catch (RemotingTooMuchRequestException e1) &#123;</span><br><span class="line"></span><br><span class="line">onExceptionImpl(retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance, timesTotal, curTimes, e1,</span><br><span class="line"></span><br><span class="line">context, false, producer);</span><br><span class="line"></span><br><span class="line">&#125; catch (RemotingException e1) &#123;</span><br><span class="line"></span><br><span class="line">producer.updateFaultItem(brokerName, 3000, true);</span><br><span class="line"></span><br><span class="line">onExceptionImpl(retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance, timesTotal, curTimes, e1,</span><br><span class="line"></span><br><span class="line">context, true, producer);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">if (context !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">context.setException(e);</span><br><span class="line"></span><br><span class="line">context.getProducer().executeSendMessageHookAfter(context);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">sendCallback.onException(e);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception ignored) &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/d473d7d3/" rel="prev" title="MQ37# RocketMQ消息发送（一）">
+      <i class="fa fa-chevron-left"></i> MQ37# RocketMQ消息发送（一）
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/9126d179/" rel="next" title="MQ39# RocketMQ消息发送Broker端流程处理">
+      MQ39# RocketMQ消息发送Broker端流程处理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E6%8E%A5%E5%8F%A3%E5%88%86%E7%B1%BB"><span class="nav-number">1.</span> <span class="nav-text">发送接口分类</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%9A%8F%E6%9C%BA%E5%8F%91%E9%80%81%E4%B8%8E%E8%87%AA%E5%AE%9A%E4%B9%89MessageQueue%E9%80%89%E6%8B%A9%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">随机发送与自定义MessageQueue选择器</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%91%E9%80%81Broker%E5%AE%B9%E9%94%99%E5%A4%84%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">发送Broker容错处理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E5%A4%B1%E8%B4%A5%E6%97%B6%E7%9A%84%E9%87%8D%E8%AF%95%E6%AC%A1%E6%95%B0"><span class="nav-number">4.</span> <span class="nav-text">发送失败时的重试次数</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

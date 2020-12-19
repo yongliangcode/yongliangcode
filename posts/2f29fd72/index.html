@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="问题思考从官方给的例子入手，代码如下: 示例类：org.apache.rocketmq.example.transaction.TransactionProducer.java 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQ41# RocketMQ特性--事物消息">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/2f29fd72/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="问题思考从官方给的例子入手，代码如下: 示例类：org.apache.rocketmq.example.transaction.TransactionProducer.java 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151320.png">
+<meta property="article:published_time" content="2020-12-20T15:43:01.000Z">
+<meta property="article:modified_time" content="2020-12-19T07:14:07.171Z">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151320.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/2f29fd72/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MQ41# RocketMQ特性--事物消息 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2f29fd72/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MQ41# RocketMQ特性--事物消息
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:43:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:43:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:14:07" itemprop="dateModified" datetime="2020-12-19T15:14:07+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>从官方给的例子入手，代码如下:</p>
+<p>示例类：org.apache.rocketmq.example.transaction.TransactionProducer.java</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line">public static void main(String[] args) throws MQClientException, InterruptedException &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 定义TransactionListener</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; new TransactionListenerImpl();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 使用事务发送Producer</span><br><span class="line"></span><br><span class="line">TransactionMQProducer producer &#x3D; new TransactionMQProducer(&quot;please_rename_unique_group_name&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 定义线程池</span><br><span class="line"></span><br><span class="line">ExecutorService executorService &#x3D; new ThreadPoolExecutor(2, 5, 100, TimeUnit.SECONDS, new ArrayBlockingQueue&lt;Runnable&gt;(2000), new ThreadFactory() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public Thread newThread(Runnable r) &#123;</span><br><span class="line"></span><br><span class="line">Thread thread &#x3D; new Thread(r);</span><br><span class="line"></span><br><span class="line">thread.setName(&quot;client-transaction-msg-check-thread&quot;);</span><br><span class="line"></span><br><span class="line">return thread;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置线程池</span><br><span class="line"></span><br><span class="line">producer.setExecutorService(executorService);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置监听器</span><br><span class="line"></span><br><span class="line">producer.setTransactionListener(transactionListener);</span><br><span class="line"></span><br><span class="line">producer.setNamesrvAddr(&quot;127.0.0.1:9876&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 发送者启动</span><br><span class="line"></span><br><span class="line">producer.start();</span><br><span class="line"></span><br><span class="line">String[] tags &#x3D; new String[] &#123;&quot;TagA&quot;, &quot;TagB&quot;, &quot;TagC&quot;, &quot;TagD&quot;, &quot;TagE&quot;&#125;;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 10; i++) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">Message msg &#x3D;</span><br><span class="line"></span><br><span class="line">new Message(&quot;TopicTest1234&quot;, tags[i % tags.length], &quot;KEY&quot; + i,</span><br><span class="line"></span><br><span class="line">(&quot;Hello RocketMQ &quot; + i).getBytes(RemotingHelper.DEFAULT_CHARSET));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 消息发送</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; producer.sendMessageInTransaction(msg, null);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;%s%n&quot;, sendResult);</span><br><span class="line"></span><br><span class="line">Thread.sleep(10);</span><br><span class="line"></span><br><span class="line">&#125; catch (MQClientException | UnsupportedEncodingException e) &#123;</span><br><span class="line"></span><br><span class="line">e.printStackTrace();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 100000; i++) &#123;</span><br><span class="line"></span><br><span class="line">Thread.sleep(1000);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;发送者关闭</span><br><span class="line"></span><br><span class="line">producer.shutdown();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>从上面客户端例子中思考一些问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. @1定义TransactionListener做什么用？</span><br><span class="line">2. @2定义的TransactionMQProducer与普通Produer区别在哪里？</span><br><span class="line">3. @3定义线程池executorService又是干啥的？</span><br><span class="line">4. @4事务发送者启动发送流程是怎么样？</span><br><span class="line">5. 发送事务消息如何和Broker进行交互的？</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="事务消息客户端发送流程"><a href="#事务消息客户端发送流程" class="headerlink" title="事务消息客户端发送流程"></a>事务消息客户端发送流程</h1><h2 id="事务发送与普通启动差异"><a href="#事务发送与普通启动差异" class="headerlink" title="事务发送与普通启动差异"></a>事务发送与普通启动差异</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">@1 producer.start();</span><br><span class="line"></span><br><span class="line">@2 TransactionMQProducer#start</span><br><span class="line"></span><br><span class="line">this.defaultMQProducerImpl.initTransactionEnv();</span><br><span class="line"></span><br><span class="line">super.start();</span><br><span class="line"></span><br><span class="line">@3 DefaultMQProducerImpl#initTransactionEnv()</span><br><span class="line"></span><br><span class="line">this.checkExecutor &#x3D; producer.getExecutorService();</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：事务发送时比普通发送启动多了initTransactionEnv操作，即：给ExecutorService checkExecutor赋值。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务消息发送调用链"><a href="#事务消息发送调用链" class="headerlink" title="事务消息发送调用链"></a>事务消息发送调用链</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 SendResult sendResult &#x3D; producer.sendMessageInTransaction</span><br><span class="line"></span><br><span class="line">@2 TransactionMQProducer#sendMessageInTransaction</span><br><span class="line"></span><br><span class="line">@3 DefaultMQProducerImpl#sendMessageInTransaction</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务消息发送分析"><a href="#事务消息发送分析" class="headerlink" title="事务消息发送分析"></a>事务消息发送分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; getCheckListener();</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; localTransactionExecuter &amp;&amp; null &#x3D;&#x3D; transactionListener) &#123;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;tranExecutor is null&quot;, null);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Validators.checkMessage(msg, this.defaultMQProducer);</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; null;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 表示消息的prepare消息</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, &quot;true&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 生产者组，用于回查本地事务事，从生产者组中选择随机选择一个生产者即可</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 消息发送</span><br><span class="line"></span><br><span class="line">sendResult &#x3D; this.send(msg);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;send message Exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：DefaultMQProducerImpl#sendKernelImpl</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;事务消息发送，设置PREPARED标记</span><br><span class="line"></span><br><span class="line">final String tranMsg &#x3D; msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (tranMsg !&#x3D; null &amp;&amp; Boolean.parseBoolean(tranMsg)) &#123;</span><br><span class="line"></span><br><span class="line">sysFlag |&#x3D; MessageSysFlag.TRANSACTION_PREPARED_TYPE;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 请求header中设置事务标记</span><br><span class="line"></span><br><span class="line">requestHeader.setSysFlag(sysFlag);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@6 发送消息请求的RequestCode</span><br><span class="line"></span><br><span class="line">request &#x3D; RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1获取TransactionListener即示例代码传入的Listener</span><br><span class="line">@2在消息属性中加入PROPERTY_TRANSACTION_PREPARED &#x3D; &quot;TRAN_MSG&quot;即事务半消息</span><br><span class="line">@3设置ProducerGroup Broker在事务回查时调用</span><br><span class="line">@4事务消息发送采用同步发送，发送流程与普通消息发送一致</span><br><span class="line">@5请求header中设置事务标记SEND_MESSAGE &#x3D; 10</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务消息发送结果分析"><a href="#事务消息发送结果分析" class="headerlink" title="事务消息发送结果分析"></a>事务消息发送结果分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">LocalTransactionState localTransactionState &#x3D; LocalTransactionState.UNKNOW;</span><br><span class="line"></span><br><span class="line">switch (sendResult.getSendStatus()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">case SEND_OK: &#123;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 执行本地事务</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; transactionListener.executeLocalTransaction(msg, arg);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">case FLUSH_DISK_TIMEOUT:</span><br><span class="line"></span><br><span class="line">case FLUSH_SLAVE_TIMEOUT:</span><br><span class="line"></span><br><span class="line">case SLAVE_NOT_AVAILABLE:</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; LocalTransactionState.ROLLBACK_MESSAGE;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 发送半消息（Prepared）消息成功，设置transactionId。</span><br><span class="line">@2 发送半消息成功后，通过transactionListener回调客户端查询本地事务执行情况，并返回事务执行状态。</span><br><span class="line">LocalTransactionState有COMMIT_MESSAGE、ROLLBACK_MESSAGE、UNKNOW三种状态。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="结束事务分析"><a href="#结束事务分析" class="headerlink" title="结束事务分析"></a>结束事务分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 结束事务，根据返回的事务状态执行提交、回滚、暂时不处理</span><br><span class="line"></span><br><span class="line">this.endTransaction(sendResult, localTransactionState, localException);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(&quot;local transaction execute &quot; + localTransactionState + &quot;, but end broker transaction failed&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">TransactionSendResult transactionSendResult &#x3D; new TransactionSendResult();</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">return transactionSendResult;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：DefaultMQProducerImpl#endTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"></span><br><span class="line">switch (localTransactionState) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 设置事务提交标记Header</span><br><span class="line"></span><br><span class="line">case COMMIT_MESSAGE: requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_COMMIT_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 设置事务回滚标记Header</span><br><span class="line"></span><br><span class="line">case ROLLBACK_MESSAGE:</span><br><span class="line"></span><br><span class="line">requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_ROLLBACK_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 设置事务未知标记Header</span><br><span class="line"></span><br><span class="line">case UNKNOW:</span><br><span class="line"></span><br><span class="line">requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_NOT_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 通过一次发送方式向Broker提交事务 this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, requestHeader, remark,</span><br><span class="line"></span><br><span class="line">this.defaultMQProducer.getSendMsgTimeout());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 根据本地事务执行返回的状态localTransactionState，调用结束事务方法</span><br><span class="line">@2 requestHeader设置事务提交标记0x2 &lt;&lt; 2&#x3D;8</span><br><span class="line">@3 requestHeader设置事务回滚标记0x3 &lt;&lt; 2&#x3D;12</span><br><span class="line">@4 requestHeader设置未知标记0</span><br><span class="line">@5 通过一次发送方式向Broker提交事务 RequestCode为END_TRANSACTION &#x3D; 37</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="事务消息服务端存储流程"><a href="#事务消息服务端存储流程" class="headerlink" title="事务消息服务端存储流程"></a>事务消息服务端存储流程</h1><h2 id="事务消息存储调用链"><a href="#事务消息存储调用链" class="headerlink" title="事务消息存储调用链"></a>事务消息存储调用链</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 SendMessageProcessor#processRequest</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendMessage(ctx, request, mqtraceContext, requestHeader)</span><br><span class="line"></span><br><span class="line">@2 SendMessageProcessor#sendMessage</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务半消息存储代码分析（一）"><a href="#事务半消息存储代码分析（一）" class="headerlink" title="事务半消息存储代码分析（一）"></a>事务半消息存储代码分析（一）</h2><p>方法：SendMessageProcessor#sendMessage</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 可以通过配置来是否接受事务消息存储</span><br><span class="line"></span><br><span class="line">if (traFlag !&#x3D; null &amp;&amp; Boolean.parseBoolean(traFlag)) &#123;</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getBrokerConfig().isRejectTransactionMessage())&#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.NO_PERMISSION);</span><br><span class="line"></span><br><span class="line">response.setRemark(</span><br><span class="line"></span><br><span class="line">&quot;the broker[&quot; + this.brokerController.getBrokerConfig().getBrokerIP1()</span><br><span class="line"></span><br><span class="line">\+ &quot;] sending transaction message is forbidden&quot;);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 prepare消息存储</span><br><span class="line"></span><br><span class="line">putMessageResult &#x3D; this.brokerController.getTransactionalMessageService().prepareMessage(msgInner);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">putMessageResult &#x3D; this.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 可以通过Broker配置属性rejectTransactionMessage来决定是否接受事务消息请求，默认为false即接受。</span><br><span class="line">@2 半消息存储</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h2 id="事务半消息存储代码分析（二）"><a href="#事务半消息存储代码分析（二）" class="headerlink" title="事务半消息存储代码分析（二）"></a>事务半消息存储代码分析（二）</h2><p>方法：TransactionalMessageBridge#putHalfMessage</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public PutMessageResult putHalfMessage(MessageExtBrokerInner messageInner)&#123;</span><br><span class="line"></span><br><span class="line">return store.putMessage(parseHalfMessageInner(messageInner));</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：TransactionalMessageBridge#parseHalfMessageInner</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 备份原主题</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_TOPIC, msgInner.getTopic());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 备份原queueID</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID,</span><br><span class="line"></span><br><span class="line">String.valueOf(msgInner.getQueueId()));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 重置sysFlag</span><br><span class="line"></span><br><span class="line">msgInner.setSysFlag(</span><br><span class="line"></span><br><span class="line">MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), MessageSysFlag.TRANSACTION_NOT_TYPE));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 主题变更 RMQ_SYS_TRANS_HALF_TOPIC</span><br><span class="line"></span><br><span class="line">msgInner.setTopic(TransactionalMessageUtil.buildHalfTopic());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 消息队列变更为0</span><br><span class="line"></span><br><span class="line">msgInner.setQueueId(0);</span><br><span class="line"></span><br><span class="line">msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：半消息在存储前将存储的主题设置为RMQ_SYS_TRANS_HALF_TOPIC，将原来的Topic备份到属性中，同时也备份了原来的QueueId。这也是为什么半消息不会被消费者消费的原因。</span><br></pre></td></tr></table></figure>
+
+<h1 id="事务消息服务端响应结束事务请求"><a href="#事务消息服务端响应结束事务请求" class="headerlink" title="事务消息服务端响应结束事务请求"></a>事务消息服务端响应结束事务请求</h1><h2 id="处理未知类型请求"><a href="#处理未知类型请求" class="headerlink" title="处理未知类型请求"></a>处理未知类型请求</h2><p>方法：EndTransactionProcessor#processRequest</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">case MessageSysFlag.TRANSACTION_NOT_TYPE: &#123;</span><br><span class="line"></span><br><span class="line">LOGGER.warn(&quot;The producer[&#123;&#125;] end transaction in sending message, and it&#39;s pending status.&quot;</span><br><span class="line"></span><br><span class="line">\+ &quot;RequestHeader: &#123;&#125; Remark: &#123;&#125;&quot;,</span><br><span class="line"></span><br><span class="line">RemotingHelper.parseChannelRemoteAddr(ctx.channel()),</span><br><span class="line"></span><br><span class="line">requestHeader.toString(),</span><br><span class="line"></span><br><span class="line">request.getRemark());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">return null;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：结束事务在处理未知类型TRANSACTION_NOT_TYPE时，只打印告警日志不做处理。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="处理事务提交请求"><a href="#处理事务提交请求" class="headerlink" title="处理事务提交请求"></a>处理事务提交请求</h2><p>半消息查找。方法：EndTransactionProcessor#processRequest</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">if (MessageSysFlag.TRANSACTION_COMMIT_TYPE</span><br><span class="line"></span><br><span class="line">&#x3D;&#x3D; requestHeader.getCommitOrRollback())&#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 将prepare消息找出来</span><br><span class="line"></span><br><span class="line">result &#x3D; this.brokerController.getTransactionalMessageService()</span><br><span class="line"></span><br><span class="line">.commitMessage(requestHeader);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2</span><br><span class="line"></span><br><span class="line">MessageExtBrokerInner msgInner &#x3D; endMessageTransaction(result.getPrepareMessage());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>半消息还原。方法：EndTransactionProcessor#endMessageTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">MessageExtBrokerInner msgInner &#x3D; new MessageExtBrokerInner();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 置换为原来的Topic</span><br><span class="line"></span><br><span class="line">msgInner.setTopic(msgExt.getUserProperty(MessageConst.PROPERTY_REAL_TOPIC));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 置换为原来的QueueId</span><br><span class="line"></span><br><span class="line">msgInner.setQueueId(Integer.parseInt(msgExt.getUserProperty(MessageConst.PROPERTY_REAL_QUEUE_ID)));</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;清除属性设置</span><br><span class="line"></span><br><span class="line">MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_REAL_TOPIC);</span><br><span class="line"></span><br><span class="line">MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID);</span><br><span class="line"></span><br><span class="line">return msgInner;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 根据偏移量将半消息查找出来</span><br><span class="line">@2 将存储在RMQ_SYS_TRANS_HALF_TOPIC还原</span><br><span class="line">@3 置换为原来的Topic</span><br><span class="line">@4 置换为原来的QueueId</span><br></pre></td></tr></table></figure>
+
+
+
+<p>还原后消息存储。方法：EndTransactionProcessor#processRequest</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 新组装的消息存储（提交）</span><br><span class="line"></span><br><span class="line">RemotingCommand sendResult &#x3D; sendFinalMessage(msgInner);</span><br><span class="line"></span><br><span class="line">if (sendResult.getCode() &#x3D;&#x3D; ResponseCode.SUCCESS) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 删除prepare消息 是将消息存储于RMQ_SYS_TRANS_OP_HALF_TOPIC中</span><br><span class="line"></span><br><span class="line">this.brokerController.getTransactionalMessageService().deletePrepareMessage(result.getPrepareMessage());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 将还原后的消息存储</span><br><span class="line">@2 删除半消息消息</span><br></pre></td></tr></table></figure>
+
+<p>半消息删除。方法：TransactionalMessageServiceImpl#putOpMessage</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">public boolean putOpMessage(MessageExt messageExt, String opType) &#123;</span><br><span class="line"></span><br><span class="line">MessageQueue messageQueue &#x3D; new MessageQueue(messageExt.getTopic(),</span><br><span class="line"></span><br><span class="line">this.brokerController.getBrokerConfig().getBrokerName(), messageExt.getQueueId());</span><br><span class="line"></span><br><span class="line">if (TransactionalMessageUtil.REMOVETAG.equals(opType)) &#123;</span><br><span class="line"></span><br><span class="line">return addRemoveTagInTransactionOp(messageExt, messageQueue);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return true;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">private boolean addRemoveTagInTransactionOp(MessageExt messageExt, MessageQueue messageQueue) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 主题变更为RMQ_SYS_TRANS_OP_HALF_TOPIC</span><br><span class="line"></span><br><span class="line">Message message &#x3D; new Message(TransactionalMessageUtil.buildOpTopic(), TransactionalMessageUtil.REMOVETAG, String.valueOf(messageExt.getQueueOffset()).getBytes(TransactionalMessageUtil.charset));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 存储消息</span><br><span class="line"></span><br><span class="line">writeOp(message, messageQueue);</span><br><span class="line"></span><br><span class="line">return true;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：半消息的删除是将Topic从RMQ_SYS_TRANS_HALF_TOPIC变更为RMQ_SYS_TRANS_OP_HALF_TOPIC存储到日志文件，依靠文件删除机制删除。</span><br></pre></td></tr></table></figure>
+
+<h2 id="处理事务回滚请求"><a href="#处理事务回滚请求" class="headerlink" title="处理事务回滚请求"></a>处理事务回滚请求</h2><p>方法：EndTransactionProcessor#processRequest</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 查找半消息</span><br><span class="line"></span><br><span class="line">result &#x3D; this.brokerController.getTransactionalMessageService().rollbackMessage(requestHeader);</span><br><span class="line"></span><br><span class="line">if (result.getResponseCode() &#x3D;&#x3D; ResponseCode.SUCCESS) &#123;</span><br><span class="line"></span><br><span class="line">if (res.getCode() &#x3D;&#x3D; ResponseCode.SUCCESS) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 删除prepare消息 是将消息存储于RMQ_SYS_TRANS_OP_HALF_TOPIC中 this.brokerController.getTransactionalMessageService().deletePrepareMessage(result.getPrepareMessage());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return res;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：处理事务回滚请求，将半消息查找出来，将其删除即：将Topic从RMQ_SYS_TRANS_HALF_TOPIC变更为RMQ_SYS_TRANS_OP_HALF_TOPIC并存储，依靠文件删除机制删除。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="事务消息服务端状态回查"><a href="#事务消息服务端状态回查" class="headerlink" title="事务消息服务端状态回查"></a>事务消息服务端状态回查</h1><h2 id="事务回查线程类调用链"><a href="#事务回查线程类调用链" class="headerlink" title="事务回查线程类调用链"></a>事务回查线程类调用链</h2><p>线程类初始化：TransactionalMessageCheckService</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 main(String[] args)</span><br><span class="line"></span><br><span class="line">start(createBrokerController(args));</span><br><span class="line"></span><br><span class="line">@2 createBrokerController</span><br><span class="line"></span><br><span class="line">@3 initialize()</span><br><span class="line"></span><br><span class="line">@4 initialTransaction()</span><br><span class="line"></span><br><span class="line">this.transactionalMessageCheckService &#x3D;</span><br><span class="line"></span><br><span class="line">new TransactionalMessageCheckService(this);</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在Broker初始化启动时，TransactionalMessageCheckService线程类也随着启动初始化。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务回查逻辑"><a href="#事务回查逻辑" class="headerlink" title="事务回查逻辑"></a>事务回查逻辑</h2><p>方法：TransactionalMessageCheckService#run</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 时间间隔为60秒</span><br><span class="line"></span><br><span class="line">long checkInterval &#x3D; brokerController.getBrokerConfig().getTransactionCheckInterval();</span><br><span class="line"></span><br><span class="line">while (!this.isStopped()) &#123;</span><br><span class="line"></span><br><span class="line">this.waitForRunning(checkInterval);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：TransactionalMessageCheckService#onWaitEnd</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@2 transactionTimeOut默认6秒</span><br><span class="line"></span><br><span class="line">long timeout &#x3D; brokerController.getBrokerConfig().getTransactionTimeOut();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 最大核查次数为15次</span><br><span class="line"></span><br><span class="line">int checkMax &#x3D; brokerController.getBrokerConfig().getTransactionCheckMax();</span><br><span class="line"></span><br><span class="line">long begin &#x3D; System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">this.brokerController.getTransactionalMessageService().check(timeout, checkMax, this.brokerController.getTransactionalMessageCheckListener());</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：事务回查每隔60秒执行一次，一次执行超时时间为6秒，最大回查次数为15次。</span><br></pre></td></tr></table></figure>
+
+
+
+<p>回查逻辑（一）。方法：TransactionalMessageServiceImpl#check</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; msgQueues &#x3D; transactionalMessageBridge.fetchMessageQueues(topic);</span><br><span class="line"></span><br><span class="line">for (MessageQueue messageQueue : msgQueues) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;获取对应的RMQ_SYS_TRANS_OP_HALF_TOPIC中的队列</span><br><span class="line"></span><br><span class="line">MessageQueue opQueue &#x3D; getOpQueue(messageQueue);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;半消息消费队列中偏移量</span><br><span class="line"></span><br><span class="line">long halfOffset &#x3D; transactionalMessageBridge.fetchConsumeOffset(messageQueue);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;OP已删除消费队列中的偏移量</span><br><span class="line"></span><br><span class="line">long opOffset &#x3D; transactionalMessageBridge.fetchConsumeOffset(opQueue);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2</span><br><span class="line"></span><br><span class="line">PullResult pullResult &#x3D; fillOpRemoveMap(removeMap, opQueue, opOffset, halfOffset, doneOpOffset);</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：TransactionalMessageServiceImpl#fillOpRemoveMap</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@3</span><br><span class="line"></span><br><span class="line">PullResult pullResult &#x3D; pullOpMsg(opQueue, pullOffsetOfOp, 32);</span><br><span class="line"></span><br><span class="line">List&lt;MessageExt&gt; opMsg &#x3D; pullResult.getMsgFoundList();</span><br><span class="line"></span><br><span class="line">for (MessageExt opMessageExt : opMsg) &#123;</span><br><span class="line"></span><br><span class="line">Long queueOffset &#x3D; getLong(new String(opMessageExt.getBody(), TransactionalMessageUtil.charset));</span><br><span class="line"></span><br><span class="line">if (TransactionalMessageUtil.REMOVETAG.equals(opMessageExt.getTags())) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;已经处理过的消息即commit和rollback</span><br><span class="line"></span><br><span class="line">if (queueOffset &lt; miniOffset) &#123;</span><br><span class="line"></span><br><span class="line">doneOpOffset.add(opMessageExt.getQueueOffset());</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;已经处理删除过了，但是半消息还没有更新</span><br><span class="line"></span><br><span class="line">removeMap.put(queueOffset, opMessageExt.getQueueOffset());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;Found a illegal tag in opMessageExt&#x3D; &#123;&#125; &quot;, opMessageExt);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 从半消息队列中查找消息队列</span><br><span class="line">@2 opQueue队列中的消息均为已经删除的半消息，需要检查下是否已经删除了，当时半消息队列还没有更新。</span><br><span class="line">@3 miniOffset为半消息消费队列中的最大偏移量；queueOffset为删除消费队列的消息偏移量；通过比较两者来确定是否已经删除了，而半消息状态还没有更新，并将这类消息存储在removeMap中。</span><br></pre></td></tr></table></figure>
+
+<p>回查逻辑（二）。方法：TransactionalMessageServiceImpl#check</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">while (true) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;查找消息</span><br><span class="line"></span><br><span class="line">GetResult getResult &#x3D; getHalfMsg(messageQueue, i);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 已经处理过了，半消息滞后了，偏移量继续递增往下走</span><br><span class="line"></span><br><span class="line">if (removeMap.containsKey(i)) &#123;</span><br><span class="line"></span><br><span class="line">log.info(&quot;Half offset &#123;&#125; has been committed&#x2F;rolled back&quot;, i);</span><br><span class="line"></span><br><span class="line">removeMap.remove(i);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 needSkip 超过存储时间（默认3天） needDiscard 超过回查次数，默认15次</span><br><span class="line"></span><br><span class="line">if (needDiscard(msgExt, transactionCheckMax) || needSkip(msgExt)) &#123;</span><br><span class="line"></span><br><span class="line">listener.resolveDiscardMsg(msgExt);</span><br><span class="line"></span><br><span class="line">newOffset &#x3D; i + 1;</span><br><span class="line"></span><br><span class="line">i++;</span><br><span class="line"></span><br><span class="line">continue;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 消息存储时间大于开始时间暂不处理</span><br><span class="line"></span><br><span class="line">if (msgExt.getStoreTimestamp() &gt;&#x3D; startTime) &#123;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 存储的时间小于需要回查的时间 跳过</span><br><span class="line"></span><br><span class="line">if (valueOfCurrentMinusBorn &lt; checkImmunityTime) &#123;</span><br><span class="line"></span><br><span class="line">if (checkPrepareQueueOffset(removeMap, doneOpOffset, msgExt)) &#123;</span><br><span class="line"></span><br><span class="line">newOffset &#x3D; i + 1;</span><br><span class="line"></span><br><span class="line">i++;</span><br><span class="line"></span><br><span class="line">continue;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;接着往下处理</span><br><span class="line"></span><br><span class="line">newOffset &#x3D; i + 1;</span><br><span class="line"></span><br><span class="line">i++;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">小结</span><br><span class="line">@1 removeMap（即已删除队列有而半消息队列未更新的消息）有则不在处理跳过该消息。</span><br><span class="line">@2 超过存储时间或者回查次数超过15次不再处理</span><br><span class="line">@3 消息存储时间大于核查程序开始时间暂不处理</span><br><span class="line">@4 如果定义了回查的时间间隔需要判断是否到时间了</span><br></pre></td></tr></table></figure>
+
+<p>回查逻辑（三）。方法：TransactionalMessageServiceImpl#check</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">if (isNeedCheck) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">if (!putBackHalfMsgQueue(msgExt, i)) &#123;</span><br><span class="line"></span><br><span class="line">continue;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2</span><br><span class="line"></span><br><span class="line">listener.resolveHalfMsg(msgExt);</span><br><span class="line"></span><br><span class="line">&#125;&#125; else &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;保存prepare消息队列的回查消费进度</span><br><span class="line"></span><br><span class="line">if (newOffset !&#x3D; halfOffset) &#123;</span><br><span class="line"></span><br><span class="line">transactionalMessageBridge.updateConsumeOffset(messageQueue, newOffset);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">long newOpOffset &#x3D; calculateOpOffset(doneOpOffset, opOffset);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;保存OP消费进度</span><br><span class="line"></span><br><span class="line">if (newOpOffset !&#x3D; opOffset) &#123;</span><br><span class="line"></span><br><span class="line">transactionalMessageBridge.updateConsumeOffset(opQueue, newOpOffset);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 将半消息重新存储在RMQ_SYS_TRANS_HALF_TOPIC中，由于本次回查尚未知道结果，所以进行存储。</span><br><span class="line">@2 发到客户端进行回查，回查的RequestCode为CHECK_TRANSACTION_STATE &#x3D; 39，根据ProductGroup随机获取客户端通道Channel进行回查。</span><br><span class="line">@3 保存半消息和已处理消息的消费进度。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="客户端响应事务回查"><a href="#客户端响应事务回查" class="headerlink" title="客户端响应事务回查"></a>客户端响应事务回查</h2><p>方法：ClientRemotingProcessor#checkTransactionState</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">producer.checkTransactionState(addr, messageExt, requestHeader);</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：MQProducerInner#checkTransactionState</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; transactionListener.checkLocalTransaction(message);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2</span><br><span class="line"></span><br><span class="line">DefaultMQProducerImpl.this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, thisHeader, remark,</span><br><span class="line"></span><br><span class="line">3000);</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 执行本地事务回查并返回事务回查状态</span><br><span class="line">@2 将事务回查状态提交到Broker</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="事务消息交互示意图"><a href="#事务消息交互示意图" class="headerlink" title="事务消息交互示意图"></a>事务消息交互示意图</h1><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151320.png"></p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/302db5ac/" rel="prev" title="MQ40# RocketMQ一次消费性能问题排查">
+      <i class="fa fa-chevron-left"></i> MQ40# RocketMQ一次消费性能问题排查
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/ea80cc10/" rel="next" title="MQ42# RocketMQ消息轨迹">
+      MQ42# RocketMQ消息轨迹 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%80%9D%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">问题思考</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%8F%91%E9%80%81%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">事务消息客户端发送流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E5%8F%91%E9%80%81%E4%B8%8E%E6%99%AE%E9%80%9A%E5%90%AF%E5%8A%A8%E5%B7%AE%E5%BC%82"><span class="nav-number">2.1.</span> <span class="nav-text">事务发送与普通启动差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81%E8%B0%83%E7%94%A8%E9%93%BE"><span class="nav-number">2.2.</span> <span class="nav-text">事务消息发送调用链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81%E5%88%86%E6%9E%90"><span class="nav-number">2.3.</span> <span class="nav-text">事务消息发送分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81%E7%BB%93%E6%9E%9C%E5%88%86%E6%9E%90"><span class="nav-number">2.4.</span> <span class="nav-text">事务消息发送结果分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E6%9D%9F%E4%BA%8B%E5%8A%A1%E5%88%86%E6%9E%90"><span class="nav-number">2.5.</span> <span class="nav-text">结束事务分析</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%AD%98%E5%82%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">事务消息服务端存储流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E5%AD%98%E5%82%A8%E8%B0%83%E7%94%A8%E9%93%BE"><span class="nav-number">3.1.</span> <span class="nav-text">事务消息存储调用链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E5%8D%8A%E6%B6%88%E6%81%AF%E5%AD%98%E5%82%A8%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90%EF%BC%88%E4%B8%80%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">事务半消息存储代码分析（一）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E5%8D%8A%E6%B6%88%E6%81%AF%E5%AD%98%E5%82%A8%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90%EF%BC%88%E4%BA%8C%EF%BC%89"><span class="nav-number">3.3.</span> <span class="nav-text">事务半消息存储代码分析（二）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%93%8D%E5%BA%94%E7%BB%93%E6%9D%9F%E4%BA%8B%E5%8A%A1%E8%AF%B7%E6%B1%82"><span class="nav-number">4.</span> <span class="nav-text">事务消息服务端响应结束事务请求</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E6%9C%AA%E7%9F%A5%E7%B1%BB%E5%9E%8B%E8%AF%B7%E6%B1%82"><span class="nav-number">4.1.</span> <span class="nav-text">处理未知类型请求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E4%BA%8B%E5%8A%A1%E6%8F%90%E4%BA%A4%E8%AF%B7%E6%B1%82"><span class="nav-number">4.2.</span> <span class="nav-text">处理事务提交请求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E4%BA%8B%E5%8A%A1%E5%9B%9E%E6%BB%9A%E8%AF%B7%E6%B1%82"><span class="nav-number">4.3.</span> <span class="nav-text">处理事务回滚请求</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%8A%B6%E6%80%81%E5%9B%9E%E6%9F%A5"><span class="nav-number">5.</span> <span class="nav-text">事务消息服务端状态回查</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E5%9B%9E%E6%9F%A5%E7%BA%BF%E7%A8%8B%E7%B1%BB%E8%B0%83%E7%94%A8%E9%93%BE"><span class="nav-number">5.1.</span> <span class="nav-text">事务回查线程类调用链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E5%9B%9E%E6%9F%A5%E9%80%BB%E8%BE%91"><span class="nav-number">5.2.</span> <span class="nav-text">事务回查逻辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%93%8D%E5%BA%94%E4%BA%8B%E5%8A%A1%E5%9B%9E%E6%9F%A5"><span class="nav-number">5.3.</span> <span class="nav-text">客户端响应事务回查</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E6%B6%88%E6%81%AF%E4%BA%A4%E4%BA%92%E7%A4%BA%E6%84%8F%E5%9B%BE"><span class="nav-number">6.</span> <span class="nav-text">事务消息交互示意图</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

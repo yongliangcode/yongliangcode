@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="问题描述日志目录(可配置)&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;commitlog会有20位长度的日志文件。 1.日志文件什么时候创建的？ 2.日志文件创建流程是什么？ 3.日志文件和内存映射是怎么样的？ 1234567891011-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:50 00000117290188144640-rw-rw-">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQ24# RocketMQ存储--日志文件创建与映射流程">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/9adc03fa/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="问题描述日志目录(可配置)&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;commitlog会有20位长度的日志文件。 1.日志文件什么时候创建的？ 2.日志文件创建流程是什么？ 3.日志文件和内存映射是怎么样的？ 1234567891011-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:50 00000117290188144640-rw-rw-">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133504.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133550.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133629.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133707.png">
+<meta property="article:published_time" content="2020-12-20T12:40:01.000Z">
+<meta property="article:modified_time" content="2020-12-19T05:38:07.350Z">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133504.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/9adc03fa/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MQ24# RocketMQ存储--日志文件创建与映射流程 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9adc03fa/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MQ24# RocketMQ存储--日志文件创建与映射流程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:40:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:40:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 13:38:07" itemprop="dateModified" datetime="2020-12-19T13:38:07+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>日志目录(可配置)/data/rocketmq/store/commitlog会有20位长度的日志文件。</p>
+<p>1.日志文件什么时候创建的？</p>
+<p>2.日志文件创建流程是什么？</p>
+<p>3.日志文件和内存映射是怎么样的？</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:50 00000117290188144640</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:52 00000117291261886464</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:54 00000117292335628288</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:56 00000117293409370112</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:57 00000117294483111936</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:56 00000117295556853760</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="日志映射相关类初始化"><a href="#日志映射相关类初始化" class="headerlink" title="日志映射相关类初始化"></a>日志映射相关类初始化</h1><p>在Broker启动时实例化了两个类DefaultMessageStore和AllocateMappedFileService。</p>
+<p>AllocateMappedFileService是线程类继承了Runnable接口，该线程类持有DefaultMessageStore的引用（即：可操作管理DefaultMessageStore），并启动该线程类。</p>
+<p>调用链</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;Broker启动时调用</span><br><span class="line"></span><br><span class="line">@1 BrokerStartup#main#createBrokerController()</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize();</span><br><span class="line"></span><br><span class="line">@2 Controller#initialize()</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener, this.brokerConfig);</span><br><span class="line"></span><br><span class="line">@3 DefaultMessageStore#DefaultMessageStore()</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将DefaultMessageStore自身引用传给AllocateMappedFileService</span><br><span class="line"></span><br><span class="line">this.allocateMappedFileService &#x3D; new AllocateMappedFileService(this);</span><br><span class="line"></span><br><span class="line">this.allocateMappedFileService.start();&#x2F;&#x2F;启动该线程类</span><br><span class="line"></span><br><span class="line">@4 class AllocateMappedFileService extends ServiceThread</span><br><span class="line"></span><br><span class="line">public AllocateMappedFileService(DefaultMessageStore messageStore) &#123;</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; messageStore;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>线程类一直运行在干啥</strong></p>
+<p>既然在Broker启动时该线程类AllocateMappedFileService就启动了，那么在做什么呢？run方法为while循环，即：<strong>只要服务不停止并且mmapOperation()返回true则一直运行</strong>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;异步处理，调用mmapOperation完成请求的处理</span><br><span class="line"></span><br><span class="line">public void run() &#123;</span><br><span class="line"></span><br><span class="line">log.info(this.getServiceName() + &quot; service started&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;while循环，只要服务部停止即调用 mmapOperation方法</span><br><span class="line"></span><br><span class="line">while (!this.isStopped() &amp;&amp; this.mmapOperation()) &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">log.info(this.getServiceName() + &quot; service end&quot;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>mmapOperation方法流程图</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133504.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：mmapOperation方法主要做了两件事：初始化MappedFile和预热MappedFile。只要服务不停止和线程不被中断，这个过程一直重复运行。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="提交映射文件请求（AllocateRequest）"><a href="#提交映射文件请求（AllocateRequest）" class="headerlink" title="提交映射文件请求（AllocateRequest）"></a>提交映射文件请求（AllocateRequest）</h1><p>既然AllocateMappedFileService一直从容器（优先级队列和ConcurrentHashMap）中获取AllocateRequest。AllocateRequest是什么时候产生并放到容器中的呢？</p>
+<p>RocketMQ消息存储概览【源码笔记】中写入commitLog流程，获取最新的日志文件。</p>
+<p><strong>调用链</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 CommitLog#putMessage</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;文件已满或者没有映射文件重新创建一个文件</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; mappedFile || mappedFile.isFull()) &#123;</span><br><span class="line"></span><br><span class="line">mappedFile &#x3D; this.mappedFileQueue.getLastMappedFile(0);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; Mark: NewFile may be cause noise</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 MappedFileQueue#getLastMappedFile</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>流程图</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133550.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：MappedFileQueue#getLastMappedFile会向线程类AllocateMappedFileServic提交两个映射文件创建请求：分别为nextFilePath和nextNextFilePath；如果线程类AllocateMappedFileServic为null，则直接new一个MappedFile，此时只会创建一个文件</span><br></pre></td></tr></table></figure>
+
+<p><strong>下面为AllocateMappedFileServic#putRequestAndReturnMappedFile提交两个映射文件请求流程</strong></p>
+<p><strong>调用链</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">@1 MappedFileQueue#getLastMappedFile</span><br><span class="line"></span><br><span class="line">if (this.allocateMappedFileService !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">mappedFile &#x3D; this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,</span><br><span class="line"></span><br><span class="line">nextNextFilePath, this.mappedFileSize);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 AllocateMappedFileService#putRequestAndReturnMappedFile</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>流程图</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133629.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：处理提交的映射文件请求指的是实例化两个AllocateRequest并把他们提交到requestTable（ConcurrentHashMap）和requestQueue（PriorityBlockingQueue）中，等待5秒，此段时间线程会从这两个容器中获取请求并创建MappedFile，并将结果返回。</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="MappedFile初始化"><a href="#MappedFile初始化" class="headerlink" title="MappedFile初始化"></a>MappedFile初始化</h1><p>本段梳理下上文中mmapOperation方法流程图第5步初始化MappedFile的流程</p>
+<p><strong>调用链</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 AllocateMappedFileService#mmapOperation</span><br><span class="line"></span><br><span class="line">mappedFile &#x3D; new MappedFile(req.getFilePath(), req.getFileSize());</span><br><span class="line"></span><br><span class="line">@2 MappedFile#init(fileName, fileSize);</span><br></pre></td></tr></table></figure>
+
+<p><strong>流程图</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133707.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：MappedFile主要干了两件事：1.创建日志文件。2.并将文件映射到内存中</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="6-总结"><a href="#6-总结" class="headerlink" title="6.总结"></a>6.总结</h1><p><strong>1.日志文件什么时候创建的？</strong></p>
+<p>备注：在写入消息时，需要获取最新的日志文件（MappedFile），如果文件不存在或者已经写满，此时需要创建MappedFile。具体在MappedFile#init方法this.file = new File(fileName)进行创建。</p>
+<p><strong>2.日志文件创建流程是什么？</strong></p>
+<p>备注：将两个映射创建请求（nextReq和nextNextReq）提交到requestTable（ConcurrentHashMap）和requestQueue(PriorityBlockingQueue)容器中;由线程不断检查并从容器中取出创建日志文件（MappedFile）。</p>
+<p><strong>3.日志文件和内存映射是怎么样的？</strong></p>
+<p>备注：具体的映射时在MappedFile#init方法中通过this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);将日志文件映射到内存中的。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/96e2eb1a/" rel="prev" title="MQ23# RocketMQ消息存储概览">
+      <i class="fa fa-chevron-left"></i> MQ23# RocketMQ消息存储概览
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/708c22d7/" rel="next" title="MQ25# RocketMQ存储--映射文件预热">
+      MQ25# RocketMQ存储--映射文件预热 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%8F%8F%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">问题描述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%98%A0%E5%B0%84%E7%9B%B8%E5%85%B3%E7%B1%BB%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">2.</span> <span class="nav-text">日志映射相关类初始化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8F%90%E4%BA%A4%E6%98%A0%E5%B0%84%E6%96%87%E4%BB%B6%E8%AF%B7%E6%B1%82%EF%BC%88AllocateRequest%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">提交映射文件请求（AllocateRequest）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#MappedFile%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">4.</span> <span class="nav-text">MappedFile初始化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#6-%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">6.总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

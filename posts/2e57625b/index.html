@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%B1%BB%E5%9B%BE%20(1).png">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210117101614.png">
 <meta property="article:published_time" content="2021-01-16T03:55:01.000Z">
-<meta property="article:modified_time" content="2021-01-17T04:15:46.309Z">
+<meta property="article:modified_time" content="2021-02-02T11:30:34.779Z">
 <meta property="article:tag" content="Netty">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%B1%BB%E5%9B%BE%20(1).png">
@@ -223,7 +223,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-01-17 12:15:46" itemprop="dateModified" datetime="2021-01-17T12:15:46+08:00">2021-01-17</time>
+                <time title="修改时间：2021-02-02 19:30:34" itemprop="dateModified" datetime="2021-02-02T19:30:34+08:00">2021-02-02</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -331,6 +331,10 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Component[] newCompArray(<span class="keyword">int</span> initComponents, <span class="keyword">int</span> maxNumComponents) &#123;</span><br><span class="line">	<span class="keyword">int</span> capacityGuess = Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents);</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">new</span> Component[Math.max(initComponents, capacityGuess)]; <span class="comment">// 注解@6.2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p><strong>注解@6.2</strong> components是Component的对象数组，数组大小默认为16. </p>
+<a id="more"></a>
+
+
+
 <h1 id="CompositeByteBuf实现原理"><a href="#CompositeByteBuf实现原理" class="headerlink" title="CompositeByteBuf实现原理"></a>CompositeByteBuf实现原理</h1><p>下面通过例子来体验一把CompositeByteBuf，先直观感受下。</p>
 <p><strong>示例代码</strong> </p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testCompositeByteBuf</span><span class="params">()</span></span>&#123;</span><br><span class="line">  String str1 = <span class="string">&quot;瓜农&quot;</span>;</span><br><span class="line">  String str2 = <span class="string">&quot;老梁&quot;</span>;</span><br><span class="line">  ByteBuf buf1 = Unpooled.buffer(<span class="number">10</span>);</span><br><span class="line">  buf1.writeBytes(str1.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">  System.out.println(<span class="string">&quot;buf1&#x27;s readerIndex:&quot;</span> + buf1.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;buf1&#x27;s writeIndex&quot;</span> + buf1.writerIndex());</span><br><span class="line"></span><br><span class="line">  ByteBuf buf2 = Unpooled.buffer(<span class="number">10</span>);</span><br><span class="line">  buf2.writeBytes(str2.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">  System.out.println(<span class="string">&quot;buf2&#x27;s readerIndex:&quot;</span> + buf2.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;buf2&#x27;s writeIndex&quot;</span> + buf2.writerIndex());</span><br><span class="line"></span><br><span class="line">  ByteBuf compositeByteBuf = Unpooled.wrappedBuffer(buf1,buf2);</span><br><span class="line">  System.out.println(<span class="string">&quot;compositeByteBuf&#x27;s readerIndex:&quot;</span> + compositeByteBuf.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;compositeByteBuf&#x27;s writeIndex&quot;</span> + compositeByteBuf.writerIndex());</span><br><span class="line">  System.out.print(compositeByteBuf.toString(CharsetUtil.UTF_8));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -398,8 +402,8 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/posts/17c9a786/" rel="prev" title="Netty8# Netty之ByteBuf初体验">
-      <i class="fa fa-chevron-left"></i> Netty8# Netty之ByteBuf初体验
+    <a href="/posts/9bf5e4df/" rel="prev" title="FA1# 微服务流控防护场景与应对措施">
+      <i class="fa fa-chevron-left"></i> FA1# 微服务流控防护场景与应对措施
     </a></div>
       <div class="post-nav-item">
     <a href="/posts/f75406c8/" rel="next" title="MQ44# RocketMQ最近几个经常被问的问题">
@@ -477,20 +481,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-count">59</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

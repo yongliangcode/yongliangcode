@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="仰望星空大家好，我是老梁，一个想跟大伙分享点干货的家伙。 今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。 上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。 老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。 嗯，不是谁都能当老板。 老梁仰望星空，看到那些闪闪发光的星星…… 多看看历史星空中的星星明正统十四年（144">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SK1# 仰望星空">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/8a7728e3/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="仰望星空大家好，我是老梁，一个想跟大伙分享点干货的家伙。 今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。 上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。 老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。 嗯，不是谁都能当老板。 老梁仰望星空，看到那些闪闪发光的星星…… 多看看历史星空中的星星明正统十四年（144">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-01-02T14:47:01.000Z">
+<meta property="article:modified_time" content="2021-02-02T11:33:12.761Z">
+<meta property="article:tag" content="思考随记">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/8a7728e3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>SK1# 仰望星空 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8a7728e3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SK1# 仰望星空
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-02 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-02T22:47:01+08:00">2021-01-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:33:12" itemprop="dateModified" datetime="2021-02-02T19:33:12+08:00">2021-02-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
+<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
+<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
+<p>嗯，不是谁都能当老板。</p>
+<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
+<h1 id="多看看历史星空中的星星"><a href="#多看看历史星空中的星星" class="headerlink" title="多看看历史星空中的星星"></a>多看看历史星空中的星星</h1><p>明正统十四年（1449年）八月，明英宗朱祁镇率军50万御驾亲征瓦刺，命弟弟朱祁钰留守京城。</p>
+<p>皇上这年22岁，还是一个容易被蛊惑的年轻人，说是御驾亲征，实际由太监王振指挥。</p>
+<p>王振不懂军事，一通乱指挥后，被瓦刺首领也先在今河北省张家口市怀来县境内的土木堡围猎。</p>
+<p>20万大军损失大半，精锐尽失，皇上也被瓦刺掳走了，跟随出征的高官阵亡五十余人。</p>
+<p>国不可一日无君，八月十八日皇太后命朱祁钰监国，八月二十九日百官拥立朱祁钰为帝，即景帝。</p>
+<p>这一个月的变化真是太大了，而且瓦刺马上就要打到北京了，大明危在旦夕。</p>
+<p>景帝命于谦为兵部尚书，原来的尚书邝埜呢？也在土木堡阵亡了。然而主战还是南迁成了争论的焦点。</p>
+<p>以徐珵为代表的大臣主张南迁，北京守不住，原因很简单，精锐部队都埋葬在土木堡了，拿什么守！</p>
+<p>于谦主战认为“京师天下根本，一动则大事去矣”。呵斥 “言南迁者，可斩也”。</p>
+<p>于谦的建议得到了吏部尚书等人的支持，廷议最后决定固守北京，皇上把北京守卫重任交给了于谦。</p>
+<p>皇上心里也没底，守说着容易，20万都打没了，现在京城不到10万军队还都是老弱病残居多。</p>
+<p>有兵的话还廷议个啥，直接打就完了，这不是没兵嘛。</p>
+<p>没了精锐就拿后备军凑，于谦命令各地备操军、备倭军、运粮军按时到京城布防，违令者斩！</p>
+<p>嗯，清一色后备役。。。</p>
+<p>这些后备役差不多有10万人，并要求途径通州粮仓把粮食顺便带到京城。</p>
+<p>九月初，各路人马总算集合完毕，二十二万人，粮食问题也解决了。</p>
+<p>十月十一日瓦刺军队来了，他们只用了11天就打到了北京城下，更增加了他们拿下北京的信心。</p>
+<p>“京城必破，大元必兴”！</p>
+<p>于谦召集将领召开战前会议，聊如何退敌。</p>
+<p>大将石享提出敌军实力远超明军，应该坚壁清野，等待敌军疲惫后自然退兵。</p>
+<p>大家比较赞同这个，但是一个人反对，这个是于谦，他是总指挥，是说了算的人。</p>
+<p>找你们来，不是跟你们商量的，让你们来听令的！他的军令：</p>
+<p>“大军全部开出九门之外，列阵迎敌”</p>
+<p>“锦衣卫巡查城内，但凡查到有盔甲军士不出城作战者，格杀勿论！”</p>
+<p>“九门是京城门户，若有丢失立斩！”</p>
+<p>“临阵，将不顾军先退者，立斩！“</p>
+<p>“临阵，军不顾将先退者，后队斩前队！”</p>
+<p>“敢违军令者，格杀勿论！”</p>
+<p>“大军开战之日，众将率军出城之后，立即关闭九门，有敢擅自放入城者立斩！”</p>
+<p>嗯，在玩命！不玩命，大明就完了，这次输不起。</p>
+<p>最终于谦带领着这只大部分的后备役军队逼退了瓦刺军，取得了北京保卫战的胜利。</p>
+<p>于谦有大明再造之功！下面是他老人家的一首《石灰吟》，感受下他的风骨：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">千锤万凿出深山，烈火焚烧若等闲。</span><br><span class="line"></span><br><span class="line">粉骨碎身浑不怕，要留清白在人间。</span><br></pre></td></tr></table></figure>
+
+
+
+<p>他那是历史星空中耀眼的一颗星星，每次翻开这段历史，总是那么明亮，让人充满敬意！</p>
+<a id="more"></a>
+
+
+
+<h1 id="多发现工作生活中的星星"><a href="#多发现工作生活中的星星" class="headerlink" title="多发现工作生活中的星星"></a>多发现工作生活中的星星</h1><p>我们在写ORK目标时，经常提到打造业界领先的、对齐业界一流的某些能力！</p>
+<p>这些业界领先的东西就是我们的星星，需要时常抬头仰望，好让我们跟的紧一点。</p>
+<p>工作中优秀的人，需要时常抬头仰望，好让我们与优秀者同行。</p>
+<p>比如老梁吧，平时工作比较忙，基本上是995的节凑，周末还得抽出时间看源码写文章，不写不行吗？</p>
+<p>也想不写，也想懈怠，但是抬头仰望星空，老梁看到了啥？老梁看到了丁威，那家伙又输出很多东西。</p>
+<p>输出倒逼输入，输入倒逼输出，不断输入输出让自己能力提升。</p>
+<p>这家伙不知疲倦，笔耕不戳！典型的湖南人性格，耐得烦、吃得苦、霸得蛮！</p>
+<p>还特别有恒心，一坚持就7、8年，没一点停的意思！你说气人不气人。</p>
+<p>能咋办？喝口水，擦把汗，接着干呗。。。</p>
+<h4 id="最后说两句"><a href="#最后说两句" class="headerlink" title="最后说两句"></a>最后说两句</h4><p>当你生活不如意时看看以前和周围的人和事，在历史长河中，你的那点事其实没多大点事，不值得怨天尤人、寻死觅活。</p>
+<p>当你春风得意时看看以前和周围的人和事，在历史长河中，你再大的成就不过沧海一粟，不值得骄傲自大、目中无人。</p>
+<p>当你遇到无论什么样的困惑时，多仰望星空，历史的星星、身边的星星会给你照前进的路。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" rel="tag"># 思考随记</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/17c9a786/" rel="prev" title="Netty8# Netty之ByteBuf初体验">
+      <i class="fa fa-chevron-left"></i> Netty8# Netty之ByteBuf初体验
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/bb2245d5/" rel="next" title="SK3# 苍天饶过谁">
+      SK3# 苍天饶过谁 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%B0%E6%9C%9B%E6%98%9F%E7%A9%BA"><span class="nav-number">1.</span> <span class="nav-text">仰望星空</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E7%9C%8B%E7%9C%8B%E5%8E%86%E5%8F%B2%E6%98%9F%E7%A9%BA%E4%B8%AD%E7%9A%84%E6%98%9F%E6%98%9F"><span class="nav-number">2.</span> <span class="nav-text">多看看历史星空中的星星</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E5%8F%91%E7%8E%B0%E5%B7%A5%E4%BD%9C%E7%94%9F%E6%B4%BB%E4%B8%AD%E7%9A%84%E6%98%9F%E6%98%9F"><span class="nav-number">3.</span> <span class="nav-text">多发现工作生活中的星星</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%80%E5%90%8E%E8%AF%B4%E4%B8%A4%E5%8F%A5"><span class="nav-number">3.0.0.1.</span> <span class="nav-text">最后说两句</span></a></li></ol></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

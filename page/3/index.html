@@ -184,6 +184,491 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9c431d59/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/9c431d59/" class="post-title-link" itemprop="url">MQ33# RocketMQ消费--Broker端处理逻辑</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:56:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:56:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.Broker是如何处理消费流程的？</p>
+<p>2.消费进度是如何流转的？</p>
+<p>说明：本文分析均为PUSH消费模式</p>
+<h1 id="Broker处理消费流程"><a href="#Broker处理消费流程" class="headerlink" title="Broker处理消费流程"></a>Broker处理消费流程</h1><p>本部分将消费的切分成三块梳理：Broker消费处理流程概览、查找消息流程、以及消息查询结果处理流程。</p>
+<h2 id="Broker消费处理流程概览"><a href="#Broker消费处理流程概览" class="headerlink" title="Broker消费处理流程概览"></a>Broker消费处理流程概览</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143006.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在拉取消息时会进行Broker和主题读权限的判断，实战中若有必要可以封锁Broker的拉取权限从而禁止从该broker进行消费；或者封锁某主题的读权限禁止消费组从该主题消费消息。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="查找消息流程"><a href="#查找消息流程" class="headerlink" title="查找消息流程"></a>查找消息流程</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143030.png"></p>
+<p><u>小结：如果需要从磁盘拉取消息则一次默认最多拉取8条，一次消息的消息大小最大为64K。</u></p>
+<p><u>如果从缓存中拉取默认最多32条，一次拉取的消息大小最大256K。使用tagcode会在查找消息前进行过滤，使用SQL92过滤再消息查找出来后进行过滤。</u></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/9c431d59/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/87a2ceec/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/87a2ceec/" class="post-title-link" itemprop="url">MQ32# RocketMQ客户端消费--ProcessQueue处理队列</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:55:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1.ProcessQueue提供哪些方法？</span><br><span class="line"></span><br><span class="line">2.这些方法的作用是什么？</span><br><span class="line"></span><br><span class="line">3.哪里调用了这些方法？</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="ProcessQueue方法梳理"><a href="#ProcessQueue方法梳理" class="headerlink" title="ProcessQueue方法梳理"></a>ProcessQueue方法梳理</h1><h2 id="isLockExpired方法"><a href="#isLockExpired方法" class="headerlink" title="isLockExpired方法"></a>isLockExpired方法</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean isLockExpired() &#123;</span><br><span class="line"></span><br><span class="line">	return (System.currentTimeMillis() - this.lastLockTimestamp) &gt; REBALANCE_LOCK_MAX_LIVE_TIME;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>lastLockTimestamp(最新加锁时间戳)</strong></p>
+<p>lastLockTimestamp属性调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">@1 RebalanceImpl#lock</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;请求broker对该消费队列进行加锁</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; lockedMq &#x3D; this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">processQueue.setLocked(true);&#x2F;&#x2F;加锁</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置加锁时间戳</span><br><span class="line"></span><br><span class="line">processQueue.setLastLockTimestamp(System.currentTimeMillis());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 RebalanceImpl#lockAll</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;向broker发送该clientId所对应的messageQueue锁定请求</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; lockOKMQSet &#x3D;</span><br><span class="line"></span><br><span class="line">this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">processQueue.setLocked(true);</span><br><span class="line"></span><br><span class="line">processQueue.setLastLockTimestamp(System.currentTimeMillis());</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>isLockExpired方法调用</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageOrderlyService#ConsumeRequest</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;集群顺序消费时需要判断processQueue加锁是否过期</span><br><span class="line"></span><br><span class="line">if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())</span><br><span class="line"></span><br><span class="line">|| (this.processQueue.isLocked() &amp;&amp; !this.processQueue.isLockExpired()))</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：@1&amp;@2中可以看出lastLockTimestamp在顺序消费时向Broker请求对队列加锁成功后设置的时间戳；REBALANCE_LOCK_MAX_LIVE_TIME由参数rocketmq.client.rebalance.lockMaxLiveTime设置默认为30秒；lastLockTimestamp的含义为加锁的有效时间为30秒，超过该时间则失效；顺序消费在判断过期时延迟拉取。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="isPullExpired方法"><a href="#isPullExpired方法" class="headerlink" title="isPullExpired方法"></a>isPullExpired方法</h2><p><strong>isPullExpired方法代码</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean isPullExpired() &#123;</span><br><span class="line"></span><br><span class="line">return (System.currentTimeMillis() - this.lastPullTimestamp) &gt; PULL_MAX_IDLE_TIME;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/87a2ceec/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/55c56ee4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/55c56ee4/" class="post-title-link" itemprop="url">MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="消息拉取与处理"><a href="#消息拉取与处理" class="headerlink" title="消息拉取与处理"></a>消息拉取与处理</h1><p><strong>消息拉取</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140825.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理拉取消息请求。通过组织RequetHeader需要包含从哪里开始拉取（ConsumerGroup、Topic，Queue，queueOffset）等信息，向Broker发起请求，取回消息后对消息进行处理。当该Queue的消息数量超过1000，或者最小与最大偏移量之间的差距超过默认2000也会触发限流，即：延迟50毫秒放入请求队列。也可以通过挂起消费线程来延迟（1秒）消息拉取，从而达到消费限流作用。</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消息处理</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140851.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理消息部分流程：将消息提交给了processQueue红黑树缓存；同时将消息提交给consumeMessageService来处理具体的消息内容。</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/55c56ee4/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd191b8b/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/dd191b8b/" class="post-title-link" itemprop="url">MQ31# RocketMQ客户端PUSH消费--负载均衡</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.主题队列是如何分配的？</p>
+<p>2.什么时候会进行负载均衡？</p>
+<p>3.负载均衡后是否会导致消息重复消费？</p>
+<h1 id="调用链条"><a href="#调用链条" class="headerlink" title="调用链条"></a>调用链条</h1><p><strong>初始化链条</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#start</span><br><span class="line"></span><br><span class="line">this.mQClientFactory</span><br><span class="line"></span><br><span class="line">&#x3D; MQClientManager.getInstance().getAndCreateMQClientInstance</span><br><span class="line"></span><br><span class="line">@2 MQClientManager#getAndCreateMQClientInstance</span><br><span class="line"></span><br><span class="line">instance &#x3D; new MQClientInstance</span><br><span class="line"></span><br><span class="line">@3 MQClientInstance#MQClientInstance</span><br><span class="line"></span><br><span class="line">this.rebalanceService &#x3D; new RebalanceService</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>启动链条</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#start</span><br><span class="line"></span><br><span class="line">mQClientFactory.start()</span><br><span class="line"></span><br><span class="line">@2 MQClientInstance#start</span><br><span class="line"></span><br><span class="line">this.rebalanceService.start</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：从初始化链和调用链可以看出RebalanceService为线程类，随着消费启动时而启动，消费不退出则一直运行着。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="负载均衡流程"><a href="#负载均衡流程" class="headerlink" title="负载均衡流程"></a>负载均衡流程</h1><p><strong>负载均衡链条</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">@1 RebalanceService#run</span><br><span class="line"></span><br><span class="line">mqClientFactory.doRebalance()</span><br><span class="line"></span><br><span class="line">@2 MQClientInstance#doRebalance</span><br><span class="line"></span><br><span class="line">impl.doRebalance()</span><br><span class="line"></span><br><span class="line">@3 DefaultMQPushConsumerImpl#doRebalance</span><br><span class="line"></span><br><span class="line">this.rebalanceImpl.doRebalance</span><br><span class="line"></span><br><span class="line">@4 RebalanceImpl#doRebalance</span><br><span class="line"></span><br><span class="line">rebalanceByTopic</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>负载均衡流程</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141402.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在负载均衡时，会循环该消费组订阅的所有Topic都会执行负载均衡。</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>更新缓存processQueue流程</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141423.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">1. 更新缓存时如果消费组订阅的队列不在新分配的队列集合中或者队列拉取时间超时失效，则将快照ProcessQueue设置为丢弃。</span><br><span class="line">2. 消费拉取时判断ProcessQueue为丢弃，则不再对该队列拉取。</span><br><span class="line">3. 顺序消费时如果获取消费锁成功，表明此队列空闲没有被消费，此时向Broker发起解锁请求，解锁成功后将该队列从缓存（processQueueTable）移除。</span><br><span class="line">4. 顺序消费时获取锁失败，表明正在消费则不从processQueueTable移除，由于ProcessQueue设置为丢弃，在顺序消费下次拉取时会退出该队列的拉取请求。</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/dd191b8b/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/3b8a1c43/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/3b8a1c43/" class="post-title-link" itemprop="url">MQ29# RocketMQ客户端PUSH消费概览</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:51:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:51:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>PUSH消费整体流程是怎么样的？</p>
+<h1 id="PUSH消费流程概览"><a href="#PUSH消费流程概览" class="headerlink" title="PUSH消费流程概览"></a>PUSH消费流程概览</h1><p><strong>从客户端示例开始</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">DefaultMQPushConsumer consumer &#x3D; new DefaultMQPushConsumer(&quot;CID_JODIE_1&quot;);</span><br><span class="line"></span><br><span class="line">consumer.subscribe(&quot;Jodie_topic_1023&quot;, &quot;*&quot;); consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;wrong time format 2017_0422_221800</span><br><span class="line"></span><br><span class="line">consumer.setConsumeTimestamp(&quot;20170422221800&quot;);</span><br><span class="line"></span><br><span class="line">consumer.registerMessageListener(new MessageListenerConcurrently() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public ConsumeConcurrentlyStatus consumeMessage(List&lt;MessageExt&gt; msgs, ConsumeConcurrentlyContext context) &#123;</span><br><span class="line"></span><br><span class="line">System.out.printf(Thread.currentThread().getName() + &quot; Receive New Messages: &quot; + msgs + &quot;%n&quot;);</span><br><span class="line"></span><br><span class="line">return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">consumer.start();</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;Consumer Started.%n&quot;);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>客户端PUSH消费流程概览</strong></p>
+<p><strong>概览流程1</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140443.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/3b8a1c43/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/72491306/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -757,476 +1242,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/96e2eb1a/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/96e2eb1a/" class="post-title-link" itemprop="url">MQ23# RocketMQ消息存储概览</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:39:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:39:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>先梳理消息存储主干流程。本分切分为两部分，第一部分消息存储流程概览，主要为校验流程；第二部分CommitLog存储概览，即消息存储流程。</p>
-<h1 id="消息存储流程概览"><a href="#消息存储流程概览" class="headerlink" title="消息存储流程概览"></a>消息存储流程概览</h1><p>调用链</p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 SendMessageProcessor#sendMessage</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息存储</span></span><br><span class="line"></span><br><span class="line">PutMessageResult putMessageResult = <span class="keyword">this</span>.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">@2 DefaultMessageStore#putMessage</span><br></pre></td></tr></table></figure>
-
-
-
-<p>流程图</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219132807.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">备注：PageCache是否繁忙，内存锁定时间为1秒，在集群流量负载很高时可能出现system busy，broker buys等异常信息。</span><br></pre></td></tr></table></figure>
-
-<p>源代码</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> PutMessageResult <span class="title">putMessage</span><span class="params">(MessageExtBrokerInner msg)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//如果消息存储服务已关闭，则消息写入被拒绝</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.shutdown) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;message store has shutdown, so putMessage is forbidden&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//Slave不处理消息存储</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (BrokerRole.SLAVE == <span class="keyword">this</span>.messageStoreConfig.getBrokerRole()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> value = <span class="keyword">this</span>.printTimes.getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ((value % <span class="number">50000</span>) == <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;message store is slave mode, so putMessage is forbidden &quot;</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//如果消息存储服务不可写，则消息写入会被拒绝</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//出现该错误可能磁盘已满</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!<span class="keyword">this</span>.runningFlags.isWriteable()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> value = <span class="keyword">this</span>.printTimes.getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ((value % <span class="number">50000</span>) == <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;message store is not writeable, so putMessage is forbidden &quot;</span> + <span class="keyword">this</span>.runningFlags.getFlagBits());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.printTimes.set(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//Topic长度的限制不能超过127个字节</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (msg.getTopic().length() &gt; Byte.MAX_VALUE) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;putMessage message topic length too long &quot;</span> + msg.getTopic().length());</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息属性长度检查不能超过32K</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (msg.getPropertiesString() != <span class="keyword">null</span> &amp;&amp; msg.getPropertiesString().length() &gt; Short.MAX_VALUE) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;putMessage message properties length too long &quot;</span> + msg.getPropertiesString().length());</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.PROPERTIES_SIZE_EXCEEDED, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//判断PageCache是否繁忙：阀值[osPageCacheBusyTimeOutMills = 1000 ] 比较时间为当前时间与Commit Lock时间之差</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//如果返回true，意味着此时有消息在写入CommitLog，且那条消息的写入耗时较长（超过1s），则本条消息不再写入</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//返回内存页写入繁忙</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.isOSPageCacheBusy()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> beginTime = <span class="keyword">this</span>.getSystemClock().now();</span><br><span class="line"></span><br><span class="line"><span class="comment">//将消息写入CommitLog</span></span><br><span class="line"></span><br><span class="line">PutMessageResult result = <span class="keyword">this</span>.commitLog.putMessage(msg);</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息写入时间过长，发出警告</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> eclipseTime = <span class="keyword">this</span>.getSystemClock().now() - beginTime;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (eclipseTime &gt; <span class="number">500</span>) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;putMessage not in lock eclipse time(ms)=&#123;&#125;, bodyLength=&#123;&#125;&quot;</span>, eclipseTime, msg.getBody().length);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//对消息的存储耗时进行分级记录，并记录当前所有消息存储时的最大耗时</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.storeStatsService.setPutMessageEntireTimeMax(eclipseTime);</span><br><span class="line"></span><br><span class="line"><span class="comment">//记录存粗失败次数</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">null</span> == result || !result.isOk()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.storeStatsService.getPutMessageFailedTimes().incrementAndGet();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/96e2eb1a/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fe0b8776/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/fe0b8776/" class="post-title-link" itemprop="url">MQ22# RocketMQ内存传输及4.7消费线程参数设置</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:19:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？</p>
-<h1 id="transferMsgByHeap误解"><a href="#transferMsgByHeap误解" class="headerlink" title="transferMsgByHeap误解"></a>transferMsgByHeap误解</h1><p>transferMsgByHeap设置为false时，通过堆外内存传输数据，相比堆内存传输减少了数据拷贝、零字节拷贝、效率更高，所以关闭transferMsgByHeap应该成为我们的优先选择，但是实践来看，你或许会改变想法，下面是transferMsgByHeap=false，客户端大量超时错误时的日志截图。</p>
-<h2 id="Broker日志截图"><a href="#Broker日志截图" class="headerlink" title="Broker日志截图"></a>Broker日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081609.png"></p>
-<h2 id="CPU日志截图"><a href="#CPU日志截图" class="headerlink" title="CPU日志截图"></a>CPU日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081632.png"></p>
-<h2 id="系统日志截图"><a href="#系统日志截图" class="headerlink" title="系统日志截图"></a>系统日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081704.png"></p>
-<h2 id="源码报错截图"><a href="#源码报错截图" class="headerlink" title="源码报错截图"></a>源码报错截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219082807.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：你看到这里会发现，在关闭transferMsgByHeap时，可能造成堆外内存分配不够，触发系统内存回收和落盘操作。此时CPU会有一个陡坡，具体客户端表现为发送大量超时。解决方式开启transferMsgByHeap即可，让运行更加平稳。</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/fe0b8776/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a46a67ee/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/a46a67ee/" class="post-title-link" itemprop="url">MQ21# 为何建议关闭RocketMQ预热配置</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:19:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 08:32:22" itemprop="dateModified" datetime="2020-12-19T08:32:22+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>RocketMQ提供了一个预热配置项warmMapedFileEnable默认为关闭状态。曾在文章RocketMQ存储–映射文件预热【源码笔记】分析过文件预热流程。在预热文件时会填充1个G的假值0作为占位符，提前分配物理内存，防止消息写入时发生缺页异常。如此特性正如文章标题所说，为何建议关闭RocketMQ预热配置呢？</p>
-<h1 id="服务端监控"><a href="#服务端监控" class="headerlink" title="服务端监控"></a>服务端监控</h1><h2 id="日志监控"><a href="#日志监控" class="headerlink" title="日志监控"></a>日志监控</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081057.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081114.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081131.png"></p>
-<h2 id="CPU情况"><a href="#CPU情况" class="headerlink" title="CPU情况"></a>CPU情况</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081205.png"></p>
-<p>由服务端日志可以看出，在预热时broker会发生较长的耗时，10～30秒不等，CPU也会有小幅抖动，这会造成什么影响呢？接着看下文</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/a46a67ee/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/69ff2739/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/69ff2739/" class="post-title-link" itemprop="url">MQ20# RocketMQ集群实现平滑扩缩容</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:18:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:18:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 08:32:22" itemprop="dateModified" datetime="2020-12-19T08:32:22+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="运维需求"><a href="#运维需求" class="headerlink" title="运维需求"></a>运维需求</h1><p>在RocketMQ集群的实践中，对集群扩容、缩容、节点下线等运维做到平滑、业务无感知、数据无丢失，这个对于集群运维的同学来说非常重要。</p>
-<p>比如前些日子出现的问题，由于线上集群频繁出现CPU毛刺甚至直接挂掉并伴随着集群抖动，对内核参数的调整只能减缓毛刺却不能消除抖动。集群抖动业务使用会伴随着发送延迟告警，始终是个必须处理的隐患。最终决定更换操作系统即更换内核。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">集群信息: RocketMQ版本4.5.2</span><br><span class="line"></span><br><span class="line">主从信息：4主4从 broker-a, broker-b, broker-c, broker-d,</span><br><span class="line"></span><br><span class="line">broker-a(slave), broker-b(slave), broker-c(slave), broker-d(slave)</span><br></pre></td></tr></table></figure>
-
-<p>操作系统: centos6</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Linux version 2.6.32-754.18.2.el6.x86_64 (mockbuild@x86-01.bsys.centos.org) (gcc version 4.4.7 20120313 (Red Hat 4.4.7-23) (GCC) ) #1 SMP Wed Aug 14 16:26:59 UTC 2019</span><br></pre></td></tr></table></figure>
-
-<p>目标系统：centos7</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Linux version 3.10.0-1062.4.1.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Fri Oct 18 17:15:30 UTC 2019</span><br></pre></td></tr></table></figure>
-
-
-
-<p>集群的部署如下下图所示：</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219080526.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">其需要简单概括如下，就是要将上述集群的操作系统内核从 Centos6 升级到 Centos7,但业务不能停。</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="平滑扩容"><a href="#平滑扩容" class="headerlink" title="平滑扩容"></a>平滑扩容</h1><h2 id="下线从节点"><a href="#下线从节点" class="headerlink" title="下线从节点"></a>下线从节点</h2><p>从节点正常关闭rocketmq，从节点下线对业务不会造成影响，如果配置，slaveReadEnable=true，从节点的通常在消息回溯延迟超过内存消息的40%时使用。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sh bin&#x2F;mqshutdown broker</span><br><span class="line"></span><br><span class="line">or</span><br><span class="line"></span><br><span class="line">kill pid</span><br></pre></td></tr></table></figure>
-
-
-
-<p>从节点下线之后，集群的部署情况如下图所示：</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219080558.png"></p>
-<p>直接停掉从节点，并不影响当前业务的使用，因为写，读都可以通过主节点，对业务无影响。</p>
-<h2 id="重组主从模式"><a href="#重组主从模式" class="headerlink" title="重组主从模式"></a>重组主从模式</h2><p>新申请4台机器与原从节点重新组合成主从关系。</p>
-<p>具体操作为将新申请的4台机器的内核全部升级为Centos7内核，并部署为 broker-a1,broker-b1,broker-c1,broker-d1，这里如果使用 broker-e,f,f,h 命名，会造成流量切斜，导致消费不均衡，原因在文末会给出，大家不妨思考一下。</p>
-<p>然后将上一步下掉的从节点，其内核全部升级为 centos7的内核。并将这些节点设置为新增4个主节点的从，其部署结构如下图所示：</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219080619.png"></p>
-<p>此时集群中变成8主，其中新增集群有从节点，即装有centor7内核的新机器构成了4主4从，接下来就只需要将内核为centos6的主节点的数据消费完成，并下线即可。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/69ff2739/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/7cbb1243/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/7cbb1243/" class="post-title-link" itemprop="url">MQ17# RocketMQ/Kafka监控项整理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:17:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:17:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 08:32:22" itemprop="dateModified" datetime="2020-12-19T08:32:22+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="系统监控项"><a href="#系统监控项" class="headerlink" title="系统监控项"></a>系统监控项</h1><h2 id="CPU"><a href="#CPU" class="headerlink" title="CPU"></a>CPU</h2><p>CPU使用率、CPU Load、</p>
-<h2 id="内存"><a href="#内存" class="headerlink" title="内存"></a>内存</h2><p>内存使用率</p>
-<h2 id="磁盘"><a href="#磁盘" class="headerlink" title="磁盘"></a>磁盘</h2><p>磁盘使用率、磁盘IO、磁盘IOWAIT</p>
-<h2 id="带宽"><a href="#带宽" class="headerlink" title="带宽"></a>带宽</h2><p>带宽检测</p>
-<h2 id="实例存活"><a href="#实例存活" class="headerlink" title="实例存活"></a>实例存活</h2><p>集群实例是否存活、实例端口是否可达</p>
-<h2 id="JVM监控"><a href="#JVM监控" class="headerlink" title="JVM监控"></a>JVM监控</h2><p>堆内存、Full GC时间等</p>
-<h1 id="集群监控项"><a href="#集群监控项" class="headerlink" title="集群监控项"></a>集群监控项</h1><h2 id="集群节点数量"><a href="#集群节点数量" class="headerlink" title="集群节点数量"></a>集群节点数量</h2><p>注：比如RocketMQ集群中有4主4从；当Master节点数量小于4时</p>
-<h2 id="集群节点可用性"><a href="#集群节点可用性" class="headerlink" title="集群节点可用性"></a>集群节点可用性</h2><p>注：检测集群节点是否可达以及RT Time</p>
-<h2 id="集群写入TPS"><a href="#集群写入TPS" class="headerlink" title="集群写入TPS"></a>集群写入TPS</h2><p>注：例如集群写入TPS压测值的40%</p>
-<h2 id="集群消费TPS"><a href="#集群消费TPS" class="headerlink" title="集群消费TPS"></a>集群消费TPS</h2><p>注：集群消费TPS需关注带宽及CPU</p>
-<h2 id="集群写入TPS变化率"><a href="#集群写入TPS变化率" class="headerlink" title="集群写入TPS变化率"></a>集群写入TPS变化率</h2><p>注：例如5分钟内集群TPS陡增30%</p>
-<h2 id="集群消费TPS变化率"><a href="#集群消费TPS变化率" class="headerlink" title="集群消费TPS变化率"></a>集群消费TPS变化率</h2><p>注：例如5分钟内集群TPS陡增30%</p>
-<h2 id="集群日消息总量的变化"><a href="#集群日消息总量的变化" class="headerlink" title="集群日消息总量的变化"></a>集群日消息总量的变化</h2><p>注：例如集群中每日的消息总量监控</p>
-<h2 id="Broker写入-消费TPS"><a href="#Broker写入-消费TPS" class="headerlink" title="Broker写入/消费TPS"></a>Broker写入/消费TPS</h2><p>注：单节点的写入/消费TPS</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/7cbb1243/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1296,20 +1311,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-count">59</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

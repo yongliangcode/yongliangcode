@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/89ef1054/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/96e2eb1a/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,383 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/89ef1054/" class="post-title-link" itemprop="url">MQ18# RocketMQ关于Broker闪断故障排查</a>
+            <a href="/posts/96e2eb1a/" class="post-title-link" itemprop="url">MQ23# RocketMQ消息存储概览</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:39:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:39:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>先梳理消息存储主干流程。本分切分为两部分，第一部分消息存储流程概览，主要为校验流程；第二部分CommitLog存储概览，即消息存储流程。</p>
+<h1 id="消息存储流程概览"><a href="#消息存储流程概览" class="headerlink" title="消息存储流程概览"></a>消息存储流程概览</h1><p>调用链</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 SendMessageProcessor#sendMessage</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息存储</span></span><br><span class="line"></span><br><span class="line">PutMessageResult putMessageResult = <span class="keyword">this</span>.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">@2 DefaultMessageStore#putMessage</span><br></pre></td></tr></table></figure>
+
+
+
+<p>流程图</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219132807.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">备注：PageCache是否繁忙，内存锁定时间为1秒，在集群流量负载很高时可能出现system busy，broker buys等异常信息。</span><br></pre></td></tr></table></figure>
+
+<p>源代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> PutMessageResult <span class="title">putMessage</span><span class="params">(MessageExtBrokerInner msg)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//如果消息存储服务已关闭，则消息写入被拒绝</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.shutdown) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;message store has shutdown, so putMessage is forbidden&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//Slave不处理消息存储</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (BrokerRole.SLAVE == <span class="keyword">this</span>.messageStoreConfig.getBrokerRole()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> value = <span class="keyword">this</span>.printTimes.getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ((value % <span class="number">50000</span>) == <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;message store is slave mode, so putMessage is forbidden &quot;</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//如果消息存储服务不可写，则消息写入会被拒绝</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//出现该错误可能磁盘已满</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!<span class="keyword">this</span>.runningFlags.isWriteable()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> value = <span class="keyword">this</span>.printTimes.getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ((value % <span class="number">50000</span>) == <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;message store is not writeable, so putMessage is forbidden &quot;</span> + <span class="keyword">this</span>.runningFlags.getFlagBits());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.SERVICE_NOT_AVAILABLE, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.printTimes.set(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//Topic长度的限制不能超过127个字节</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (msg.getTopic().length() &gt; Byte.MAX_VALUE) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;putMessage message topic length too long &quot;</span> + msg.getTopic().length());</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息属性长度检查不能超过32K</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (msg.getPropertiesString() != <span class="keyword">null</span> &amp;&amp; msg.getPropertiesString().length() &gt; Short.MAX_VALUE) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;putMessage message properties length too long &quot;</span> + msg.getPropertiesString().length());</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.PROPERTIES_SIZE_EXCEEDED, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//判断PageCache是否繁忙：阀值[osPageCacheBusyTimeOutMills = 1000 ] 比较时间为当前时间与Commit Lock时间之差</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//如果返回true，意味着此时有消息在写入CommitLog，且那条消息的写入耗时较长（超过1s），则本条消息不再写入</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//返回内存页写入繁忙</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.isOSPageCacheBusy()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> beginTime = <span class="keyword">this</span>.getSystemClock().now();</span><br><span class="line"></span><br><span class="line"><span class="comment">//将消息写入CommitLog</span></span><br><span class="line"></span><br><span class="line">PutMessageResult result = <span class="keyword">this</span>.commitLog.putMessage(msg);</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息写入时间过长，发出警告</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">long</span> eclipseTime = <span class="keyword">this</span>.getSystemClock().now() - beginTime;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (eclipseTime &gt; <span class="number">500</span>) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(<span class="string">&quot;putMessage not in lock eclipse time(ms)=&#123;&#125;, bodyLength=&#123;&#125;&quot;</span>, eclipseTime, msg.getBody().length);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//对消息的存储耗时进行分级记录，并记录当前所有消息存储时的最大耗时</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.storeStatsService.setPutMessageEntireTimeMax(eclipseTime);</span><br><span class="line"></span><br><span class="line"><span class="comment">//记录存粗失败次数</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">null</span> == result || !result.isOk()) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.storeStatsService.getPutMessageFailedTimes().incrementAndGet();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/96e2eb1a/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a46a67ee/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/a46a67ee/" class="post-title-link" itemprop="url">MQ21# 为何建议关闭RocketMQ预热配置</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:19:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 08:32:22" itemprop="dateModified" datetime="2020-12-19T08:32:22+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>RocketMQ提供了一个预热配置项warmMapedFileEnable默认为关闭状态。曾在文章RocketMQ存储–映射文件预热【源码笔记】分析过文件预热流程。在预热文件时会填充1个G的假值0作为占位符，提前分配物理内存，防止消息写入时发生缺页异常。如此特性正如文章标题所说，为何建议关闭RocketMQ预热配置呢？</p>
+<h1 id="服务端监控"><a href="#服务端监控" class="headerlink" title="服务端监控"></a>服务端监控</h1><h2 id="日志监控"><a href="#日志监控" class="headerlink" title="日志监控"></a>日志监控</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081057.png"></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081114.png"></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081131.png"></p>
+<h2 id="CPU情况"><a href="#CPU情况" class="headerlink" title="CPU情况"></a>CPU情况</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081205.png"></p>
+<p>由服务端日志可以看出，在预热时broker会发生较长的耗时，10～30秒不等，CPU也会有小幅抖动，这会造成什么影响呢？接着看下文</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/a46a67ee/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fe0b8776/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/fe0b8776/" class="post-title-link" itemprop="url">MQ22# RocketMQ内存传输及4.7消费线程参数设置</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:19:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？</p>
+<h1 id="transferMsgByHeap误解"><a href="#transferMsgByHeap误解" class="headerlink" title="transferMsgByHeap误解"></a>transferMsgByHeap误解</h1><p>transferMsgByHeap设置为false时，通过堆外内存传输数据，相比堆内存传输减少了数据拷贝、零字节拷贝、效率更高，所以关闭transferMsgByHeap应该成为我们的优先选择，但是实践来看，你或许会改变想法，下面是transferMsgByHeap=false，客户端大量超时错误时的日志截图。</p>
+<h2 id="Broker日志截图"><a href="#Broker日志截图" class="headerlink" title="Broker日志截图"></a>Broker日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081609.png"></p>
+<h2 id="CPU日志截图"><a href="#CPU日志截图" class="headerlink" title="CPU日志截图"></a>CPU日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081632.png"></p>
+<h2 id="系统日志截图"><a href="#系统日志截图" class="headerlink" title="系统日志截图"></a>系统日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081704.png"></p>
+<h2 id="源码报错截图"><a href="#源码报错截图" class="headerlink" title="源码报错截图"></a>源码报错截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219082807.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：你看到这里会发现，在关闭transferMsgByHeap时，可能造成堆外内存分配不够，触发系统内存回收和落盘操作。此时CPU会有一个陡坡，具体客户端表现为发送大量超时。解决方式开启transferMsgByHeap即可，让运行更加平稳。</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/fe0b8776/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/69ff2739/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/69ff2739/" class="post-title-link" itemprop="url">MQ20# RocketMQ集群实现平滑扩缩容</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:18:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:18:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 08:32:22" itemprop="dateModified" datetime="2020-12-19T08:32:22+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="运维需求"><a href="#运维需求" class="headerlink" title="运维需求"></a>运维需求</h1><p>在RocketMQ集群的实践中，对集群扩容、缩容、节点下线等运维做到平滑、业务无感知、数据无丢失，这个对于集群运维的同学来说非常重要。</p>
+<p>比如前些日子出现的问题，由于线上集群频繁出现CPU毛刺甚至直接挂掉并伴随着集群抖动，对内核参数的调整只能减缓毛刺却不能消除抖动。集群抖动业务使用会伴随着发送延迟告警，始终是个必须处理的隐患。最终决定更换操作系统即更换内核。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">集群信息: RocketMQ版本4.5.2</span><br><span class="line"></span><br><span class="line">主从信息：4主4从 broker-a, broker-b, broker-c, broker-d,</span><br><span class="line"></span><br><span class="line">broker-a(slave), broker-b(slave), broker-c(slave), broker-d(slave)</span><br></pre></td></tr></table></figure>
+
+<p>操作系统: centos6</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Linux version 2.6.32-754.18.2.el6.x86_64 (mockbuild@x86-01.bsys.centos.org) (gcc version 4.4.7 20120313 (Red Hat 4.4.7-23) (GCC) ) #1 SMP Wed Aug 14 16:26:59 UTC 2019</span><br></pre></td></tr></table></figure>
+
+<p>目标系统：centos7</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Linux version 3.10.0-1062.4.1.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Fri Oct 18 17:15:30 UTC 2019</span><br></pre></td></tr></table></figure>
+
+
+
+<p>集群的部署如下下图所示：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219080526.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">其需要简单概括如下，就是要将上述集群的操作系统内核从 Centos6 升级到 Centos7,但业务不能停。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="平滑扩容"><a href="#平滑扩容" class="headerlink" title="平滑扩容"></a>平滑扩容</h1><h2 id="下线从节点"><a href="#下线从节点" class="headerlink" title="下线从节点"></a>下线从节点</h2><p>从节点正常关闭rocketmq，从节点下线对业务不会造成影响，如果配置，slaveReadEnable=true，从节点的通常在消息回溯延迟超过内存消息的40%时使用。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sh bin&#x2F;mqshutdown broker</span><br><span class="line"></span><br><span class="line">or</span><br><span class="line"></span><br><span class="line">kill pid</span><br></pre></td></tr></table></figure>
+
+
+
+<p>从节点下线之后，集群的部署情况如下图所示：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219080558.png"></p>
+<p>直接停掉从节点，并不影响当前业务的使用，因为写，读都可以通过主节点，对业务无影响。</p>
+<h2 id="重组主从模式"><a href="#重组主从模式" class="headerlink" title="重组主从模式"></a>重组主从模式</h2><p>新申请4台机器与原从节点重新组合成主从关系。</p>
+<p>具体操作为将新申请的4台机器的内核全部升级为Centos7内核，并部署为 broker-a1,broker-b1,broker-c1,broker-d1，这里如果使用 broker-e,f,f,h 命名，会造成流量切斜，导致消费不均衡，原因在文末会给出，大家不妨思考一下。</p>
+<p>然后将上一步下掉的从节点，其内核全部升级为 centos7的内核。并将这些节点设置为新增4个主节点的从，其部署结构如下图所示：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219080619.png"></p>
+<p>此时集群中变成8主，其中新增集群有从节点，即装有centor7内核的新机器构成了4主4从，接下来就只需要将内核为centos6的主节点的数据消费完成，并下线即可。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/69ff2739/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/7cbb1243/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/7cbb1243/" class="post-title-link" itemprop="url">MQ17# RocketMQ/Kafka监控项整理</a>
         </h2>
 
         <div class="post-meta">
@@ -238,19 +614,23 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>在2020-03-16 18:00左右收到告警，业务出现发送RocketMQ失败，在约1分钟左右后自动恢复。RocketMQ运行向来稳定，为何也抖动了？</p>
-<h1 id="Broker日志分析"><a href="#Broker日志分析" class="headerlink" title="Broker日志分析"></a>Broker日志分析</h1><h2 id="查看GC日志"><a href="#查看GC日志" class="headerlink" title="查看GC日志"></a>查看GC日志</h2><p>通过查看发时间问题时间附近GC日志并无发现异常。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">2020-03-16T17:49:13.785+0800: 13484510.599: Total time for which application threads were stopped: 0.0072354 seconds, Stopping threads took: 0.0001536 seconds</span><br><span class="line"></span><br><span class="line">2020-03-16T18:01:23.149+0800: 13485239.963: [GC pause (G1 Evacuation Pause) (young) 13485239.965: [G1Ergonomics (CSet Construction) start choosing CSet, _pending_cards: 7738, predicted base time: 5.74 ms, remaining time: 194.26 ms, target pause time: 200.00 ms]</span><br><span class="line"></span><br><span class="line">13485239.965: [G1Ergonomics (CSet Construction) add young regions to CSet, eden: 255 regions, survivors: 1 regions, predicted young region time: 0.52 ms]</span><br><span class="line"></span><br><span class="line">13485239.965: [G1Ergonomics (CSet Construction) finish choosing CSet, eden: 255 regions, survivors: 1 regions, old: 0 regions, predicted pause time: 6.26 ms, target pause time: 200.00 ms]</span><br><span class="line"></span><br><span class="line">, 0.0090963 secs]</span><br><span class="line"></span><br><span class="line">[Parallel Time: 2.3 ms, GC Workers: 23]</span><br><span class="line"></span><br><span class="line">[GC Worker Start (ms): Min: 13485239965.1, Avg: 13485239965.4, Max: 13485239965.7, Diff: 0.6]</span><br><span class="line"></span><br><span class="line">[Ext Root Scanning (ms): Min: 0.0, Avg: 0.3, Max: 0.6, Diff: 0.6, Sum: 8.0]</span><br><span class="line"></span><br><span class="line">[Update RS (ms): Min: 0.1, Avg: 0.3, Max: 0.6, Diff: 0.5, Sum: 7.8]</span><br><span class="line"></span><br><span class="line">[Processed Buffers: Min: 2, Avg: 5.7, Max: 11, Diff: 9, Sum: 131]</span><br><span class="line"></span><br><span class="line">[Scan RS (ms): Min: 0.0, Avg: 0.0, Max: 0.1, Diff: 0.1, Sum: 0.8]</span><br><span class="line"></span><br><span class="line">[Code Root Scanning (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.3]</span><br><span class="line"></span><br><span class="line">[Object Copy (ms): Min: 0.2, Avg: 0.5, Max: 0.7, Diff: 0.4, Sum: 11.7]</span><br><span class="line"></span><br><span class="line">[Termination (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.3]</span><br><span class="line"></span><br><span class="line">[Termination Attempts: Min: 1, Avg: 1.0, Max: 1, Diff: 0, Sum: 23]</span><br><span class="line"></span><br><span class="line">[GC Worker Other (ms): Min: 0.0, Avg: 0.2, Max: 0.3, Diff: 0.3, Sum: 3.6]</span><br><span class="line"></span><br><span class="line">[GC Worker Total (ms): Min: 1.0, Avg: 1.4, Max: 1.9, Diff: 0.8, Sum: 32.6]</span><br><span class="line"></span><br><span class="line">[GC Worker End (ms): Min: 13485239966.7, Avg: 13485239966.9, Max: 13485239967.0, Diff: 0.3]</span><br><span class="line"></span><br><span class="line">[Code Root Fixup: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Code Root Purge: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Clear CT: 0.9 ms]</span><br><span class="line"></span><br><span class="line">[Other: 5.9 ms]</span><br><span class="line"></span><br><span class="line">[Choose CSet: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Ref Proc: 1.9 ms]</span><br><span class="line"></span><br><span class="line">[Ref Enq: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Redirty Cards: 1.0 ms]</span><br><span class="line"></span><br><span class="line">[Humongous Register: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Humongous Reclaim: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Free CSet: 0.2 ms]</span><br><span class="line"></span><br><span class="line">[Eden: 4080.0M(4080.0M)-&gt;0.0B(4080.0M) Survivors: 16.0M-&gt;16.0M Heap: 4176.5M(8192.0M)-&gt;96.5M(8192.0M)]</span><br><span class="line"></span><br><span class="line">[Times: user&#x3D;0.05 sys&#x3D;0.00, real&#x3D;0.01 secs]</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="查看Broker日志"><a href="#查看Broker日志" class="headerlink" title="查看Broker日志"></a>查看Broker日志</h2><p>由日志可以看出：slave与问题节点broker同步信息异常。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">2020-03-16 17:55:15 ERROR BrokerControllerScheduledThread1 - SyncTopicConfig Exception, x.x.x.x:10911</span><br><span class="line"></span><br><span class="line">org.apache.rocketmq.remoting.exception.RemotingTimeoutException: wait response on the channel &lt;x.x.x.x:10909&gt; timeout, 3000(ms)</span><br><span class="line"></span><br><span class="line">at org.apache.rocketmq.remoting.netty.NettyRemotingAbstract.invokeSyncImpl(NettyRemotingAbstract.java:427) ~[rocketmq-remoting-4.5.2.jar:4.5.2]</span><br><span class="line"></span><br><span class="line">at org.apache.rocketmq.remoting.netty.NettyRemotingClient.invokeSync(NettyRemotingClient.java:375) ~[rocketmq-remoting-4.5.2.jar:4.5.2]</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">备注：通过查看RocketMQ的集群和GC日志，只能说明但是网络不可用，造成主从同步问题；并未发现Broker自身出问题了。</span><br></pre></td></tr></table></figure>
+          <h1 id="系统监控项"><a href="#系统监控项" class="headerlink" title="系统监控项"></a>系统监控项</h1><h2 id="CPU"><a href="#CPU" class="headerlink" title="CPU"></a>CPU</h2><p>CPU使用率、CPU Load、</p>
+<h2 id="内存"><a href="#内存" class="headerlink" title="内存"></a>内存</h2><p>内存使用率</p>
+<h2 id="磁盘"><a href="#磁盘" class="headerlink" title="磁盘"></a>磁盘</h2><p>磁盘使用率、磁盘IO、磁盘IOWAIT</p>
+<h2 id="带宽"><a href="#带宽" class="headerlink" title="带宽"></a>带宽</h2><p>带宽检测</p>
+<h2 id="实例存活"><a href="#实例存活" class="headerlink" title="实例存活"></a>实例存活</h2><p>集群实例是否存活、实例端口是否可达</p>
+<h2 id="JVM监控"><a href="#JVM监控" class="headerlink" title="JVM监控"></a>JVM监控</h2><p>堆内存、Full GC时间等</p>
+<h1 id="集群监控项"><a href="#集群监控项" class="headerlink" title="集群监控项"></a>集群监控项</h1><h2 id="集群节点数量"><a href="#集群节点数量" class="headerlink" title="集群节点数量"></a>集群节点数量</h2><p>注：比如RocketMQ集群中有4主4从；当Master节点数量小于4时</p>
+<h2 id="集群节点可用性"><a href="#集群节点可用性" class="headerlink" title="集群节点可用性"></a>集群节点可用性</h2><p>注：检测集群节点是否可达以及RT Time</p>
+<h2 id="集群写入TPS"><a href="#集群写入TPS" class="headerlink" title="集群写入TPS"></a>集群写入TPS</h2><p>注：例如集群写入TPS压测值的40%</p>
+<h2 id="集群消费TPS"><a href="#集群消费TPS" class="headerlink" title="集群消费TPS"></a>集群消费TPS</h2><p>注：集群消费TPS需关注带宽及CPU</p>
+<h2 id="集群写入TPS变化率"><a href="#集群写入TPS变化率" class="headerlink" title="集群写入TPS变化率"></a>集群写入TPS变化率</h2><p>注：例如5分钟内集群TPS陡增30%</p>
+<h2 id="集群消费TPS变化率"><a href="#集群消费TPS变化率" class="headerlink" title="集群消费TPS变化率"></a>集群消费TPS变化率</h2><p>注：例如5分钟内集群TPS陡增30%</p>
+<h2 id="集群日消息总量的变化"><a href="#集群日消息总量的变化" class="headerlink" title="集群日消息总量的变化"></a>集群日消息总量的变化</h2><p>注：例如集群中每日的消息总量监控</p>
+<h2 id="Broker写入-消费TPS"><a href="#Broker写入-消费TPS" class="headerlink" title="Broker写入/消费TPS"></a>Broker写入/消费TPS</h2><p>注：单节点的写入/消费TPS</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/89ef1054/#more" rel="contents">
+              <a class="btn" href="/posts/7cbb1243/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -391,6 +771,96 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/649ec9da/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/89ef1054/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/89ef1054/" class="post-title-link" itemprop="url">MQ18# RocketMQ关于Broker闪断故障排查</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:17:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:17:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 08:32:22" itemprop="dateModified" datetime="2020-12-19T08:32:22+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>在2020-03-16 18:00左右收到告警，业务出现发送RocketMQ失败，在约1分钟左右后自动恢复。RocketMQ运行向来稳定，为何也抖动了？</p>
+<h1 id="Broker日志分析"><a href="#Broker日志分析" class="headerlink" title="Broker日志分析"></a>Broker日志分析</h1><h2 id="查看GC日志"><a href="#查看GC日志" class="headerlink" title="查看GC日志"></a>查看GC日志</h2><p>通过查看发时间问题时间附近GC日志并无发现异常。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">2020-03-16T17:49:13.785+0800: 13484510.599: Total time for which application threads were stopped: 0.0072354 seconds, Stopping threads took: 0.0001536 seconds</span><br><span class="line"></span><br><span class="line">2020-03-16T18:01:23.149+0800: 13485239.963: [GC pause (G1 Evacuation Pause) (young) 13485239.965: [G1Ergonomics (CSet Construction) start choosing CSet, _pending_cards: 7738, predicted base time: 5.74 ms, remaining time: 194.26 ms, target pause time: 200.00 ms]</span><br><span class="line"></span><br><span class="line">13485239.965: [G1Ergonomics (CSet Construction) add young regions to CSet, eden: 255 regions, survivors: 1 regions, predicted young region time: 0.52 ms]</span><br><span class="line"></span><br><span class="line">13485239.965: [G1Ergonomics (CSet Construction) finish choosing CSet, eden: 255 regions, survivors: 1 regions, old: 0 regions, predicted pause time: 6.26 ms, target pause time: 200.00 ms]</span><br><span class="line"></span><br><span class="line">, 0.0090963 secs]</span><br><span class="line"></span><br><span class="line">[Parallel Time: 2.3 ms, GC Workers: 23]</span><br><span class="line"></span><br><span class="line">[GC Worker Start (ms): Min: 13485239965.1, Avg: 13485239965.4, Max: 13485239965.7, Diff: 0.6]</span><br><span class="line"></span><br><span class="line">[Ext Root Scanning (ms): Min: 0.0, Avg: 0.3, Max: 0.6, Diff: 0.6, Sum: 8.0]</span><br><span class="line"></span><br><span class="line">[Update RS (ms): Min: 0.1, Avg: 0.3, Max: 0.6, Diff: 0.5, Sum: 7.8]</span><br><span class="line"></span><br><span class="line">[Processed Buffers: Min: 2, Avg: 5.7, Max: 11, Diff: 9, Sum: 131]</span><br><span class="line"></span><br><span class="line">[Scan RS (ms): Min: 0.0, Avg: 0.0, Max: 0.1, Diff: 0.1, Sum: 0.8]</span><br><span class="line"></span><br><span class="line">[Code Root Scanning (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.3]</span><br><span class="line"></span><br><span class="line">[Object Copy (ms): Min: 0.2, Avg: 0.5, Max: 0.7, Diff: 0.4, Sum: 11.7]</span><br><span class="line"></span><br><span class="line">[Termination (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.3]</span><br><span class="line"></span><br><span class="line">[Termination Attempts: Min: 1, Avg: 1.0, Max: 1, Diff: 0, Sum: 23]</span><br><span class="line"></span><br><span class="line">[GC Worker Other (ms): Min: 0.0, Avg: 0.2, Max: 0.3, Diff: 0.3, Sum: 3.6]</span><br><span class="line"></span><br><span class="line">[GC Worker Total (ms): Min: 1.0, Avg: 1.4, Max: 1.9, Diff: 0.8, Sum: 32.6]</span><br><span class="line"></span><br><span class="line">[GC Worker End (ms): Min: 13485239966.7, Avg: 13485239966.9, Max: 13485239967.0, Diff: 0.3]</span><br><span class="line"></span><br><span class="line">[Code Root Fixup: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Code Root Purge: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Clear CT: 0.9 ms]</span><br><span class="line"></span><br><span class="line">[Other: 5.9 ms]</span><br><span class="line"></span><br><span class="line">[Choose CSet: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Ref Proc: 1.9 ms]</span><br><span class="line"></span><br><span class="line">[Ref Enq: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Redirty Cards: 1.0 ms]</span><br><span class="line"></span><br><span class="line">[Humongous Register: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Humongous Reclaim: 0.0 ms]</span><br><span class="line"></span><br><span class="line">[Free CSet: 0.2 ms]</span><br><span class="line"></span><br><span class="line">[Eden: 4080.0M(4080.0M)-&gt;0.0B(4080.0M) Survivors: 16.0M-&gt;16.0M Heap: 4176.5M(8192.0M)-&gt;96.5M(8192.0M)]</span><br><span class="line"></span><br><span class="line">[Times: user&#x3D;0.05 sys&#x3D;0.00, real&#x3D;0.01 secs]</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="查看Broker日志"><a href="#查看Broker日志" class="headerlink" title="查看Broker日志"></a>查看Broker日志</h2><p>由日志可以看出：slave与问题节点broker同步信息异常。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">2020-03-16 17:55:15 ERROR BrokerControllerScheduledThread1 - SyncTopicConfig Exception, x.x.x.x:10911</span><br><span class="line"></span><br><span class="line">org.apache.rocketmq.remoting.exception.RemotingTimeoutException: wait response on the channel &lt;x.x.x.x:10909&gt; timeout, 3000(ms)</span><br><span class="line"></span><br><span class="line">at org.apache.rocketmq.remoting.netty.NettyRemotingAbstract.invokeSyncImpl(NettyRemotingAbstract.java:427) ~[rocketmq-remoting-4.5.2.jar:4.5.2]</span><br><span class="line"></span><br><span class="line">at org.apache.rocketmq.remoting.netty.NettyRemotingClient.invokeSync(NettyRemotingClient.java:375) ~[rocketmq-remoting-4.5.2.jar:4.5.2]</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">备注：通过查看RocketMQ的集群和GC日志，只能说明但是网络不可用，造成主从同步问题；并未发现Broker自身出问题了。</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/89ef1054/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -717,619 +1187,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/5d180165/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/5d180165/" class="post-title-link" itemprop="url">MQ13# RocketMQ性能测试</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 19:14:01" itemprop="dateCreated datePublished" datetime="2020-12-20T19:14:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-18 13:41:27" itemprop="dateModified" datetime="2020-12-18T13:41:27+08:00">2020-12-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line">1.概述</span><br><span class="line"></span><br><span class="line">2.1个线程测试记录</span><br><span class="line"></span><br><span class="line">a.1个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.1个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.1个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.1个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">3.10个线程测试记录</span><br><span class="line"></span><br><span class="line">a.10个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.10个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.10个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.10个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">4.30个线程测试记录</span><br><span class="line"></span><br><span class="line">a.30个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.30个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.30个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.30个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">5.45个线程测试记录</span><br><span class="line"></span><br><span class="line">a.45个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.45个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.45个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.45个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">6.60个线程测试记录</span><br><span class="line"></span><br><span class="line">a.60个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.60个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.60个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.60个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">7.75个线程测试记录</span><br><span class="line"></span><br><span class="line">a.75个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.75个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.75个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.75个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">8.100个线程测试记录</span><br><span class="line"></span><br><span class="line">a.100个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.100个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.100个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.100个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">9.150个线程测试记录</span><br><span class="line"></span><br><span class="line">a.150个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.150个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.150个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.150个线程 消息3K 16个队列</span><br><span class="line"></span><br><span class="line">10.200个线程测试记录</span><br><span class="line"></span><br><span class="line">a.200个线程 消息1K 8个队列</span><br><span class="line"></span><br><span class="line">b.200个线程 消息3K 8个队列</span><br><span class="line"></span><br><span class="line">c.200个线程 消息1K 16个队列</span><br><span class="line"></span><br><span class="line">d.200个线程 消息3K 16个队列</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>目的：对生产环境RocketMQ集群进行性能测试,该集群4主4从。</p>
-<p>过程：线程数1、线程数10、线程数30、线程数60、线程数100、线程数150、线程数200对消息大小为1K、3K；队列为8个、16个分别进行测试。</p>
-<p>结果：其中最大TPS为12.6万，最小TPS为3.6万。</p>
-<h1 id="1个线程测试记录"><a href="#1个线程测试记录" class="headerlink" title="1个线程测试记录"></a>1个线程测试记录</h1><h3 id="1个线程-消息1K-8个队列"><a href="#1个线程-消息1K-8个队列" class="headerlink" title="1个线程 消息1K 8个队列"></a>1个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 1 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4281 Max RT: 299 Average RT: 0.233 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4237 Max RT: 299 Average RT: 0.236 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4533 Max RT: 299 Average RT: 0.221 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4404 Max RT: 299 Average RT: 0.227 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4360 Max RT: 299 Average RT: 0.229 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4269 Max RT: 299 Average RT: 0.234 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4319 Max RT: 299 Average RT: 0.231 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="1个线程-消息3K-8个队列"><a href="#1个线程-消息3K-8个队列" class="headerlink" title="1个线程 消息3K 8个队列"></a>1个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 1 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4120 Max RT: 255 Average RT: 0.242 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4054 Max RT: 255 Average RT: 0.246 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4010 Max RT: 255 Average RT: 0.249 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4125 Max RT: 255 Average RT: 0.242 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4093 Max RT: 255 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4093 Max RT: 255 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 3999 Max RT: 255 Average RT: 0.250 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 3957 Max RT: 255 Average RT: 0.253 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-<h3 id="1个线程-消息1K-16个队列"><a href="#1个线程-消息1K-16个队列" class="headerlink" title="1个线程 消息1K 16个队列"></a>1个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 1 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 5289 Max RT: 225 Average RT: 0.189 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5252 Max RT: 225 Average RT: 0.190 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5124 Max RT: 225 Average RT: 0.195 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5146 Max RT: 225 Average RT: 0.194 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4861 Max RT: 225 Average RT: 0.206 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4998 Max RT: 225 Average RT: 0.200 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5063 Max RT: 225 Average RT: 0.198 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5039 Max RT: 225 Average RT: 0.198 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-<h3 id="1个线程-消息3K-16个队列"><a href="#1个线程-消息3K-16个队列" class="headerlink" title="1个线程 消息3K 16个队列"></a>1个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 1 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5011 Max RT: 244 Average RT: 0.199 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4826 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4762 Max RT: 244 Average RT: 0.210 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4663 Max RT: 244 Average RT: 0.214 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4648 Max RT: 244 Average RT: 0.215 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4737 Max RT: 244 Average RT: 0.211 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4523 Max RT: 244 Average RT: 0.221 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4544 Max RT: 244 Average RT: 0.220 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4683 Max RT: 244 Average RT: 0.213 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4838 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-
-
-<h1 id="10个线程测试记录"><a href="#10个线程测试记录" class="headerlink" title="10个线程测试记录"></a>10个线程测试记录</h1><h3 id="10个线程-消息1K-8个队列"><a href="#10个线程-消息1K-8个队列" class="headerlink" title="10个线程 消息1K 8个队列"></a>10个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 1 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 5011 Max RT: 244 Average RT: 0.199 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4826 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4762 Max RT: 244 Average RT: 0.210 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4663 Max RT: 244 Average RT: 0.214 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4648 Max RT: 244 Average RT: 0.215 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4778 Max RT: 244 Average RT: 0.209 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4737 Max RT: 244 Average RT: 0.211 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4523 Max RT: 244 Average RT: 0.221 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4544 Max RT: 244 Average RT: 0.220 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4683 Max RT: 244 Average RT: 0.213 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 4838 Max RT: 244 Average RT: 0.207 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="10个线程-消息3K-8个队列"><a href="#10个线程-消息3K-8个队列" class="headerlink" title="10个线程 消息3K 8个队列"></a>10个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 10 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 40085 Max RT: 265 Average RT: 0.249 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 37710 Max RT: 265 Average RT: 0.265 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39305 Max RT: 265 Average RT: 0.254 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39881 Max RT: 265 Average RT: 0.251 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38428 Max RT: 265 Average RT: 0.260 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39280 Max RT: 265 Average RT: 0.255 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38539 Max RT: 265 Average RT: 0.259 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 40927 Max RT: 265 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="10个线程-消息1K-16个队列"><a href="#10个线程-消息1K-16个队列" class="headerlink" title="10个线程 消息1K 16个队列"></a>10个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 10 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 41301 Max RT: 243 Average RT: 0.242 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 42365 Max RT: 243 Average RT: 0.236 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 42181 Max RT: 243 Average RT: 0.237 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 42261 Max RT: 243 Average RT: 0.237 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 40831 Max RT: 243 Average RT: 0.245 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 43010 Max RT: 243 Average RT: 0.232 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 41871 Max RT: 243 Average RT: 0.239 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 40970 Max RT: 243 Average RT: 0.244 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="10个线程-消息3K-16个队列"><a href="#10个线程-消息3K-16个队列" class="headerlink" title="10个线程 消息3K 16个队列"></a>10个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 10 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 36245 Max RT: 237 Average RT: 0.276 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38713 Max RT: 237 Average RT: 0.258 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 36327 Max RT: 237 Average RT: 0.275 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39005 Max RT: 237 Average RT: 0.256 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 37926 Max RT: 237 Average RT: 0.264 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 38804 Max RT: 237 Average RT: 0.258 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 39976 Max RT: 237 Average RT: 0.250 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="30个线程测试记录"><a href="#30个线程测试记录" class="headerlink" title="30个线程测试记录"></a>30个线程测试记录</h1><h3 id="30个线程-消息1K-8个队列"><a href="#30个线程-消息1K-8个队列" class="headerlink" title="30个线程 消息1K 8个队列"></a>30个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 30 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 86259 Max RT: 309 Average RT: 0.348 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 85335 Max RT: 309 Average RT: 0.351 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 81850 Max RT: 309 Average RT: 0.366 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 87712 Max RT: 309 Average RT: 0.342 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 89288 Max RT: 309 Average RT: 0.336 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86732 Max RT: 309 Average RT: 0.346 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="30个线程-消息3K-8个队列"><a href="#30个线程-消息3K-8个队列" class="headerlink" title="30个线程 消息3K 8个队列"></a>30个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 30 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 74085 Max RT: 334 Average RT: 0.405 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 71014 Max RT: 334 Average RT: 0.422 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77792 Max RT: 334 Average RT: 0.386 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 73913 Max RT: 334 Average RT: 0.406 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77337 Max RT: 334 Average RT: 0.392 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 72184 Max RT: 334 Average RT: 0.416 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77271 Max RT: 334 Average RT: 0.388 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 75016 Max RT: 334 Average RT: 0.400 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="30个线程-消息1K-16个队列"><a href="#30个线程-消息1K-16个队列" class="headerlink" title="30个线程 消息1K 16个队列"></a>30个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 30 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 82946 Max RT: 306 Average RT: 0.362 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86902 Max RT: 306 Average RT: 0.345 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 83157 Max RT: 306 Average RT: 0.365 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86804 Max RT: 306 Average RT: 0.345 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 87009 Max RT: 306 Average RT: 0.345 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 80219 Max RT: 306 Average RT: 0.374 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="30个线程-消息3K-16个队列"><a href="#30个线程-消息3K-16个队列" class="headerlink" title="30个线程 消息3K 16个队列"></a>30个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 30 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 73864 Max RT: 329 Average RT: 0.403 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 78555 Max RT: 329 Average RT: 0.382 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 75200 Max RT: 329 Average RT: 0.406 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 73925 Max RT: 329 Average RT: 0.406 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 69955 Max RT: 329 Average RT: 0.429 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="45个线程测试记录"><a href="#45个线程测试记录" class="headerlink" title="45个线程测试记录"></a>45个线程测试记录</h1><h3 id="45个线程-消息1K-8个队列"><a href="#45个线程-消息1K-8个队列" class="headerlink" title="45个线程 消息1K 8个队列"></a>45个线程 消息1K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 45 -s 1024 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 91266 Max RT: 2063 Average RT: 0.493 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 87279 Max RT: 2063 Average RT: 0.515 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 92130 Max RT: 2063 Average RT: 0.487 Send Failed: 0 Response Failed: 1</span><br><span class="line"></span><br><span class="line">Send TPS: 95227 Max RT: 2063 Average RT: 0.472 Send Failed: 0 Response Failed: 1</span><br><span class="line"></span><br><span class="line">Send TPS: 96340 Max RT: 2063 Average RT: 0.467 Send Failed: 0 Response Failed: 1</span><br><span class="line"></span><br><span class="line">Send TPS: 84272 Max RT: 2063 Average RT: 0.534 Send Failed: 0 Response Failed: 1</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="45个线程-消息3K-8个队列"><a href="#45个线程-消息3K-8个队列" class="headerlink" title="45个线程 消息3K 8个队列"></a>45个线程 消息3K 8个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst8 -w 45 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 89334 Max RT: 462 Average RT: 0.503 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 84237 Max RT: 462 Average RT: 0.534 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86051 Max RT: 462 Average RT: 0.523 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86475 Max RT: 462 Average RT: 0.520 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 86088 Max RT: 462 Average RT: 0.523 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 90403 Max RT: 462 Average RT: 0.498 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 84229 Max RT: 462 Average RT: 0.534 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="45个线程-消息1K-16个队列"><a href="#45个线程-消息1K-16个队列" class="headerlink" title="45个线程 消息1K 16个队列"></a>45个线程 消息1K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 45 -s 1024 -n 192.168.x.:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 91724 Max RT: 604 Average RT: 0.490 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 90414 Max RT: 604 Average RT: 0.498 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 89904 Max RT: 604 Average RT: 0.500 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 100158 Max RT: 604 Average RT: 0.449 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 99658 Max RT: 604 Average RT: 0.451 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 92440 Max RT: 604 Average RT: 0.489 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="45个线程-消息3K-16个队列"><a href="#45个线程-消息3K-16个队列" class="headerlink" title="45个线程 消息3K 16个队列"></a>45个线程 消息3K 16个队列</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">sh producer.sh -t zms-clusterB-perf-tst16 -w 30 -s 3072 -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Send TPS: 75159 Max RT: 436 Average RT: 0.399 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 75315 Max RT: 436 Average RT: 0.398 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77297 Max RT: 436 Average RT: 0.388 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 72188 Max RT: 436 Average RT: 0.415 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 77525 Max RT: 436 Average RT: 0.387 Send Failed: 0 Response Failed: 0</span><br><span class="line"></span><br><span class="line">Send TPS: 71535 Max RT: 436 Average RT: 0.422 Send Failed: 0 Response Failed: 0</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/5d180165/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/eb676532/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/eb676532/" class="post-title-link" itemprop="url">MQ12# RocketMQ性能优化</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 18:14:01" itemprop="dateCreated datePublished" datetime="2020-12-20T18:14:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-18 23:29:41" itemprop="dateModified" datetime="2020-12-18T23:29:41+08:00">2020-12-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">一、系统优化</span><br><span class="line"></span><br><span class="line">1.最大文件数</span><br><span class="line"></span><br><span class="line">2.系统参数调整</span><br><span class="line"></span><br><span class="line">二、RocketMQ性能调优</span><br><span class="line"></span><br><span class="line">1.开启异步刷盘</span><br><span class="line"></span><br><span class="line">2.开启堆外内存设置</span><br><span class="line"></span><br><span class="line">3.开启文件预热</span><br><span class="line"></span><br><span class="line">4.开启Slave读权限</span><br><span class="line"></span><br><span class="line">5.关闭堆内存据传输</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="系统优化"><a href="#系统优化" class="headerlink" title="系统优化"></a>系统优化</h1><h2 id="最大文件数"><a href="#最大文件数" class="headerlink" title="最大文件数"></a>最大文件数</h2><p>limits.conf 设置用户能打开的最大文件数</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">vim &#x2F;etc&#x2F;security&#x2F;limits.conf</span><br><span class="line"></span><br><span class="line">\# End of file</span><br><span class="line"></span><br><span class="line">baseuser soft nofile 655360</span><br><span class="line"></span><br><span class="line">baseuser hard nofile 655360</span><br><span class="line"></span><br><span class="line">\* soft nofile 655360</span><br><span class="line"></span><br><span class="line">\* hard nofile 655360</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="系统参数调整"><a href="#系统参数调整" class="headerlink" title="系统参数调整"></a>系统参数调整</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">sudo vim &#x2F;etc&#x2F;sysctl.conf</span><br><span class="line"></span><br><span class="line">vm.overcommit_memory&#x3D;1</span><br><span class="line"></span><br><span class="line">vm.drop_caches&#x3D;1</span><br><span class="line"></span><br><span class="line">vm.zone_reclaim_mode&#x3D;0</span><br><span class="line"></span><br><span class="line">vm.max_map_count&#x3D;655360</span><br><span class="line"></span><br><span class="line">vm.dirty_background_ratio&#x3D;50</span><br><span class="line"></span><br><span class="line">vm.dirty_ratio&#x3D;50</span><br><span class="line"></span><br><span class="line">vm.dirty_writeback_centisecs&#x3D;360000</span><br><span class="line"></span><br><span class="line">vm.page-cluster&#x3D;3</span><br><span class="line"></span><br><span class="line">vm.swappiness&#x3D;1</span><br><span class="line"></span><br><span class="line">vm.zone_reclaim_mode&#x3D;1 &#x2F;&#x2F; 主节点</span><br><span class="line"></span><br><span class="line">vm.min_free_kbytes&#x3D;512000</span><br><span class="line"></span><br><span class="line">sudo sysctl -p</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="参数说明"><a href="#参数说明" class="headerlink" title="参数说明"></a>参数说明</h2><h3 id="overcommit-memory"><a href="#overcommit-memory" class="headerlink" title="overcommit_memory"></a>overcommit_memory</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">是否允许内存的过量分配</span><br><span class="line"></span><br><span class="line">当为0的时候，当用户申请内存的时候，内核会去检查是否有这么大的内存空间</span><br><span class="line"></span><br><span class="line">当为1的时候，内核始终认为，有足够大的内存空间，直到它用完了为止</span><br><span class="line"></span><br><span class="line">当为2的时候，内核禁止任何形式的过量分配内存</span><br></pre></td></tr></table></figure>
-
-<h3 id="drop-caches"><a href="#drop-caches" class="headerlink" title="drop_caches"></a>drop_caches</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">写入的时候，内核会清空缓存，腾出内存来，相当于sync</span><br><span class="line"></span><br><span class="line">写1的时候，会清空页缓存，就是文件</span><br><span class="line"></span><br><span class="line">写2的时候，会清空inode和目录树</span><br><span class="line"></span><br><span class="line">写3的时候，都清空</span><br><span class="line"></span><br><span class="line">This is a non-destructive operation and will only free things that are completely unused.</span><br><span class="line"></span><br><span class="line">Dirty objects will continue to be in use until written out to disk and are not freeable.</span><br><span class="line"></span><br><span class="line">If you run &quot;sync&quot; first to flush them out to disk, these drop operations will tend to free more memory.</span><br></pre></td></tr></table></figure>
-
-<h3 id="zone-reclaim-mode"><a href="#zone-reclaim-mode" class="headerlink" title="zone_reclaim_mode"></a>zone_reclaim_mode</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">如果为0的话，那么系统会倾向于从其他节点分配内存</span><br><span class="line"></span><br><span class="line">如果为1的话，那么系统会倾向于从本地节点回收Cache内存多数时候</span><br></pre></td></tr></table></figure>
-
-<h3 id="max-map-count"><a href="#max-map-count" class="headerlink" title="max_map_count"></a>max_map_count</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">定义了一个进程能拥有的最多的内存区域，默认为65536</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="dirty-background-bytes-dirty-background-ratio"><a href="#dirty-background-bytes-dirty-background-ratio" class="headerlink" title="dirty_background_bytes/dirty_background_ratio"></a>dirty_background_bytes/dirty_background_ratio</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">当dirty cache到了多少的时候，就启动pdflush进程，将dirty cache写回磁盘</span><br><span class="line"></span><br><span class="line">当有dirty_background_bytes存在的时候，dirty_background_ratio是被自动计算的</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="dirty-bytes-dirty-ratio"><a href="#dirty-bytes-dirty-ratio" class="headerlink" title="dirty_bytes/dirty_ratio"></a>dirty_bytes/dirty_ratio</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">当一个进程的dirty cache到了多少的时候，启动pdflush进程，将dirty cache写回磁盘</span><br><span class="line"></span><br><span class="line">当dirty_bytes存在的时候，dirty_ratio是被自动计算的</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="dirty-writeback-centisecs"><a href="#dirty-writeback-centisecs" class="headerlink" title="dirty_writeback_centisecs"></a>dirty_writeback_centisecs</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pdflush每隔多久，自动运行一次（单位是百分之一秒）</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="page-cluster"><a href="#page-cluster" class="headerlink" title="page-cluster"></a>page-cluster</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">每次swap in或者swap out操作多少内存页为2的指数。</span><br><span class="line"></span><br><span class="line">等于0的时候，为1页；等于1的时候，为2页；等于2的时候，为4页</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="swappiness"><a href="#swappiness" class="headerlink" title="swappiness"></a>swappiness</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">swappiness&#x3D;0 仅在内存不足的情况下，当剩余空闲内存低于vm.min_free_kbytes limit时，使用交换空间</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;1 内核版本3.5及以上、Red Hat内核版本2.6.32-303及以上，进行最少量的交换，而不禁用交换</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;10 当系统存在足够内存时，推荐设置为该值以提高性能</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;60 默认值</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;100 内核将积极的使用交换空间</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/eb676532/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a3306fb0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/a3306fb0/" class="post-title-link" itemprop="url">Netty6# Netty之事件轮询与处理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T11:55:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-27 13:24:52" itemprop="dateModified" datetime="2020-12-27T13:24:52+08:00">2020-12-27</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <div id="vip-container"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在前面的文章第三篇《Netty组件之Channel注册》分析了channel是如何注册到Selector上的。第五篇《Netty之客户端连接调用》，分析了建立连接的过程。本文将梳理如下内容：</p>
-<p>1.就绪事件如何轮询的？bossGroup和workGroup都轮询什么感兴趣的事件</p>
-<p>2.bossGroup的职责是什么？又是如何将客户端新建连接Channel传递到workGroup的？</p>
-<p>3.workGroup的职责是什么？如何回调到我们自己加入的childHandler中的？</p>
-<h2 id="一、准备工作"><a href="#一、准备工作" class="headerlink" title="一、准备工作"></a>一、准备工作</h2><h4 id="1-示例代码"><a href="#1-示例代码" class="headerlink" title="1.示例代码"></a>1.示例代码</h4><p>本文将以这段示例为入口进行分析，示例中设置了bossGroup、workerGroup以及childHandler为HttpUploadServerInitializer。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">EventLoopGroup bossGroup = <span class="keyword">new</span> NioEventLoopGroup(<span class="number">1</span>);</span><br><span class="line">EventLoopGroup workerGroup = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line"></span><br><span class="line">ServerBootstrap b = <span class="keyword">new</span> ServerBootstrap();</span><br><span class="line">b.group(bossGroup, workerGroup);</span><br><span class="line">b.channel(NioServerSocketChannel.class);</span><br><span class="line">b.handler(<span class="keyword">new</span> LoggingHandler(LogLevel.INFO));</span><br><span class="line">b.childHandler(<span class="keyword">new</span> HttpUploadServerInitializer(sslCtx));</span><br><span class="line"></span><br><span class="line">Channel ch = b.bind(PORT).sync().channel();</span><br></pre></td></tr></table></figure>
-
-
-
-<h4 id="2-原理文章"><a href="#2-原理文章" class="headerlink" title="2.原理文章"></a>2.原理文章</h4><p>在阅读本文前，可以先阅读下之前的两篇文章。<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/A4x5xCqHOV4HXdU3R4frnw">系统五种I/O模型</a> 和 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/WZB4ChAsail2dPD8zuCutA">Reactor线程模型</a>。</p>
-<h2 id="二、就绪事件轮询"><a href="#二、就绪事件轮询" class="headerlink" title="二、就绪事件轮询"></a>二、就绪事件轮询</h2><p>接着第三篇《Netty组件之Channel注册》channel注册到Selector，返回selectionKey。其中包含isReadable、isWritable、isConnectable、isAcceptable等通道的就绪状态。一起看下Netty是如何轮询这些就绪事件的。</p>
-<h4 id="1-注册selectionKey集合"><a href="#1-注册selectionKey集合" class="headerlink" title="1.注册selectionKey集合"></a>1.注册selectionKey集合</h4><p>将Channel注册到Selector时再往后看下implRegister()方法以及实现AbstractPollSelectorImpl。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">protected abstract void implRegister(SelectionKeyImpl ski)</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">implRegister</span><span class="params">(SelectionKeyImpl ski)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (closeLock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (closed)</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ClosedSelectorException();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Check to see if the array is large enough</span></span><br><span class="line">        <span class="keyword">if</span> (channelArray.length == totalChannels) &#123;</span><br><span class="line">            <span class="comment">// Make a larger array</span></span><br><span class="line">            <span class="keyword">int</span> newSize = pollWrapper.totalChannels * <span class="number">2</span>;</span><br><span class="line">            SelectionKeyImpl temp[] = <span class="keyword">new</span> SelectionKeyImpl[newSize];</span><br><span class="line">            <span class="comment">// Copy over</span></span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i=channelOffset; i&lt;totalChannels; i++)</span><br><span class="line">                temp[i] = channelArray[i];</span><br><span class="line">            channelArray = temp;</span><br><span class="line">            <span class="comment">// Grow the NativeObject poll array</span></span><br><span class="line">            pollWrapper.grow(newSize);</span><br><span class="line">        &#125;</span><br><span class="line">        channelArray[totalChannels] = ski;</span><br><span class="line">        ski.setIndex(totalChannels);</span><br><span class="line">        pollWrapper.addEntry(ski.channel);</span><br><span class="line">        totalChannels++;</span><br><span class="line">        keys.add(ski); <span class="comment">// 注解@1</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="title">SelectorImpl</span><span class="params">(SelectorProvider sp)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>(sp);</span><br><span class="line">    keys = <span class="keyword">new</span> HashSet&lt;SelectionKey&gt;();</span><br><span class="line">    selectedKeys = <span class="keyword">new</span> HashSet&lt;SelectionKey&gt;();</span><br><span class="line">    <span class="keyword">if</span> (Util.atBugLevel(<span class="string">&quot;1.4&quot;</span>)) &#123;</span><br><span class="line">        publicKeys = keys;</span><br><span class="line">        publicSelectedKeys = selectedKeys;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        publicKeys = Collections.unmodifiableSet(keys); <span class="comment">// 注解@2</span></span><br><span class="line">        publicSelectedKeys = Util.ungrowableSet(selectedKeys); <span class="comment">// 注解@3</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@1：将注册channel返回的selectionKey放入到了HashSet<SelectionKey> keys中。</p>
-<p>注解@2：Set<SelectionKey> publicKeys 也就是selectionKey的集合。</p>
-<p>小结：SelectorImpl类中有这么一个结合publicKeys存储了selectionKey，而就绪事件的轮询需要依靠轮询selectionKey。</p>
-<h4 id="2-就绪selectionKey集合"><a href="#2-就绪selectionKey集合" class="headerlink" title="2.就绪selectionKey集合"></a>2.就绪selectionKey集合</h4><p>当执行select()方法时，以AbstractPollSelectorImpl为例，会执行到updateSelectedKeys()方法。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Copy the information in the pollfd structs into the opss</span></span><br><span class="line"><span class="comment"> * of the corresponding Channels. Add the ready keys to the</span></span><br><span class="line"><span class="comment"> * ready queue.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">int</span> <span class="title">updateSelectedKeys</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> numKeysUpdated = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// Skip zeroth entry; it is for interrupts only</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=channelOffset; i&lt;totalChannels; i++) &#123;</span><br><span class="line">        <span class="comment">// 获取通道就绪操作类型（可读、可写、错误等）</span></span><br><span class="line">        <span class="keyword">int</span> rOps = pollWrapper.getReventOps(i);</span><br><span class="line">        <span class="keyword">if</span> (rOps != <span class="number">0</span>) &#123;</span><br><span class="line">            SelectionKeyImpl sk = channelArray[i];</span><br><span class="line">            pollWrapper.putReventOps(i, <span class="number">0</span>);</span><br><span class="line">            <span class="keyword">if</span> (selectedKeys.contains(sk)) &#123;</span><br><span class="line">                <span class="comment">// 将ReventOps就绪的操作类型转换到SelectionKeyImpl</span></span><br><span class="line">                <span class="keyword">if</span> (sk.channel.translateAndSetReadyOps(rOps, sk)) &#123;</span><br><span class="line">                    numKeysUpdated++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                sk.channel.translateAndSetReadyOps(rOps, sk);</span><br><span class="line">                <span class="keyword">if</span> ((sk.nioReadyOps() &amp; sk.nioInterestOps()) != <span class="number">0</span>) &#123;</span><br><span class="line">                    selectedKeys.add(sk); <span class="comment">// 注解@4</span></span><br><span class="line">                    numKeysUpdated++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> numKeysUpdated;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@3：由SelectorImpl方法可以看出publicSelectedKeys即为selectedKeys。</p>
-<p>注解@4：将就绪的key放入了selectedKeys集合中。</p>
-<p>小结：SelectorImpl中的publicSelectedKeys存放了就绪selectedKey。</p>
-<h4 id="3-轮询就绪selectionKey集合"><a href="#3-轮询就绪selectionKey集合" class="headerlink" title="3.轮询就绪selectionKey集合"></a>3.轮询就绪selectionKey集合</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">doBind0</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">final</span> ChannelFuture regFuture, <span class="keyword">final</span> Channel channel,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">final</span> SocketAddress localAddress, <span class="keyword">final</span> ChannelPromise promise)</span> </span>&#123;</span><br><span class="line">    channel.eventLoop().execute(<span class="keyword">new</span> Runnable() &#123; <span class="comment">// 注解@5</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (regFuture.isSuccess()) &#123;</span><br><span class="line">                channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                promise.setFailure(regFuture.cause());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@5： 顺着示例b.bind(PORT)进入到doBind0()方法。channel.eventLoop().execute(…)，此处的eventLoop()即NioEventLoop。也就是后续的轮询事件在该NioEventLoop线程中进行。SingleThreadEventExecutor是NioEventLoop的父类，实际执行到SingleThreadEventExecutor的execute方法。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(Runnable task)</span> </span>&#123;</span><br><span class="line">    ObjectUtil.checkNotNull(task, <span class="string">&quot;task&quot;</span>);</span><br><span class="line">    execute(task, !(task <span class="keyword">instanceof</span> LazyRunnable) &amp;&amp; wakesUpForTask(task));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(Runnable task, <span class="keyword">boolean</span> immediate)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> inEventLoop = inEventLoop();</span><br><span class="line">    addTask(task); <span class="comment">// 注解@6</span></span><br><span class="line">    <span class="keyword">if</span> (!inEventLoop) &#123;</span><br><span class="line">        startThread(); <span class="comment">// 注解@7</span></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">doStartThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    executor.execute(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="comment">//...</span></span><br><span class="line">            SingleThreadEventExecutor.<span class="keyword">this</span>.run(); <span class="comment">// 注解@8</span></span><br><span class="line">            <span class="comment">//...   </span></span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@6：将Runnable放入Queue中。</p>
-<p>注解@7：此处启动了一个线程默认为ThreadPerTaskExecutor。</p>
-<p>注解@8：具体执行逻辑由NioEventLoop#run()来执行。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> selectCnt = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;  <span class="comment">// 注解@9</span></span><br><span class="line">     <span class="comment">// ... </span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">     		  <span class="comment">// ...</span></span><br><span class="line">      		 processSelectedKeys(); <span class="comment">// @10</span></span><br><span class="line">      &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      	 <span class="comment">// Ensure we always run tasks.</span></span><br><span class="line">         ranTasks = runAllTasks(); <span class="comment">// @11</span></span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// ...   </span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@9：一个死循环在不断轮询就绪事件</p>
-<p>注解@10：处理就绪事件</p>
-<p>注解@11：处理放入Queue中的Runnable任务</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processSelectedKeys</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (selectedKeys != <span class="keyword">null</span>) &#123;</span><br><span class="line">        processSelectedKeysOptimized();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        processSelectedKeysPlain(selector.selectedKeys()); <span class="comment">// 注解@12</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@12：selector.selectedKeys()即为SelectorImpl的publicSelectedKeys，即获取了就绪事件集合。</p>
-<p>小结：就绪事件的轮询SingleThreadEventExecutor#run方法负责，不断轮询就绪事件集合publicSelectedKeys，来判断是否有就绪事件。</p>
-<h2 id="三、事件处理"><a href="#三、事件处理" class="headerlink" title="三、事件处理"></a>三、事件处理</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processSelectedKey</span><span class="params">(SelectionKey k, AbstractNioChannel ch)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">int</span> readyOps = k.readyOps();</span><br><span class="line">        <span class="comment">// We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise</span></span><br><span class="line">        <span class="comment">// the NIO JDK channel implementation may throw a NotYetConnectedException.</span></span><br><span class="line">        <span class="keyword">if</span> ((readyOps &amp; SelectionKey.OP_CONNECT) != <span class="number">0</span>) &#123; <span class="comment">// 注解@13</span></span><br><span class="line">            <span class="comment">// remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking</span></span><br><span class="line">            <span class="comment">// See https://github.com/netty/netty/issues/924</span></span><br><span class="line">            <span class="keyword">int</span> ops = k.interestOps();</span><br><span class="line">            ops &amp;= ~SelectionKey.OP_CONNECT;</span><br><span class="line">            k.interestOps(ops);</span><br><span class="line"></span><br><span class="line">            unsafe.finishConnect();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Process OP_WRITE first as we may be able to write some queued buffers and so free memory.</span></span><br><span class="line">        <span class="keyword">if</span> ((readyOps &amp; SelectionKey.OP_WRITE) != <span class="number">0</span>) &#123; <span class="comment">// 注解@14</span></span><br><span class="line">          <span class="comment">// Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write</span></span><br><span class="line">          ch.unsafe().forceFlush();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead</span></span><br><span class="line">        <span class="comment">// to a spin loop</span></span><br><span class="line">        <span class="keyword">if</span> ((readyOps &amp; (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != <span class="number">0</span> || readyOps == <span class="number">0</span>) &#123; <span class="comment">// 注解@15</span></span><br><span class="line">            unsafe.read();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (CancelledKeyException ignored) &#123;</span><br><span class="line">        unsafe.close(unsafe.voidPromise());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@13：处理连接事件</p>
-<p>注解@14：处理可写事件</p>
-<p>注解@15：处理可读事件和处理客户端连接事件</p>
-<p>小结：在以上的事件处理中，bossGroup主要处理客户端连接OP_ACCEPT事件。当有新的客户端的连接时触发unsafe.read()执行。具体为NioMessageUnsafe#read()方法。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">public void read() &#123;</span><br><span class="line">    &#x2F;&#x2F; ...</span><br><span class="line">    try &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            do &#123;</span><br><span class="line">                int localRead &#x3D; doReadMessages(readBuf); &#x2F;&#x2F; 注解@16</span><br><span class="line">                &#x2F;&#x2F; ...</span><br><span class="line">                allocHandle.incMessagesRead(localRead);</span><br><span class="line">            &#125; while (allocHandle.continueReading());</span><br><span class="line">        &#125; catch (Throwable t) &#123;</span><br><span class="line">            exception &#x3D; t;</span><br><span class="line">        &#125;</span><br><span class="line">			  int size &#x3D; readBuf.size();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; size; i ++) &#123;</span><br><span class="line">            readPending &#x3D; false;</span><br><span class="line">            pipeline.fireChannelRead(readBuf.get(i)); &#x2F;&#x2F; 注解@17</span><br><span class="line">        &#125;</span><br><span class="line">      	&#x2F;&#x2F; ...</span><br><span class="line">    &#125; finally &#123;</span><br><span class="line">        &#x2F;&#x2F; ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@16：见下面doReadMessages逻辑。</p>
-<p>注解@17：pipeline.fireChannelRead触发了pipeline链表向下执行。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">int</span> <span class="title">doReadMessages</span><span class="params">(List&lt;Object&gt; buf)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    SocketChannel ch = SocketUtils.accept(javaChannel()); <span class="comment">// 注解@18</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (ch != <span class="keyword">null</span>) &#123;</span><br><span class="line">            buf.add(<span class="keyword">new</span> NioSocketChannel(<span class="keyword">this</span>, ch)); <span class="comment">// 注解@19</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="title">AbstractNioByteChannel</span><span class="params">(Channel parent, SelectableChannel ch)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>(parent, ch, SelectionKey.OP_READ);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@18：获取新建立的连接通道SocketChannel。</p>
-<p>注解@19：将连接通道SocketChannel转换为NioSocketChannel，建立时注册的OP_READ读事件。并将新建立的连接通道放入了List中。</p>
-<p>再回到注解@17，pipeline.fireChannelRead触发了链表向下传递。具体传递到那个Handler中需要翻前面初始化代码。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">init</span><span class="params">(Channel channel)</span> </span>&#123;</span><br><span class="line">    setChannelOptions(channel, newOptionsArray(), logger); </span><br><span class="line">    setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));</span><br><span class="line"></span><br><span class="line">    ChannelPipeline p = channel.pipeline();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> EventLoopGroup currentChildGroup = childGroup;</span><br><span class="line">    <span class="keyword">final</span> ChannelHandler currentChildHandler = childHandler;</span><br><span class="line">    <span class="keyword">final</span> Entry&lt;ChannelOption&lt;?&gt;, Object&gt;[] currentChildOptions;</span><br><span class="line">    <span class="keyword">synchronized</span> (childOptions) &#123;</span><br><span class="line">        currentChildOptions = childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">final</span> Entry&lt;AttributeKey&lt;?&gt;, Object&gt;[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);</span><br><span class="line"></span><br><span class="line">    p.addLast(<span class="keyword">new</span> ChannelInitializer&lt;Channel&gt;() &#123; </span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(<span class="keyword">final</span> Channel ch)</span> </span>&#123; <span class="comment">// 注解@20</span></span><br><span class="line">            <span class="keyword">final</span> ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line">            ChannelHandler handler = config.handler();</span><br><span class="line">            <span class="keyword">if</span> (handler != <span class="keyword">null</span>) &#123;</span><br><span class="line">                pipeline.addLast(handler);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            ch.eventLoop().execute(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    pipeline.addLast(<span class="keyword">new</span> ServerBootstrapAcceptor( <span class="comment">// 注解21</span></span><br><span class="line">                            ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@20：在Server初始化时回调</p>
-<p>注解@21：Server初始化后在pipeline加入了ServerBootstrapAcceptor，同时注意参数currentChildGroup和currentChildHandler，分别对应示例中传入的childGroup和childHandler。</p>
-<p>接着看下ServerBootstrapAcceptor的channelRead方法。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelRead</span><span class="params">(ChannelHandlerContext ctx, Object msg)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> Channel child = (Channel) msg; <span class="comment">// 注解@22</span></span><br><span class="line"></span><br><span class="line">    child.pipeline().addLast(childHandler); <span class="comment">// 注解@23</span></span><br><span class="line"></span><br><span class="line">    setChannelOptions(child, childOptions, logger);</span><br><span class="line">    setAttributes(child, childAttrs);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        childGroup.register(child).addListener(<span class="keyword">new</span> ChannelFutureListener() &#123; <span class="comment">// 注解@24</span></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">operationComplete</span><span class="params">(ChannelFuture future)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (!future.isSuccess()) &#123;</span><br><span class="line">                    forceClose(child, future.cause());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">        forceClose(child, t);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注解@22：注意此处有“注解@17”步回调回来，传入的msg为新建立连接的NioSocketChannel，再强调下该通道注册了可读事件。</p>
-<p>注解@23：把childHandler加入到新建立连接Channel的pipeline，也就是示例中的HttpUploadServerInitializer。HttpUploadServerInitializer的初始化（channel注册后回调）又加入了HttpRequestDecoder、HttpResponseEncoder、HttpContentCompressor、HttpUploadServerHandler到该channel的pipeline。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel ch)</span> </span>&#123;</span><br><span class="line">    ChannelPipeline pipeline = ch.pipeline();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (sslCtx != <span class="keyword">null</span>) &#123;</span><br><span class="line">        pipeline.addLast(sslCtx.newHandler(ch.alloc()));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    pipeline.addLast(<span class="keyword">new</span> HttpRequestDecoder());</span><br><span class="line">    pipeline.addLast(<span class="keyword">new</span> HttpResponseEncoder());</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Remove the following line if you don&#x27;t want automatic content compression.</span></span><br><span class="line">    pipeline.addLast(<span class="keyword">new</span> HttpContentCompressor());</span><br><span class="line"></span><br><span class="line">    pipeline.addLast(<span class="keyword">new</span> HttpUploadServerHandler());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p>注解@24：将childGroup绑定到该NioSocketChannel，并将该NioSocketChannel注册到Selector。</p>
-<p>小结：1.当轮询到有新的客户端连接建立时，将该新建的通道NioSocketChannel通过pipeline转发给ServerBootstrapAcceptor，这个过程由线程池bossGroup分配的线程负责。</p>
-<p>2.当ServerBootstrapAcceptor收到新建立的通道NioSocketChannel时与workGroup分配的线程绑定，并将用户添加的childHandler加入到该channel的pipeline，注册OP_READ读事件到Selector。该过程由线程池workGroup分配的线程负责。</p>
-<p>3.当有数据可读时由线程池workGroup分配的线程处理，并一路通过pipeline回调到我们自己加入的ChannelHandler 见注解@23.</p>
-<p>例如：示例中加入的HttpUploadServerHandler，父类为SimpleChannelInboundHandler。当监听到有可读时间时，通过pipeline一路回调到SimpleChannelInboundHandler的channelRead()，进而调用到HttpUploadServerHandler的channelRead0()方法，从而处理我们的逻辑。</p>
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6887b617/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/6887b617/" class="post-title-link" itemprop="url">MQ11# RocketMQ集群生产环境节点下线操作</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-19 18:14:01" itemprop="dateCreated datePublished" datetime="2020-12-19T18:14:01+08:00">2020-12-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-18 10:23:18" itemprop="dateModified" datetime="2020-12-18T10:23:18+08:00">2020-12-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="现状描述"><a href="#现状描述" class="headerlink" title="现状描述"></a>现状描述</h1><p>集群其中一台物理机未知原因导致单用户无法登陆机器，该物理机需要重启修改密码或者重装系统。该台为master节点，运行正常。</p>
-<p>配置策略为：异步刷盘 &amp; 主从异步复制</p>
-<p>如果直接下线该master，由于主从异步复制，可能导致部分消息来不及复制到slave造成消息丢失。所以该方案不可行。</p>
-<p>另一种方案选择：关闭该broker的写入权限，待该broker不再有写入和消费时，再下线该节点。</p>
-<h1 id="关闭broker写权限"><a href="#关闭broker写权限" class="headerlink" title="关闭broker写权限"></a>关闭broker写权限</h1><p>2表示只写权限，4表示只读权限，6表示读写权限</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateBrokerConfig -b 192.168.x.x:10911 -n 192.168.x.x:9876 -k brokerPermission -v 4</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">update broker config success, 192.168.x.x:10911</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="观察节点流量"><a href="#观察节点流量" class="headerlink" title="观察节点流量"></a>观察节点流量</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n 192.168.x.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">\#Cluster Name #Broker Name #BID #Addr #Version #InTPS(LOAD) #OutTPS(LOAD) #PCWait(ms) #Hour #SPACE</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-a 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2492.95(0,0ms) 2269.27(1,0ms) 0 137.57 0.1861</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-a 1 192.168.x.x:10911 V4_1_0_SNAPSHOT 2485.45(0,0ms) 0.00(0,0ms) 0 125.26 0.3055</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-b 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 26.47(0,0ms) 26.08(0,0ms) 0 137.24 0.1610</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-b 1 192.168.x.x:10915 V4_1_0_SNAPSHOT 20.47(0,0ms) 0.00(0,0ms) 0 125.22 0.3055</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-c 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2061.09(0,0ms) 1967.30(0,0ms) 0 125.28 0.2031</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-c 1 192.168.x.x:10911 V4_1_0_SNAPSHOT 2048.20(0,0ms) 0.00(0,0ms) 0 137.51 0.2789</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-d 0 192.168.x.x:10911 V4_1_0_SNAPSHOT 2017.40(0,0ms) 1788.32(0,0ms) 0 125.22 0.1261</span><br><span class="line"></span><br><span class="line">ZmsClusterA broker-d 1 192.168.x.x:10915 V4_1_0_SNAPSHOT 2026.50(0,0ms) 0.00(0,0ms) 0 137.61 0.2789</span><br></pre></td></tr></table></figure>
-
-
-
-<p>观察InTPS和OutTPS，理想情况都为零时，并不再变化时，则该节点可下线了。</p>
-<p>然而，在实际过程中并没有出现为零的情况，InTPS和OutTPS总是有值，有时个位数字有时是两位数字，大部分时间在20多的值。此刻要分析下broker目前的消费状态。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/6887b617/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/cad2b239/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/cad2b239/" class="post-title-link" itemprop="url">MQ10# RocketMQ查询死信队列中的消息内容</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-12-18 17:14:01 / 修改时间：10:23:18" itemprop="dateCreated datePublished" datetime="2020-12-18T17:14:01+08:00">2020-12-18</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h1><p>RocketMQ中当重试消息超过最大重试次数（默认16次），会被发送到%DLQ%开头的死信队列，默认死信队列为只写权限。在有些情况下，想看看死信队列里的内容。</p>
-<h1 id="更改死信队列权限"><a href="#更改死信队列权限" class="headerlink" title="更改死信队列权限"></a>更改死信队列权限</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateTopicPerm -c ClusterB -t %DLQ%online-tst -p 6 -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">update topic perm from 2 to 6 in 192.168.1.x:10911 success.</span><br><span class="line"></span><br><span class="line">注：将死信队列只写权限更改为读写权限</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="查询死信队列状态"><a href="#查询死信队列状态" class="headerlink" title="查询死信队列状态"></a>查询死信队列状态</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin topicStatus -n 192.168.1.x:9876 -t %DLQ%online-tst</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Broker Name QID Min Offset Max Offset Last Updated</span><br><span class="line"></span><br><span class="line">broker-a 0 0 109 2018-12-10 18:03:08,732</span><br><span class="line"></span><br><span class="line">broker-a 1 0 109 2018-12-10 18:03:08,740</span><br><span class="line"></span><br><span class="line">broker-a 2 0 110 2018-12-10 18:03:08,750</span><br><span class="line"></span><br><span class="line">broker-a 3 0 109 2018-12-10 18:03:08,728</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/cad2b239/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1399,20 +1256,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-count">59</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

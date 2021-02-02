@@ -184,6 +184,574 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/86dc035b/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/86dc035b/" class="post-title-link" itemprop="url">MQ43# Raft一致性算法整理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:55:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="Raft概述"><a href="#Raft概述" class="headerlink" title="Raft概述"></a>Raft概述</h1><h2 id="Raft定义"><a href="#Raft定义" class="headerlink" title="Raft定义"></a>Raft定义</h2><p>Raft是一种用来管理日志复制的一致性算法。一致性算法允许一组机器像一个整体一样工作，即使其中的一些机器出了错误也能正常工作。</p>
+<h2 id="复制状态机"><a href="#复制状态机" class="headerlink" title="复制状态机"></a>复制状态机</h2><p>复制状态机(State Machine Replication)：通过复制服务副本，并和副本一起来协调客户端的交互，来实现容错服务。Raft复制状态机是通过复制日志来实现的，每一台服务器保存着一份日志。</p>
+<h2 id="Raft一致性"><a href="#Raft一致性" class="headerlink" title="Raft一致性"></a>Raft一致性</h2><p>Raft实现一致性是首先选择一个确定的leader，然后leader负责管理日志复制。leader接受来自客户端的请求并追加到本地日志，然后把日志复制到其它的机器并告诉其它机器什么时候可以安全的将日志应用到状态机。<code>集群存在一个leader的好处可以简化日志复制的管理</code>。例如：leader可以决定日志的追加，而不需要经其它机器的同意。<code>整个集群的数据流向也是从leader流向其它机器</code>。如果leader宕机或者网络断开，其它的机器可以重新选举一个新的leader。</p>
+<p>Raft一致性问题分解为3个相对独立的子问题</p>
+<p>Leader election：当一个leader宕机后，一个新的leader必须被选举。</p>
+<p>Log replication：leader必须响应客户端的请求，并把日志复制到整个集群来保证其它机器的日志和自己的相同。</p>
+<p>Safety：状态机的安全是Raft优先保证的。如果任意一台机器将一条特定的日志应用到自己的状态机，那么其他的机器就不能应用一条不同的日志到自己的状态机。解决这个问题的方案就是在选举是增加额外的规则约束。</p>
+<h2 id="Raft新的特性"><a href="#Raft新的特性" class="headerlink" title="Raft新的特性"></a>Raft新的特性</h2><p>强领导者（Strong Leader）：日志条目只从领导者发送向其他服务器。</p>
+<p>领导选取（Leader Selection）：Raft使用了随机定时器来选择leader。</p>
+<p>成员变化（Membership Change）：Raft使用了一种<code>联合一致性</code>的方法，使得集群中的机器发生变更的时候，整个集群也可以正常的工作。联合一致性配置是两个不同配置的大多数机器的重叠。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/86dc035b/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ea80cc10/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/ea80cc10/" class="post-title-link" itemprop="url">MQ42# RocketMQ消息轨迹</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:45:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:45:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <div id="vip-container"><h1 id="Broker配置"><a href="#Broker配置" class="headerlink" title="Broker配置"></a>Broker配置</h1><p>首先看下broker.conf配置的两个属性</p>
+<p>| 属性 |默认值 |</p>
+<p>| — | — |</p>
+<p>|traceTopicEnable |false |</p>
+<p>| msgTraceTopicName | RMQ_SYS_TRACE_TOPIC |</p>
+<p>在一个集群中可以配置一台机器专门负责消息轨迹的收集工作，该台机器上配置traceTopicEnable = true,</p>
+<p>borker启动的时候自动创建默认轨迹topic</p>
+<p>TopicConfigManager.java构造方法，BrokerController在启动的时候，会初始化TopicConfigManager实现trace topic的创建工作</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.brokerController.getBrokerConfig().isTraceTopicEnable()) &#123;</span><br><span class="line"></span><br><span class="line">String topic = <span class="keyword">this</span>.brokerController.getBrokerConfig().getMsgTraceTopicName();</span><br><span class="line"></span><br><span class="line">TopicConfig topicConfig = <span class="keyword">new</span> TopicConfig(topic);</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.systemTopicList.add(topic);</span><br><span class="line"></span><br><span class="line">topicConfig.setReadQueueNums(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">topicConfig.setWriteQueueNums(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="客户端发送实现"><a href="#客户端发送实现" class="headerlink" title="客户端发送实现"></a><strong>客户端发送实现</strong></h1><p>客户端发送</p>
+<p>DefaultMQProducer producer = new DefaultMQProducer(“ProducerGroupName”,true);</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">public DefaultMQProducer(final String producerGroup, RPCHook rpcHook, boolean enableMsgTrace,final String customizedTraceTopic) &#123;</span><br><span class="line"></span><br><span class="line">this.producerGroup &#x3D; producerGroup;</span><br><span class="line"></span><br><span class="line">defaultMQProducerImpl &#x3D; new DefaultMQProducerImpl(this, rpcHook);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;if client open the message trace feature</span><br><span class="line"></span><br><span class="line">if (enableMsgTrace) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">AsyncTraceDispatcher dispatcher &#x3D; new AsyncTraceDispatcher(customizedTraceTopic, rpcHook);</span><br><span class="line"></span><br><span class="line">dispatcher.setHostProducer(this.getDefaultMQProducerImpl());</span><br><span class="line"></span><br><span class="line">traceDispatcher &#x3D; dispatcher;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;为消息轨迹注册hook,在消息发送前执行</span><br><span class="line"></span><br><span class="line">this.getDefaultMQProducerImpl().registerSendMessageHook(</span><br><span class="line"></span><br><span class="line">new SendMessageTraceHookImpl(traceDispatcher));</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;system mqtrace hook init failed ,maybe can&#39;t send msg trace data&quot;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>SendMessageTraceHookImpl 实现了SendMessageHook接口，在消息发送前后会被调用</p>
+<p>AsyncTraceDispatcher 主要负责消息的发送工作；内部队列，由线程池批量（100条）发送</p>
+<h1 id="Hook调用"><a href="#Hook调用" class="headerlink" title="Hook调用"></a><strong>Hook调用</strong></h1><p>发送前hook调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;如果有hook在消息发送前执行，消息轨迹通过这种方式记录</span><br><span class="line"></span><br><span class="line">if (this.hasSendMessageHook()) &#123;</span><br><span class="line"></span><br><span class="line">context &#x3D; new SendMessageContext();</span><br><span class="line"></span><br><span class="line">context.setProducer(this); &#x2F;&#x2F;发送对象</span><br><span class="line"></span><br><span class="line">context.setProducerGroup(this.defaultMQProducer.getProducerGroup()); &#x2F;&#x2F;生产组</span><br><span class="line"></span><br><span class="line">context.setCommunicationMode(communicationMode); &#x2F;&#x2F;发送模式</span><br><span class="line"></span><br><span class="line">context.setBornHost(this.defaultMQProducer.getClientIP()); &#x2F;&#x2F;客户端IP</span><br><span class="line"></span><br><span class="line">context.setBrokerAddr(brokerAddr); &#x2F;&#x2F;发往broker的地址</span><br><span class="line"></span><br><span class="line">context.setMessage(msg); &#x2F;&#x2F;消息内容</span><br><span class="line"></span><br><span class="line">context.setMq(mq); &#x2F;&#x2F;消息 Queue</span><br><span class="line"></span><br><span class="line">String isTrans &#x3D; msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (isTrans !&#x3D; null &amp;&amp; isTrans.equals(&quot;true&quot;)) &#123;</span><br><span class="line"></span><br><span class="line">context.setMsgType(MessageType.Trans_Msg_Half);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (msg.getProperty(&quot;__STARTDELIVERTIME&quot;) !&#x3D; null || msg.getProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL) !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">context.setMsgType(MessageType.Delay_Msg);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookBefore(context); &#x2F;&#x2F;执行自定义个hook业务</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>发送后hook调用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;消息发送后执行的hook，消息轨迹会调用</span><br><span class="line"></span><br><span class="line">if (this.hasSendMessageHook()) &#123;</span><br><span class="line"></span><br><span class="line">context.setSendResult(sendResult);</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookAfter(context);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="发送轨迹"><a href="#发送轨迹" class="headerlink" title="发送轨迹"></a><strong>发送轨迹</strong></h1><p>Producer启动时注册钩子，该钩子持有负责消息发送的AsyncTraceDispatcher实例，消息发送后进而发送消息轨迹</p>
+<p><strong>发送轨迹的消息格式</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151653.png"></p>
+<h1 id="客户端消费轨迹实现"><a href="#客户端消费轨迹实现" class="headerlink" title="客户端消费轨迹实现"></a>客户端消费轨迹实现</h1><p>消费轨迹：与消息发送的轨迹实现思路相同</p>
+<p>DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(“CID_JODIE_1”,true);</p>
+<p><strong>注册消费钩子</strong></p>
+<p>ConsumeMessageTraceHookImpl实现了ConsumeMessageHook，在消费的前后会进行回调</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">public DefaultMQPushConsumer(final String consumerGroup, RPCHook rpcHook,</span><br><span class="line"></span><br><span class="line">AllocateMessageQueueStrategy allocateMessageQueueStrategy, boolean enableMsgTrace, final String customizedTraceTopic) &#123;</span><br><span class="line"></span><br><span class="line">this.consumerGroup &#x3D; consumerGroup;</span><br><span class="line"></span><br><span class="line">this.allocateMessageQueueStrategy &#x3D; allocateMessageQueueStrategy;</span><br><span class="line"></span><br><span class="line">defaultMQPushConsumerImpl &#x3D; new DefaultMQPushConsumerImpl(this, rpcHook);</span><br><span class="line"></span><br><span class="line">if (enableMsgTrace) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">AsyncTraceDispatcher dispatcher &#x3D; new AsyncTraceDispatcher(customizedTraceTopic, rpcHook);</span><br><span class="line"></span><br><span class="line">dispatcher.setHostConsumer(this.getDefaultMQPushConsumerImpl());</span><br><span class="line"></span><br><span class="line">traceDispatcher &#x3D; dispatcher;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;注册消费hook</span><br><span class="line"></span><br><span class="line">this.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(</span><br><span class="line"></span><br><span class="line">new ConsumeMessageTraceHookImpl(traceDispatcher));</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;system mqtrace hook init failed ,maybe can&#39;t send msg trace data&quot;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>ConsumeMessageConcurrentlyService.ConsumeRequest.run消费前执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;消费前执行hook 消费轨迹会执行</span><br><span class="line"></span><br><span class="line">ConsumeMessageContext consumeMessageContext &#x3D; null;</span><br><span class="line"></span><br><span class="line">if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) &#123;</span><br><span class="line"></span><br><span class="line">consumeMessageContext &#x3D; new ConsumeMessageContext();</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setConsumerGroup(defaultMQPushConsumer.getConsumerGroup());</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setProps(new HashMap&lt;String, String&gt;());</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setMq(messageQueue);</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setMsgList(msgs);</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setSuccess(false); &#x2F;&#x2F;消费状态</span><br><span class="line"></span><br><span class="line">ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookBefore(consumeMessageContext);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消费后执行</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) &#123;</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setStatus(status.toString());</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setSuccess(ConsumeConcurrentlyStatus.CONSUME_SUCCESS &#x3D;&#x3D; status);</span><br><span class="line"></span><br><span class="line">ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookAfter(consumeMessageContext);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消费轨迹格式</strong></p>
+<p>分为两部分，一部分为消费前，一部分为消费后</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151820.png"></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151831.png"></p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2f29fd72/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/2f29fd72/" class="post-title-link" itemprop="url">MQ41# RocketMQ特性--事物消息</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:43:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:43:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>从官方给的例子入手，代码如下:</p>
+<p>示例类：org.apache.rocketmq.example.transaction.TransactionProducer.java</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line">public static void main(String[] args) throws MQClientException, InterruptedException &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 定义TransactionListener</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; new TransactionListenerImpl();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 使用事务发送Producer</span><br><span class="line"></span><br><span class="line">TransactionMQProducer producer &#x3D; new TransactionMQProducer(&quot;please_rename_unique_group_name&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 定义线程池</span><br><span class="line"></span><br><span class="line">ExecutorService executorService &#x3D; new ThreadPoolExecutor(2, 5, 100, TimeUnit.SECONDS, new ArrayBlockingQueue&lt;Runnable&gt;(2000), new ThreadFactory() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public Thread newThread(Runnable r) &#123;</span><br><span class="line"></span><br><span class="line">Thread thread &#x3D; new Thread(r);</span><br><span class="line"></span><br><span class="line">thread.setName(&quot;client-transaction-msg-check-thread&quot;);</span><br><span class="line"></span><br><span class="line">return thread;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置线程池</span><br><span class="line"></span><br><span class="line">producer.setExecutorService(executorService);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置监听器</span><br><span class="line"></span><br><span class="line">producer.setTransactionListener(transactionListener);</span><br><span class="line"></span><br><span class="line">producer.setNamesrvAddr(&quot;127.0.0.1:9876&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 发送者启动</span><br><span class="line"></span><br><span class="line">producer.start();</span><br><span class="line"></span><br><span class="line">String[] tags &#x3D; new String[] &#123;&quot;TagA&quot;, &quot;TagB&quot;, &quot;TagC&quot;, &quot;TagD&quot;, &quot;TagE&quot;&#125;;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 10; i++) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">Message msg &#x3D;</span><br><span class="line"></span><br><span class="line">new Message(&quot;TopicTest1234&quot;, tags[i % tags.length], &quot;KEY&quot; + i,</span><br><span class="line"></span><br><span class="line">(&quot;Hello RocketMQ &quot; + i).getBytes(RemotingHelper.DEFAULT_CHARSET));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 消息发送</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; producer.sendMessageInTransaction(msg, null);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;%s%n&quot;, sendResult);</span><br><span class="line"></span><br><span class="line">Thread.sleep(10);</span><br><span class="line"></span><br><span class="line">&#125; catch (MQClientException | UnsupportedEncodingException e) &#123;</span><br><span class="line"></span><br><span class="line">e.printStackTrace();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 100000; i++) &#123;</span><br><span class="line"></span><br><span class="line">Thread.sleep(1000);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;发送者关闭</span><br><span class="line"></span><br><span class="line">producer.shutdown();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>从上面客户端例子中思考一些问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. @1定义TransactionListener做什么用？</span><br><span class="line">2. @2定义的TransactionMQProducer与普通Produer区别在哪里？</span><br><span class="line">3. @3定义线程池executorService又是干啥的？</span><br><span class="line">4. @4事务发送者启动发送流程是怎么样？</span><br><span class="line">5. 发送事务消息如何和Broker进行交互的？</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="事务消息客户端发送流程"><a href="#事务消息客户端发送流程" class="headerlink" title="事务消息客户端发送流程"></a>事务消息客户端发送流程</h1><h2 id="事务发送与普通启动差异"><a href="#事务发送与普通启动差异" class="headerlink" title="事务发送与普通启动差异"></a>事务发送与普通启动差异</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">@1 producer.start();</span><br><span class="line"></span><br><span class="line">@2 TransactionMQProducer#start</span><br><span class="line"></span><br><span class="line">this.defaultMQProducerImpl.initTransactionEnv();</span><br><span class="line"></span><br><span class="line">super.start();</span><br><span class="line"></span><br><span class="line">@3 DefaultMQProducerImpl#initTransactionEnv()</span><br><span class="line"></span><br><span class="line">this.checkExecutor &#x3D; producer.getExecutorService();</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：事务发送时比普通发送启动多了initTransactionEnv操作，即：给ExecutorService checkExecutor赋值。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务消息发送调用链"><a href="#事务消息发送调用链" class="headerlink" title="事务消息发送调用链"></a>事务消息发送调用链</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 SendResult sendResult &#x3D; producer.sendMessageInTransaction</span><br><span class="line"></span><br><span class="line">@2 TransactionMQProducer#sendMessageInTransaction</span><br><span class="line"></span><br><span class="line">@3 DefaultMQProducerImpl#sendMessageInTransaction</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务消息发送分析"><a href="#事务消息发送分析" class="headerlink" title="事务消息发送分析"></a>事务消息发送分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; getCheckListener();</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; localTransactionExecuter &amp;&amp; null &#x3D;&#x3D; transactionListener) &#123;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;tranExecutor is null&quot;, null);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Validators.checkMessage(msg, this.defaultMQProducer);</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; null;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 表示消息的prepare消息</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, &quot;true&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 生产者组，用于回查本地事务事，从生产者组中选择随机选择一个生产者即可</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 消息发送</span><br><span class="line"></span><br><span class="line">sendResult &#x3D; this.send(msg);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;send message Exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：DefaultMQProducerImpl#sendKernelImpl</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;事务消息发送，设置PREPARED标记</span><br><span class="line"></span><br><span class="line">final String tranMsg &#x3D; msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (tranMsg !&#x3D; null &amp;&amp; Boolean.parseBoolean(tranMsg)) &#123;</span><br><span class="line"></span><br><span class="line">sysFlag |&#x3D; MessageSysFlag.TRANSACTION_PREPARED_TYPE;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 请求header中设置事务标记</span><br><span class="line"></span><br><span class="line">requestHeader.setSysFlag(sysFlag);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@6 发送消息请求的RequestCode</span><br><span class="line"></span><br><span class="line">request &#x3D; RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1获取TransactionListener即示例代码传入的Listener</span><br><span class="line">@2在消息属性中加入PROPERTY_TRANSACTION_PREPARED &#x3D; &quot;TRAN_MSG&quot;即事务半消息</span><br><span class="line">@3设置ProducerGroup Broker在事务回查时调用</span><br><span class="line">@4事务消息发送采用同步发送，发送流程与普通消息发送一致</span><br><span class="line">@5请求header中设置事务标记SEND_MESSAGE &#x3D; 10</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务消息发送结果分析"><a href="#事务消息发送结果分析" class="headerlink" title="事务消息发送结果分析"></a>事务消息发送结果分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">LocalTransactionState localTransactionState &#x3D; LocalTransactionState.UNKNOW;</span><br><span class="line"></span><br><span class="line">switch (sendResult.getSendStatus()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">case SEND_OK: &#123;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 执行本地事务</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; transactionListener.executeLocalTransaction(msg, arg);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">case FLUSH_DISK_TIMEOUT:</span><br><span class="line"></span><br><span class="line">case FLUSH_SLAVE_TIMEOUT:</span><br><span class="line"></span><br><span class="line">case SLAVE_NOT_AVAILABLE:</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; LocalTransactionState.ROLLBACK_MESSAGE;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 发送半消息（Prepared）消息成功，设置transactionId。</span><br><span class="line">@2 发送半消息成功后，通过transactionListener回调客户端查询本地事务执行情况，并返回事务执行状态。</span><br><span class="line">LocalTransactionState有COMMIT_MESSAGE、ROLLBACK_MESSAGE、UNKNOW三种状态。</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="结束事务分析"><a href="#结束事务分析" class="headerlink" title="结束事务分析"></a>结束事务分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 结束事务，根据返回的事务状态执行提交、回滚、暂时不处理</span><br><span class="line"></span><br><span class="line">this.endTransaction(sendResult, localTransactionState, localException);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(&quot;local transaction execute &quot; + localTransactionState + &quot;, but end broker transaction failed&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">TransactionSendResult transactionSendResult &#x3D; new TransactionSendResult();</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">return transactionSendResult;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>方法：DefaultMQProducerImpl#endTransaction</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"></span><br><span class="line">switch (localTransactionState) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 设置事务提交标记Header</span><br><span class="line"></span><br><span class="line">case COMMIT_MESSAGE: requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_COMMIT_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 设置事务回滚标记Header</span><br><span class="line"></span><br><span class="line">case ROLLBACK_MESSAGE:</span><br><span class="line"></span><br><span class="line">requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_ROLLBACK_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 设置事务未知标记Header</span><br><span class="line"></span><br><span class="line">case UNKNOW:</span><br><span class="line"></span><br><span class="line">requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_NOT_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 通过一次发送方式向Broker提交事务 this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, requestHeader, remark,</span><br><span class="line"></span><br><span class="line">this.defaultMQProducer.getSendMsgTimeout());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 根据本地事务执行返回的状态localTransactionState，调用结束事务方法</span><br><span class="line">@2 requestHeader设置事务提交标记0x2 &lt;&lt; 2&#x3D;8</span><br><span class="line">@3 requestHeader设置事务回滚标记0x3 &lt;&lt; 2&#x3D;12</span><br><span class="line">@4 requestHeader设置未知标记0</span><br><span class="line">@5 通过一次发送方式向Broker提交事务 RequestCode为END_TRANSACTION &#x3D; 37</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="事务消息服务端存储流程"><a href="#事务消息服务端存储流程" class="headerlink" title="事务消息服务端存储流程"></a>事务消息服务端存储流程</h1><h2 id="事务消息存储调用链"><a href="#事务消息存储调用链" class="headerlink" title="事务消息存储调用链"></a>事务消息存储调用链</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 SendMessageProcessor#processRequest</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendMessage(ctx, request, mqtraceContext, requestHeader)</span><br><span class="line"></span><br><span class="line">@2 SendMessageProcessor#sendMessage</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="事务半消息存储代码分析（一）"><a href="#事务半消息存储代码分析（一）" class="headerlink" title="事务半消息存储代码分析（一）"></a>事务半消息存储代码分析（一）</h2><p>方法：SendMessageProcessor#sendMessage</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 可以通过配置来是否接受事务消息存储</span><br><span class="line"></span><br><span class="line">if (traFlag !&#x3D; null &amp;&amp; Boolean.parseBoolean(traFlag)) &#123;</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getBrokerConfig().isRejectTransactionMessage())&#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.NO_PERMISSION);</span><br><span class="line"></span><br><span class="line">response.setRemark(</span><br><span class="line"></span><br><span class="line">&quot;the broker[&quot; + this.brokerController.getBrokerConfig().getBrokerIP1()</span><br><span class="line"></span><br><span class="line">\+ &quot;] sending transaction message is forbidden&quot;);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 prepare消息存储</span><br><span class="line"></span><br><span class="line">putMessageResult &#x3D; this.brokerController.getTransactionalMessageService().prepareMessage(msgInner);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">putMessageResult &#x3D; this.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 可以通过Broker配置属性rejectTransactionMessage来决定是否接受事务消息请求，默认为false即接受。</span><br><span class="line">@2 半消息存储</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/2f29fd72/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/302db5ac/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/302db5ac/" class="post-title-link" itemprop="url">MQ40# RocketMQ一次消费性能问题排查</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:41:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:41:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>在容器推广中，为了测试容器的性能，需要消息SDK与ECS上在发送和消费的性能对比；在对比消费性能时，发现容器中的消费性能居然是ECS的2倍。容器并发消费的20个线程TPS在3万左右，ECS中20个消费线程TPS在1.5万左右。</p>
+<p>问题：配置均采用8C16G，容器中的性能几乎是ECS的两倍，这不科学，事出反常必有妖。</p>
+<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><h2 id="tcpdump网络情况"><a href="#tcpdump网络情况" class="headerlink" title="tcpdump网络情况"></a>tcpdump网络情况</h2><p>tcpdump显示在消费的机器存在频繁的域名解析过程；10.x.x.185向DNS服务器100.x.x.136.domain和10.x.x.138.domain请求解析。而10.x.x.185这台机器又是消息发送者的机器IP，测试的发送和消费分别部署在两台机器上。</p>
+<p>问题：消费时为何会有消息发送方的IP呢？而且该IP还不断进行域名解析。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219150223.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/302db5ac/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9126d179/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/9126d179/" class="post-title-link" itemprop="url">MQ39# RocketMQ消息发送Broker端流程处理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:39:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:39:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="Broker处理消息的入口类SendMessageProcessor"><a href="#Broker处理消息的入口类SendMessageProcessor" class="headerlink" title="Broker处理消息的入口类SendMessageProcessor"></a>Broker处理消息的入口类SendMessageProcessor</h1><p>processRequest方法主要三件事情：</p>
+<p>1.处理consumer发回broker的消息重试</p>
+<p>2.处理批量发送</p>
+<p>3.处理单条消息发送</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException &#123;</span><br><span class="line"></span><br><span class="line">SendMessageContext mqtraceContext;</span><br><span class="line"></span><br><span class="line">switch (request.getCode()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;处理消息重试</span><br><span class="line"></span><br><span class="line">case RequestCode.CONSUMER_SEND_MSG_BACK:</span><br><span class="line"></span><br><span class="line">return this.consumerSendMsgBack(ctx, request);</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">SendMessageRequestHeader requestHeader &#x3D; parseRequestHeader(request);</span><br><span class="line"></span><br><span class="line">if (requestHeader &#x3D;&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">return null;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">mqtraceContext &#x3D; buildMsgContext(ctx, requestHeader);</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookBefore(ctx, request, mqtraceContext);</span><br><span class="line"></span><br><span class="line">RemotingCommand response;</span><br><span class="line"></span><br><span class="line">if (requestHeader.isBatch()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;批量发送</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendBatchMessage(ctx, request, mqtraceContext, requestHeader);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;处理消息发送</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendMessage(ctx, request, mqtraceContext, requestHeader);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookAfter(response, mqtraceContext);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="单条处理流程"><a href="#单条处理流程" class="headerlink" title="单条处理流程"></a>单条处理流程</h1><p>批处理流程与单条处理基本一致</p>
+<p>SendMessageProcessor.sendMessage主要流程：</p>
+<p>1.broker可以在指定的时间开始服务通过startAcceptSendRequestTimeStamp设定</p>
+<p>2.消息校验：</p>
+<p>* broker没有写入权限并且topic为顺序topic则拒绝服务</p>
+<p>* 检查Topic不能和系统保留Topic[TBW102]冲突</p>
+<p>* 若Topic未创建，Broker开启自动创建</p>
+<p>* queueId校验，不能大于队列最大值</p>
+<p>3.判断是否超过消费次数（16次），决定是否写入死信队列</p>
+<p>4.消息内容组织</p>
+<p>* 设置Message扩展字段</p>
+<p>* 设置Message在客户端生成的时间</p>
+<p>* 设置发送Message机器的地址</p>
+<p>* 设置存储Message的Broker地址</p>
+<p>* 设置消费重试消息的次数</p>
+<p>5.消息存储（单独梳理）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br></pre></td><td class="code"><pre><span class="line">private RemotingCommand sendMessage(final ChannelHandlerContext ctx, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final RemotingCommand request, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendMessageContext sendMessageContext, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendMessageRequestHeader requestHeader) throws RemotingCommandException &#123;</span><br><span class="line"></span><br><span class="line">final RemotingCommand response &#x3D; RemotingCommand.createResponseCommand(SendMessageResponseHeader.class);</span><br><span class="line"></span><br><span class="line">final SendMessageResponseHeader responseHeader &#x3D; (SendMessageResponseHeader) response.readCustomHeader();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;标识RPC的SeqNumber</span><br><span class="line"></span><br><span class="line">response.setOpaque(request.getOpaque());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;埋点不清楚用处</span><br><span class="line"></span><br><span class="line">response.addExtField(MessageConst.PROPERTY_MSG_REGION, this.brokerController.getBrokerConfig().getRegionId());</span><br><span class="line"></span><br><span class="line">response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));</span><br><span class="line"></span><br><span class="line">log.debug(&quot;receive SendMessage request command, &#123;&#125;&quot;, request);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;Broker启动后在设定的时间处理请求，通过startAcceptSendRequestTimeStamp来设置</span><br><span class="line"></span><br><span class="line">final long startTimstamp &#x3D; this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getMessageStore().now() &lt; startTimstamp) &#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.SYSTEM_ERROR);</span><br><span class="line"></span><br><span class="line">response.setRemark(String.format(&quot;broker unable to service, until %s&quot;, UtilAll.timeMillisToHumanString2(startTimstamp)));</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">response.setCode(-1);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;创建Topic</span><br><span class="line"></span><br><span class="line">super.msgCheck(ctx, requestHeader, response);</span><br><span class="line"></span><br><span class="line">if (response.getCode() !&#x3D; -1) &#123;</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">final byte[] body &#x3D; request.getBody();</span><br><span class="line"></span><br><span class="line">int queueIdInt &#x3D; requestHeader.getQueueId();</span><br><span class="line"></span><br><span class="line">TopicConfig topicConfig &#x3D; this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());</span><br><span class="line"></span><br><span class="line">if (queueIdInt &lt; 0) &#123;</span><br><span class="line"></span><br><span class="line">queueIdInt &#x3D; Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">MessageExtBrokerInner msgInner &#x3D; new MessageExtBrokerInner();</span><br><span class="line"></span><br><span class="line">msgInner.setTopic(requestHeader.getTopic());</span><br><span class="line"></span><br><span class="line">msgInner.setQueueId(queueIdInt);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;判断是否超过消费次数（16次），决定是否写入死信队列</span><br><span class="line"></span><br><span class="line">if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig)) &#123;</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">msgInner.setBody(body);</span><br><span class="line"></span><br><span class="line">msgInner.setFlag(requestHeader.getFlag());</span><br><span class="line"></span><br><span class="line">MessageAccessor.setProperties(msgInner, MessageDecoder.string2messageProperties(requestHeader.getProperties()));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;Message扩展字段，比如：Unikey, Keys, Tag都在这里面</span><br><span class="line"></span><br><span class="line">msgInner.setPropertiesString(requestHeader.getProperties());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;Message在客户端生成的时间</span><br><span class="line"></span><br><span class="line">msgInner.setBornTimestamp(requestHeader.getBornTimestamp());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;发送Message机器的地址</span><br><span class="line"></span><br><span class="line">msgInner.setBornHost(ctx.channel().remoteAddress());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;存储Message的Broker地址</span><br><span class="line"></span><br><span class="line">msgInner.setStoreHost(this.getStoreHost());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;重试消息的次数</span><br><span class="line"></span><br><span class="line">msgInner.setReconsumeTimes(requestHeader.getReconsumeTimes() &#x3D;&#x3D; null ? 0 : requestHeader.getReconsumeTimes());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;判断broker是否拒绝事物消息[rejectTransactionMessage]默认false</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getBrokerConfig().isRejectTransactionMessage()) &#123;</span><br><span class="line"></span><br><span class="line">String traFlag &#x3D; msgInner.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (traFlag !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.NO_PERMISSION);</span><br><span class="line"></span><br><span class="line">response.setRemark(</span><br><span class="line"></span><br><span class="line">&quot;the broker[&quot; + this.brokerController.getBrokerConfig().getBrokerIP1() + &quot;] sending transaction message is forbidden&quot;);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;消息存储</span><br><span class="line"></span><br><span class="line">PutMessageResult putMessageResult &#x3D; this.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">return handlePutMessageResult(putMessageResult, response, request, msgInner, responseHeader, sendMessageContext, ctx, queueIdInt);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/9126d179/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bfe41dca/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -709,491 +1277,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9c431d59/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/9c431d59/" class="post-title-link" itemprop="url">MQ33# RocketMQ消费--Broker端处理逻辑</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:56:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:56:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.Broker是如何处理消费流程的？</p>
-<p>2.消费进度是如何流转的？</p>
-<p>说明：本文分析均为PUSH消费模式</p>
-<h1 id="Broker处理消费流程"><a href="#Broker处理消费流程" class="headerlink" title="Broker处理消费流程"></a>Broker处理消费流程</h1><p>本部分将消费的切分成三块梳理：Broker消费处理流程概览、查找消息流程、以及消息查询结果处理流程。</p>
-<h2 id="Broker消费处理流程概览"><a href="#Broker消费处理流程概览" class="headerlink" title="Broker消费处理流程概览"></a>Broker消费处理流程概览</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143006.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在拉取消息时会进行Broker和主题读权限的判断，实战中若有必要可以封锁Broker的拉取权限从而禁止从该broker进行消费；或者封锁某主题的读权限禁止消费组从该主题消费消息。</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="查找消息流程"><a href="#查找消息流程" class="headerlink" title="查找消息流程"></a>查找消息流程</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143030.png"></p>
-<p><u>小结：如果需要从磁盘拉取消息则一次默认最多拉取8条，一次消息的消息大小最大为64K。</u></p>
-<p><u>如果从缓存中拉取默认最多32条，一次拉取的消息大小最大256K。使用tagcode会在查找消息前进行过滤，使用SQL92过滤再消息查找出来后进行过滤。</u></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/9c431d59/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/87a2ceec/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/87a2ceec/" class="post-title-link" itemprop="url">MQ32# RocketMQ客户端消费--ProcessQueue处理队列</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:55:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1.ProcessQueue提供哪些方法？</span><br><span class="line"></span><br><span class="line">2.这些方法的作用是什么？</span><br><span class="line"></span><br><span class="line">3.哪里调用了这些方法？</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="ProcessQueue方法梳理"><a href="#ProcessQueue方法梳理" class="headerlink" title="ProcessQueue方法梳理"></a>ProcessQueue方法梳理</h1><h2 id="isLockExpired方法"><a href="#isLockExpired方法" class="headerlink" title="isLockExpired方法"></a>isLockExpired方法</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean isLockExpired() &#123;</span><br><span class="line"></span><br><span class="line">	return (System.currentTimeMillis() - this.lastLockTimestamp) &gt; REBALANCE_LOCK_MAX_LIVE_TIME;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>lastLockTimestamp(最新加锁时间戳)</strong></p>
-<p>lastLockTimestamp属性调用</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">@1 RebalanceImpl#lock</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;请求broker对该消费队列进行加锁</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; lockedMq &#x3D; this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">processQueue.setLocked(true);&#x2F;&#x2F;加锁</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置加锁时间戳</span><br><span class="line"></span><br><span class="line">processQueue.setLastLockTimestamp(System.currentTimeMillis());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 RebalanceImpl#lockAll</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;向broker发送该clientId所对应的messageQueue锁定请求</span><br><span class="line"></span><br><span class="line">Set&lt;MessageQueue&gt; lockOKMQSet &#x3D;</span><br><span class="line"></span><br><span class="line">this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">processQueue.setLocked(true);</span><br><span class="line"></span><br><span class="line">processQueue.setLastLockTimestamp(System.currentTimeMillis());</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>isLockExpired方法调用</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">@1 ConsumeMessageOrderlyService#ConsumeRequest</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;集群顺序消费时需要判断processQueue加锁是否过期</span><br><span class="line"></span><br><span class="line">if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())</span><br><span class="line"></span><br><span class="line">|| (this.processQueue.isLocked() &amp;&amp; !this.processQueue.isLockExpired()))</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：@1&amp;@2中可以看出lastLockTimestamp在顺序消费时向Broker请求对队列加锁成功后设置的时间戳；REBALANCE_LOCK_MAX_LIVE_TIME由参数rocketmq.client.rebalance.lockMaxLiveTime设置默认为30秒；lastLockTimestamp的含义为加锁的有效时间为30秒，超过该时间则失效；顺序消费在判断过期时延迟拉取。</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="isPullExpired方法"><a href="#isPullExpired方法" class="headerlink" title="isPullExpired方法"></a>isPullExpired方法</h2><p><strong>isPullExpired方法代码</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean isPullExpired() &#123;</span><br><span class="line"></span><br><span class="line">return (System.currentTimeMillis() - this.lastPullTimestamp) &gt; PULL_MAX_IDLE_TIME;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/87a2ceec/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/55c56ee4/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/55c56ee4/" class="post-title-link" itemprop="url">MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="消息拉取与处理"><a href="#消息拉取与处理" class="headerlink" title="消息拉取与处理"></a>消息拉取与处理</h1><p><strong>消息拉取</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140825.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理拉取消息请求。通过组织RequetHeader需要包含从哪里开始拉取（ConsumerGroup、Topic，Queue，queueOffset）等信息，向Broker发起请求，取回消息后对消息进行处理。当该Queue的消息数量超过1000，或者最小与最大偏移量之间的差距超过默认2000也会触发限流，即：延迟50毫秒放入请求队列。也可以通过挂起消费线程来延迟（1秒）消息拉取，从而达到消费限流作用。</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>消息处理</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140851.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理消息部分流程：将消息提交给了processQueue红黑树缓存；同时将消息提交给consumeMessageService来处理具体的消息内容。</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/55c56ee4/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd191b8b/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/dd191b8b/" class="post-title-link" itemprop="url">MQ31# RocketMQ客户端PUSH消费--负载均衡</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.主题队列是如何分配的？</p>
-<p>2.什么时候会进行负载均衡？</p>
-<p>3.负载均衡后是否会导致消息重复消费？</p>
-<h1 id="调用链条"><a href="#调用链条" class="headerlink" title="调用链条"></a>调用链条</h1><p><strong>初始化链条</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#start</span><br><span class="line"></span><br><span class="line">this.mQClientFactory</span><br><span class="line"></span><br><span class="line">&#x3D; MQClientManager.getInstance().getAndCreateMQClientInstance</span><br><span class="line"></span><br><span class="line">@2 MQClientManager#getAndCreateMQClientInstance</span><br><span class="line"></span><br><span class="line">instance &#x3D; new MQClientInstance</span><br><span class="line"></span><br><span class="line">@3 MQClientInstance#MQClientInstance</span><br><span class="line"></span><br><span class="line">this.rebalanceService &#x3D; new RebalanceService</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>启动链条</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#start</span><br><span class="line"></span><br><span class="line">mQClientFactory.start()</span><br><span class="line"></span><br><span class="line">@2 MQClientInstance#start</span><br><span class="line"></span><br><span class="line">this.rebalanceService.start</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：从初始化链和调用链可以看出RebalanceService为线程类，随着消费启动时而启动，消费不退出则一直运行着。</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="负载均衡流程"><a href="#负载均衡流程" class="headerlink" title="负载均衡流程"></a>负载均衡流程</h1><p><strong>负载均衡链条</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">@1 RebalanceService#run</span><br><span class="line"></span><br><span class="line">mqClientFactory.doRebalance()</span><br><span class="line"></span><br><span class="line">@2 MQClientInstance#doRebalance</span><br><span class="line"></span><br><span class="line">impl.doRebalance()</span><br><span class="line"></span><br><span class="line">@3 DefaultMQPushConsumerImpl#doRebalance</span><br><span class="line"></span><br><span class="line">this.rebalanceImpl.doRebalance</span><br><span class="line"></span><br><span class="line">@4 RebalanceImpl#doRebalance</span><br><span class="line"></span><br><span class="line">rebalanceByTopic</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>负载均衡流程</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141402.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在负载均衡时，会循环该消费组订阅的所有Topic都会执行负载均衡。</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>更新缓存processQueue流程</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141423.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">1. 更新缓存时如果消费组订阅的队列不在新分配的队列集合中或者队列拉取时间超时失效，则将快照ProcessQueue设置为丢弃。</span><br><span class="line">2. 消费拉取时判断ProcessQueue为丢弃，则不再对该队列拉取。</span><br><span class="line">3. 顺序消费时如果获取消费锁成功，表明此队列空闲没有被消费，此时向Broker发起解锁请求，解锁成功后将该队列从缓存（processQueueTable）移除。</span><br><span class="line">4. 顺序消费时获取锁失败，表明正在消费则不从processQueueTable移除，由于ProcessQueue设置为丢弃，在顺序消费下次拉取时会退出该队列的拉取请求。</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/dd191b8b/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/3b8a1c43/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/3b8a1c43/" class="post-title-link" itemprop="url">MQ29# RocketMQ客户端PUSH消费概览</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:51:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:51:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>PUSH消费整体流程是怎么样的？</p>
-<h1 id="PUSH消费流程概览"><a href="#PUSH消费流程概览" class="headerlink" title="PUSH消费流程概览"></a>PUSH消费流程概览</h1><p><strong>从客户端示例开始</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">DefaultMQPushConsumer consumer &#x3D; new DefaultMQPushConsumer(&quot;CID_JODIE_1&quot;);</span><br><span class="line"></span><br><span class="line">consumer.subscribe(&quot;Jodie_topic_1023&quot;, &quot;*&quot;); consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;wrong time format 2017_0422_221800</span><br><span class="line"></span><br><span class="line">consumer.setConsumeTimestamp(&quot;20170422221800&quot;);</span><br><span class="line"></span><br><span class="line">consumer.registerMessageListener(new MessageListenerConcurrently() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public ConsumeConcurrentlyStatus consumeMessage(List&lt;MessageExt&gt; msgs, ConsumeConcurrentlyContext context) &#123;</span><br><span class="line"></span><br><span class="line">System.out.printf(Thread.currentThread().getName() + &quot; Receive New Messages: &quot; + msgs + &quot;%n&quot;);</span><br><span class="line"></span><br><span class="line">return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">consumer.start();</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;Consumer Started.%n&quot;);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>客户端PUSH消费流程概览</strong></p>
-<p><strong>概览流程1</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140443.png"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/3b8a1c43/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1263,20 +1346,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-count">59</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

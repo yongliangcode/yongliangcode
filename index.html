@@ -215,7 +215,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-01-31 17:26:30" itemprop="dateModified" datetime="2021-01-31T17:26:30+08:00">2021-01-31</time>
+                <time title="修改时间：2021-02-02 19:30:51" itemprop="dateModified" datetime="2021-02-02T19:30:51+08:00">2021-02-02</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -238,7 +238,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>非池化/池化内存如何分配的？该撸这块了，奈何到处都在调用PlatformDependent类的方法，要不各种判断，要不分配堆外内存。反正到处都能看到它，得，索性先把这个撸一把。PlatformDependent又依赖了PlatformDependent0，那就一层一层剥好了。</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>非池化/池化内存如何分配的？该撸这块了，奈何到处都在调用PlatformDependent类的方法，要不各种判断，要不分配堆外内存。反正到处都能看到它，得，索性先把这个撸一把。PlatformDependent又依赖了PlatformDependent0，那就一层一层剥好了。</p>
 <p>嗯，有点碎，大伙随便看看。</p>
 <h1 id="PlatformDependent0"><a href="#PlatformDependent0" class="headerlink" title="PlatformDependent0"></a>PlatformDependent0</h1><h3 id="成员变量"><a href="#成员变量" class="headerlink" title="成员变量"></a>成员变量</h3><table>
 <thead>
@@ -322,181 +322,14 @@
 <p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131111631.png"></p>
 <p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131172450.png"></p>
 <p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131111747.png"></p>
-<h3 id="重要方法走查"><a href="#重要方法走查" class="headerlink" title="重要方法走查"></a>重要方法走查</h3><p>PlatformDependent0提供的方法，主要判断Unsafe是否可用、Unsafe分配堆外内存、Unsafe从堆外内存获取数据等。下面挑几个走查下。</p>
-<p><strong>@1 检查UNSAFE是否可用</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">hasUnsafe</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> UNSAFE != <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>@2 DirectByteBuffer的构造函数是否可用</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">hasDirectBufferNoCleanerConstructor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> DIRECT_BUFFER_CONSTRUCTOR != <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>@3 堆外内存分配</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">*  malloc()返回获得内存空间的首地址，失败返回null</span></span><br><span class="line"><span class="comment">*  根据返回的内存地址构造DirectBuffer</span></span><br><span class="line"><span class="comment">* <span class="doctag">@param</span> capacity</span></span><br><span class="line"><span class="comment">* <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> ByteBuffer <span class="title">allocateDirectNoCleaner</span><span class="params">(<span class="keyword">int</span> capacity)</span> </span>&#123;</span><br><span class="line">  <span class="comment">/**</span></span><br><span class="line"><span class="comment">  * malloc()返回获得内存空间的首地址，失败返回null</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">	<span class="keyword">return</span> newDirectBuffer(UNSAFE.allocateMemory(Math.max(<span class="number">1</span>, capacity)), capacity);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>@4 调用DirectByteBuffer构造函数分配堆外内存</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> ByteBuffer <span class="title">newDirectBuffer</span><span class="params">(<span class="keyword">long</span> address, <span class="keyword">int</span> capacity)</span> </span>&#123;</span><br><span class="line">        ObjectUtil.checkPositiveOrZero(capacity, <span class="string">&quot;capacity&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable cause) &#123;</span><br><span class="line">            <span class="comment">// Not expected to ever throw!</span></span><br><span class="line">            <span class="keyword">if</span> (cause <span class="keyword">instanceof</span> Error) &#123;</span><br><span class="line">                <span class="keyword">throw</span> (Error) cause;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> Error(cause);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>@5 获取堆外内存数据</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">byte</span> <span class="title">getByte</span><span class="params">(<span class="keyword">long</span> address)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> UNSAFE.getByte(address);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="PlatformDependent"><a href="#PlatformDependent" class="headerlink" title="PlatformDependent"></a>PlatformDependent</h1><h3 id="成员变量-1"><a href="#成员变量-1" class="headerlink" title="成员变量"></a>成员变量</h3><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>含义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN</td>
-<td>允许最大堆外内存的正则表达式，可以通过MaxDirectMemorySize参数在应用启动时指定</td>
-</tr>
-<tr>
-<td>IS_WINDOWS</td>
-<td>判断系统是否为windows系统</td>
-</tr>
-<tr>
-<td>IS_OSX</td>
-<td>判断是否为MacOS系统</td>
-</tr>
-<tr>
-<td>IS_J9_JVM</td>
-<td>是否为jdk9版本</td>
-</tr>
-<tr>
-<td>IS_IVKVM_DOT_NET</td>
-<td>判断是否为IKVM.NET</td>
-</tr>
-<tr>
-<td>MAYBE_SUPER_USER</td>
-<td>判断是否为root超级用户</td>
-</tr>
-<tr>
-<td>CAN_ENABLE_TCP_NODELAY_BY_DEFAULT</td>
-<td>Linux系统可以开启TCP_NODELAY参数，当开启时数据会以最快的速度发出去同时也就禁用了纳格算法（Nagle algorithm）；如果不设置（开启纳格算法），数据会缓存满足阈值后发出</td>
-</tr>
-<tr>
-<td>UNSAFE_UNAVAILABILITY_CAUSE</td>
-<td>平台不支持UNSAFE会将异常封装在UNSAFE_UNAVAILABILITY_CAUSE中</td>
-</tr>
-<tr>
-<td>DIRECT_BUFFER_PREFERRED</td>
-<td>默认优先使用堆外内存分配</td>
-</tr>
-<tr>
-<td>MAX_DIRECT_MEMORY</td>
-<td>获取最大堆外内存通过sun.misc.VM#maxDirectMemory方法获取</td>
-</tr>
-<tr>
-<td>MPSC_CHUNK_SIZE</td>
-<td>使用JCTools提供的无锁队列，初始化队列容量，默认1024</td>
-</tr>
-<tr>
-<td>MIN_MAX_MPSC_CAPACITY</td>
-<td>使用JCTools提供的无锁队列，最大队列容量；MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2</td>
-</tr>
-<tr>
-<td>MAX_ALLOWED_MPSC_CAPACITY</td>
-<td>使用JCTools提供的无锁队列，允许队列最大容量，默认为1073741824（1 &lt;&lt; 30）；MAX_ALLOWED_MPSC_CAPACITY = Pow2.MAX_POW2</td>
-</tr>
-<tr>
-<td>BYTE_ARRAY_BASE_OFFSET</td>
-<td>获取内存中第一个元素的内存偏移量；UNSAFE.arrayBaseOffset</td>
-</tr>
-<tr>
-<td>TMPDIR</td>
-<td>Netty临时目录</td>
-</tr>
-<tr>
-<td>BIT_MODE</td>
-<td>操作系统是32位还是64位</td>
-</tr>
-<tr>
-<td>NORMALIZED_ARCH</td>
-<td>获取操作系统CPU architecture，例如：x86_64</td>
-</tr>
-<tr>
-<td>NORMALIZED_OS</td>
-<td>获取操作系统名称，例如：Linux</td>
-</tr>
-<tr>
-<td>ALLOWED_LINUX_OS_CLASSIFIERS</td>
-<td>Linux系统演化了众多版本，下面是允许的的Linux版本</td>
-</tr>
-<tr>
-<td>LINUX_OS_CLASSIFIERS</td>
-<td>通过系统识别文件将支持的Linux版本填充到该集合中，是ALLOWED_LINUX_OS_CLASSIFIERS子集</td>
-</tr>
-<tr>
-<td>ADDRESS_SIZE</td>
-<td>返回系统指针的大小，32位系统返回4；64位系统返回8</td>
-</tr>
-<tr>
-<td>USE_DIRECT_BUFFER_NO_CLEANER</td>
-<td>堆外内存是否能分配（系统是否支持unsafe、DirectByteBuffer是否可用）</td>
-</tr>
-<tr>
-<td>DIRECT_MEMORY_COUNTER</td>
-<td>堆外内存使用限制</td>
-</tr>
-<tr>
-<td>ThreadLocalRandomProvider</td>
-<td>随机数字生成器</td>
-</tr>
-<tr>
-<td>CLEANER</td>
-<td>可以用于堆外内存回收</td>
-</tr>
-<tr>
-<td>UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD</td>
-<td>堆外内存分配阈值，默认为1024（字节）；小于该阈值分配堆内存，大于分配堆外内存；可以通过-Dio.netty.uninitializedArrayAllocationThreshold指定</td>
-</tr>
-<tr>
-<td>OS_RELEASE_FILES</td>
-<td>包含了操作系统识别数据 /etc/os-release与/usr/lib/os-release；String[] OS_RELEASE_FILES = {“/etc/os-release”, “/usr/lib/os-release”}</td>
-</tr>
-<tr>
-<td>BIG_ENDIAN_NATIVE_ORDER</td>
-<td>是否为大端排序（默认大端排序）；boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN</td>
-</tr>
-</tbody></table>
-<h3 id="重要方法走查-1"><a href="#重要方法走查-1" class="headerlink" title="重要方法走查"></a>重要方法走查</h3><p>挑几个比较重要的方法走查下，</p>
-<p><strong>@1 内存分配</strong></p>
-<p>小于阈值默认1024（字节），使用堆内存；大于阈值使用堆外内存</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">byte</span>[] allocateUninitializedArray(<span class="keyword">int</span> size) &#123;</span><br><span class="line">        <span class="keyword">return</span> UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD &lt; <span class="number">0</span> || UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD &gt; size ?</span><br><span class="line">                <span class="keyword">new</span> <span class="keyword">byte</span>[size] : PlatformDependent0.allocateUninitializedArray(size);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>@2释放堆外内存</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">freeDirectBuffer</span><span class="params">(ByteBuffer buffer)</span> </span>&#123;</span><br><span class="line">        CLEANER.freeDirectBuffer(buffer);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>@3 构造Queue</strong></p>
-<p>使用了使用JCTools提供的无锁队列</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">Queue&lt;T&gt; <span class="title">newMpscQueue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Mpsc.newMpscQueue();</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">static</span> &lt;T&gt; <span class="function">Queue&lt;T&gt; <span class="title">newMpscQueue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> USE_MPSC_CHUNKED_ARRAY_QUEUE ? <span class="keyword">new</span> MpscUnboundedArrayQueue&lt;T&gt;(MPSC_CHUNK_SIZE)</span><br><span class="line">    : <span class="keyword">new</span> MpscUnboundedAtomicArrayQueue&lt;T&gt;(MPSC_CHUNK_SIZE);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p>其他的方法基本在判断成员变量或者调用PlatformDependent0的方法分配堆外内存、获取堆外内存数据、释放堆外内存等。</p>
-<h1 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h1><p>PlatformDependent与PlatformDependent0主要针对操作系统、JDK版本等环境因素是否支持堆外内存Unsafe以及一些关联类进行判断；通过封装Unsafe申请堆外内存、释放、获取数据等操作。另外Netty为了提高性能使用了JCTools提供的无锁队列、可以通过-XX:MaxDirectMemorySize参数调整Netty允许使用的最大堆外内存，超过最大限制将使堆外内存分配失败，抛出 “failed to allocate byte(s) of direct memory” 异常。</p>
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/821aaf66/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -538,10 +371,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2021-01-25 20:55:01 / 修改时间：23:07:18" itemprop="dateCreated datePublished" datetime="2021-01-25T20:55:01+08:00">2021-01-25</time>
+              <time title="创建时间：2021-01-25 20:55:01" itemprop="dateCreated datePublished" datetime="2021-01-25T20:55:01+08:00">2021-01-25</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:28:53" itemprop="dateModified" datetime="2021-02-02T19:28:53+08:00">2021-02-02</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
@@ -563,7 +402,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <div id="vip-container"><h1 id="常见问题一"><a href="#常见问题一" class="headerlink" title="常见问题一"></a>常见问题一</h1><p><strong>问：</strong> RocketMQ消费者订阅了tag，但却收不到消息无法消费，并且根据 msgid 去查询，发现这条消息的状态为 CONSUMED_BUT_FILTERED，那这是为什么？</p>
+          <h1 id="常见问题一"><a href="#常见问题一" class="headerlink" title="常见问题一"></a>常见问题一</h1><p><strong>问：</strong> RocketMQ消费者订阅了tag，但却收不到消息无法消费，并且根据 msgid 去查询，发现这条消息的状态为 CONSUMED_BUT_FILTERED，那这是为什么？</p>
 <p><strong>答：</strong> 在RocketMQ中，一个消费组能同时订阅多个 tag，但一个消费组的不同消费者不能分开订阅不同的tag，即同一个消费组的订阅关系必须保持一样。例如：常见错误使用方式同一个项目中，一段消费代码订阅tagA，然后拷贝到这段代码再更改为tagB。</p>
 <p><strong>正确用法</strong> </p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">subscribe</span><span class="params">()</span></span>&#123;</span><br><span class="line">	DefaultMQPushConsumer consumer = <span class="keyword">new</span> DefaultMQPushConsumer(<span class="string">&quot;melon_online_test_consumer&quot;</span>);</span><br><span class="line">	consumer.subscribe(<span class="string">&quot;melon_online_test&quot;</span>,<span class="string">&quot;tag1 || tag2 || tag3&quot;</span>);</span><br><span class="line">&#125;  </span><br></pre></td></tr></table></figure>
@@ -583,36 +422,14 @@
 <h1 id="常见问题三"><a href="#常见问题三" class="headerlink" title="常见问题三"></a>常见问题三</h1><p><strong>问：</strong> 我的服务消费后需要调用第三方接口，别人的接口调用有限制，Rocketmq消费可以限流吗？</p>
 <p><strong>答：</strong> RocketMQ本身没有类似每秒消费多少条数据的精确限流，我们可以结合Sentienl来实现，示例代码如下：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> String KEY = <span class="string">&quot;melon_topic:melon_consumer&quot;</span>; <span class="comment">// 资源名称由topic和消费组构成</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException, MQClientException </span>&#123;</span><br><span class="line">    initFlowControlRule(); <span class="comment">// Sentinel流控规则</span></span><br><span class="line">    DefaultMQPushConsumer consumer = <span class="keyword">new</span> DefaultMQPushConsumer(<span class="string">&quot;melon_consumer&quot;</span>);</span><br><span class="line">    consumer.setNamesrvAddr(<span class="string">&quot;localhost:9876&quot;</span>);</span><br><span class="line">    consumer.subscribe(<span class="string">&quot;melon_topic&quot;</span>, <span class="string">&quot;*&quot;</span>);</span><br><span class="line">    consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);</span><br><span class="line">    consumer.registerMessageListener(<span class="keyword">new</span> MessageListenerConcurrently() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ConsumeConcurrentlyStatus <span class="title">consumeMessage</span><span class="params">(List&lt;MessageExt&gt; msgs, ConsumeConcurrentlyContext context)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (MessageExt msg : msgs) &#123;</span><br><span class="line">                Entry entry = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    ContextUtil.enter(KEY); <span class="comment">// 定义资源</span></span><br><span class="line">                    entry = SphU.entry(KEY, EntryType.OUT);</span><br><span class="line">                    System.out.printf(<span class="string">&quot;%s Receive New Messages: %s %n&quot;</span>, Thread.currentThread().getName(), msg);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (BlockException ex) &#123;</span><br><span class="line">                    <span class="comment">// Blocked.被限流后消息重试</span></span><br><span class="line">                    <span class="keyword">return</span> ConsumeConcurrentlyStatus.RECONSUME_LATER;</span><br><span class="line">                &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (entry != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        entry.exit();</span><br><span class="line">                    &#125;</span><br><span class="line">                    ContextUtil.exit();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> ConsumeConcurrentlyStatus.CONSUME_SUCCESS;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    consumer.start();</span><br><span class="line">    System.out.printf(<span class="string">&quot;Consumer Started.%n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">initFlowControlRule</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    FlowRule rule = <span class="keyword">new</span> FlowRule();</span><br><span class="line">    rule.setResource(KEY);</span><br><span class="line">    rule.setCount(<span class="number">5</span>);<span class="comment">// 每秒通过5条消息</span></span><br><span class="line">    rule.setGrade(RuleConstant.FLOW_GRADE_QPS);</span><br><span class="line">    rule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_RATE_LIMITER);</span><br><span class="line">    rule.setMaxQueueingTimeMs(<span class="number">5</span> * <span class="number">1000</span>); <span class="comment">// 排队超时时间5秒</span></span><br><span class="line">    FlowRuleManager.loadRules(Collections.singletonList(rule));</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="常见问题四"><a href="#常见问题四" class="headerlink" title="常见问题四"></a>常见问题四</h1><p><strong>问：</strong>RocketMQ默认延迟等级有18个，我可以扩增吗？</p>
-<p><strong>答：</strong> 可以的，但是不建议扩增太多等级，可以通过修改broker属性messageDelayLevel来实现，注意修改了后需要重启broker。例如：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">messageDelayLevel = 1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h <span class="number">1d</span> <span class="number">3d</span> <span class="number">7d</span> <span class="number">14d</span> <span class="number">21d</span></span><br></pre></td></tr></table></figure>
-
-
-
-
-
-
-
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/f75406c8/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -662,7 +479,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-01-17 12:15:46" itemprop="dateModified" datetime="2021-01-17T12:15:46+08:00">2021-01-17</time>
+                <time title="修改时间：2021-02-02 19:30:34" itemprop="dateModified" datetime="2021-02-02T19:30:34+08:00">2021-02-02</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -685,7 +502,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p> 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p> 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。</p>
 <h1 id="内存分配器概览"><a href="#内存分配器概览" class="headerlink" title="内存分配器概览"></a>内存分配器概览</h1><p><strong>堆外内存&amp;堆内存</strong> </p>
 <table>
 <thead>
@@ -770,56 +587,462 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Component[] newCompArray(<span class="keyword">int</span> initComponents, <span class="keyword">int</span> maxNumComponents) &#123;</span><br><span class="line">	<span class="keyword">int</span> capacityGuess = Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents);</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">new</span> Component[Math.max(initComponents, capacityGuess)]; <span class="comment">// 注解@6.2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p><strong>注解@6.2</strong> components是Component的对象数组，数组大小默认为16. </p>
-<h1 id="CompositeByteBuf实现原理"><a href="#CompositeByteBuf实现原理" class="headerlink" title="CompositeByteBuf实现原理"></a>CompositeByteBuf实现原理</h1><p>下面通过例子来体验一把CompositeByteBuf，先直观感受下。</p>
-<p><strong>示例代码</strong> </p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testCompositeByteBuf</span><span class="params">()</span></span>&#123;</span><br><span class="line">  String str1 = <span class="string">&quot;瓜农&quot;</span>;</span><br><span class="line">  String str2 = <span class="string">&quot;老梁&quot;</span>;</span><br><span class="line">  ByteBuf buf1 = Unpooled.buffer(<span class="number">10</span>);</span><br><span class="line">  buf1.writeBytes(str1.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">  System.out.println(<span class="string">&quot;buf1&#x27;s readerIndex:&quot;</span> + buf1.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;buf1&#x27;s writeIndex&quot;</span> + buf1.writerIndex());</span><br><span class="line"></span><br><span class="line">  ByteBuf buf2 = Unpooled.buffer(<span class="number">10</span>);</span><br><span class="line">  buf2.writeBytes(str2.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">  System.out.println(<span class="string">&quot;buf2&#x27;s readerIndex:&quot;</span> + buf2.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;buf2&#x27;s writeIndex&quot;</span> + buf2.writerIndex());</span><br><span class="line"></span><br><span class="line">  ByteBuf compositeByteBuf = Unpooled.wrappedBuffer(buf1,buf2);</span><br><span class="line">  System.out.println(<span class="string">&quot;compositeByteBuf&#x27;s readerIndex:&quot;</span> + compositeByteBuf.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;compositeByteBuf&#x27;s writeIndex&quot;</span> + compositeByteBuf.writerIndex());</span><br><span class="line">  System.out.print(compositeByteBuf.toString(CharsetUtil.UTF_8));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/2e57625b/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
 
-<p><strong>结果输出</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">buf1&#39;s readerIndex:0</span><br><span class="line">buf1&#39;s writeIndex6</span><br><span class="line">buf2&#39;s readerIndex:0</span><br><span class="line">buf2&#39;s writeIndex6</span><br><span class="line">compositeByteBuf&#39;s readerIndex:0</span><br><span class="line">compositeByteBuf&#39;s writeIndex12</span><br><span class="line">瓜农老梁</span><br></pre></td></tr></table></figure>
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
 
-<p><strong>小结</strong>  Unpooled.wrappedBuffer(buf1,buf2)将两个ByteBuf进行了合并一个ByteBuf；对外提供统一的读写指针供使用。</p>
-<p>接下来看下他是如何合并的。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ByteBuf <span class="title">wrappedBuffer</span><span class="params">(<span class="keyword">int</span> maxNumComponents, ByteBuf... buffers)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">switch</span> (buffers.length) &#123;</span><br><span class="line">        <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">            ByteBuf buffer = buffers[<span class="number">0</span>];</span><br><span class="line">            <span class="keyword">if</span> (buffer.isReadable()) &#123;</span><br><span class="line">                <span class="keyword">return</span> wrappedBuffer(buffer.order(BIG_ENDIAN));</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                buffer.release();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffers.length; i++) &#123;</span><br><span class="line">                ByteBuf buf = buffers[i];</span><br><span class="line">                <span class="keyword">if</span> (buf.isReadable()) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> CompositeByteBuf(ALLOC, <span class="keyword">false</span>, maxNumComponents, buffers, i); <span class="comment">// 注解@7</span></span><br><span class="line">                &#125;</span><br><span class="line">                buf.release();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> EMPTY_BUFFER;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9bf5e4df/">
 
-<p><strong>注解@7</strong> 通过创建一个CompositeByteBuf，将ByteBuf数组传入构造函数。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">CompositeByteBuf(ByteBufAllocator alloc, <span class="keyword">boolean</span> direct, <span class="keyword">int</span> maxNumComponents,</span><br><span class="line">            ByteBuf[] buffers, <span class="keyword">int</span> offset) &#123;</span><br><span class="line">            <span class="keyword">this</span>(alloc, direct, maxNumComponents, buffers.length - offset);</span><br><span class="line"></span><br><span class="line">	addComponents0(<span class="keyword">false</span>, <span class="number">0</span>, buffers, offset); <span class="comment">// 注解@8</span></span><br><span class="line">	consolidateIfNeeded();</span><br><span class="line">	setIndex0(<span class="number">0</span>, capacity()); <span class="comment">// 注解@9</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
 
-<p><strong>注解@8</strong>  填充Component[]数据，每个Component元素包含了传入的ByteBuf。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompositeByteBuf <span class="title">addComponents0</span><span class="params">(<span class="keyword">boolean</span> increaseWriterIndex,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> <span class="keyword">int</span> cIndex, ByteBuf[] buffers, <span class="keyword">int</span> arrOffset)</span> </span>&#123;</span><br><span class="line">  			<span class="comment">//  buffers数组的长度；本例中arrOffset=0；count=len</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> len = buffers.length, count = len - arrOffset;</span><br><span class="line">        <span class="keyword">int</span> ci = Integer.MAX_VALUE;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            checkComponentIndex(cIndex); <span class="comment">// 合法性校验</span></span><br><span class="line">            shiftComps(cIndex, count); <span class="comment">// 注解@8.1</span></span><br><span class="line">            <span class="keyword">int</span> nextOffset = cIndex &gt; <span class="number">0</span> ? components[cIndex - <span class="number">1</span>].endOffset : <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">for</span> (ci = cIndex; arrOffset &lt; len; arrOffset++, ci++) &#123; <span class="comment">// 注解@8.2</span></span><br><span class="line">                <span class="comment">// 从数组中拿出传入的ByteBuf</span></span><br><span class="line">              	ByteBuf b = buffers[arrOffset];</span><br><span class="line">                <span class="keyword">if</span> (b == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// 构建Component</span></span><br><span class="line">                Component c = newComponent(ensureAccessible(b), nextOffset); </span><br><span class="line">              	<span class="comment">// 加入components数组</span></span><br><span class="line">                components[ci] = c;</span><br><span class="line">                <span class="comment">// 递增endOffset</span></span><br><span class="line">                nextOffset = c.endOffset;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/9bf5e4df/" class="post-title-link" itemprop="url">FA1# 微服务流控防护场景与应对措施</a>
+        </h2>
 
-<p><strong>注解@8.1</strong> 扩容Component数组，默认的数量为16个，当添加的buffer的数量超过16时就需要扩容了，下面看下其如何扩容的。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">shiftComps</span><span class="params">(<span class="keyword">int</span> i, <span class="keyword">int</span> count)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> size = componentCount, newSize = size + count;</span><br><span class="line">        <span class="keyword">assert</span> i &gt;= <span class="number">0</span> &amp;&amp; i &lt;= size &amp;&amp; count &gt; <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (newSize &gt; components.length) &#123;</span><br><span class="line">            <span class="comment">// grow the array </span></span><br><span class="line">          	<span class="keyword">int</span> newArrSize = Math.max(size + (size &gt;&gt; <span class="number">1</span>), newSize); <span class="comment">// 注解@8.1.1</span></span><br><span class="line">            Component[] newArr;</span><br><span class="line">            <span class="comment">// 注解@8.1.2</span></span><br><span class="line">            <span class="keyword">if</span> (i == size) &#123;</span><br><span class="line">                newArr = Arrays.copyOf(components, newArrSize, Component[].class);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                newArr = <span class="keyword">new</span> Component[newArrSize];</span><br><span class="line">                <span class="keyword">if</span> (i &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    System.arraycopy(components, <span class="number">0</span>, newArr, <span class="number">0</span>, i);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (i &lt; size) &#123;</span><br><span class="line">                    System.arraycopy(components, i, newArr, i + count, size - i);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            components = newArr;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (i &lt; size) &#123;</span><br><span class="line">            System.arraycopy(components, i, components, i + count, size - i);</span><br><span class="line">        &#125;</span><br><span class="line">        componentCount = newSize;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
 
-<p>**注解@8.1.1 ** 默认size=16，size &gt;&gt; 1 = 8 也就是扩容会以原大小一半的容量进行扩容。</p>
-<p><strong>注解@8.1.2</strong> 下面判断根据场景通过Arrays.copyOf、System.arraycopy将Component数组扩容；插入尾部、中部、头部等情况。本示例中没有超过16，所以不会扩容，componentCount=2。</p>
-<p><strong>注解@8.2</strong> 循环拿出传入的ByteBuf数组构建Component，并将其加入Component数组中；最后移动nextOffset。关于各个参数的含义，源码给出了注释。构造函数中</p>
-<p>第一个参数：传入的ByteBuf<br>第二个参数：源ByteBuf的readerIndex<br>第三个参数：unwrapped的buffer<br>第四个参数：unwrappedIndex<br>第五个参数：offset = components[cIndex - 1].endOffset<br>第六个参数：len = buf.readableBytes()  buf为源buffer<br>第七个参数：slice = null （示例）</p>
-<p>以endOffset为例，等于插入数组中上一个Conponent的endOffset + 当前ByteBuf的可读长度，从而维护了其在整个CompositeByteBuf的写索引情况。</p>
-<p>一个buffer对应一个Component，每个Component持有源buffer并维护了其在整个CompositeByteBuf的索引情况。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210117101614.png"></p>
-<p><strong>注解@9</strong> 设置整个CompositeByteBuf的读索引和写索引，读索引初始值为0；写索引为components[size - 1].endOffset，也就是整个Conponent数组中其每个元素维护的ByteBuf可读字节（writerIndex - readerIndex）大小的总和。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setIndex0</span><span class="params">(<span class="keyword">int</span> readerIndex, <span class="keyword">int</span> writerIndex)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.readerIndex = readerIndex;</span><br><span class="line">	<span class="keyword">this</span>.writerIndex = writerIndex;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">capacity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> size = componentCount;</span><br><span class="line">  <span class="keyword">return</span> size &gt; <span class="number">0</span> ? components[size - <span class="number">1</span>].endOffset : <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+              <time title="创建时间：2021-01-09 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-09T11:55:01+08:00">2021-01-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:38:25" itemprop="dateModified" datetime="2021-02-02T19:38:25+08:00">2021-02-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>微服务成了互联网架构的标配模式，对微服务之间的调用的流量治理和管控就尤为重要。哪些场景需要流量防控，针对这些场景又有哪些应对措施。有没有一个通用的措施来降低风险呢？这篇文章咱就聊聊这个。</p>
+<h1 id="服务被过载调用"><a href="#服务被过载调用" class="headerlink" title="服务被过载调用"></a>服务被过载调用</h1><p>当服务D的某个接口服务被上游服务过载调用时，如果不对服务D加入保护，可能整体将服务D整体拖垮。在这种场景中，我们需要对服务D配置限流，以保护服务D不被整体冲跨。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E9%99%90%E6%B5%81.png"></p>
+<p><strong>应对措施：</strong> 针对服务提供方D配置流量防护规则，对进入服务D的流量进行控制，从而对服务D提供保护。触发流控时可以有多重策略，例如：快速失败、预热模式、排队等待、预热模式+排队等待。</p>
+<p><strong>快速失败：</strong> 发生流控时直接抛出异常。</p>
+<p><strong>预热模式：</strong> 发生流控时，流量缓慢增加的一种模式，效果如下图所示，流量QPS从200缓慢增加到600。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210109141101.png"></p>
+<p><strong>排队等待：</strong> 请求匀速通过，过多请求需要排队，此时排队有超时时间，超过排队时间抛出流控异常。效果如下图所示：请求QPS保持1000的匀速通过。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210109141720.png"></p>
+<p><strong>预热模式+排队等待：</strong> 这种模式是预热和排队等待的叠加模式，请求以匀速的方式缓慢增加。如下图：请求从0缓慢增加到500，匀速通过一段时间后，再增加到1000。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210109142131.png"></p>
+<h1 id="服务慢调用或故障"><a href="#服务慢调用或故障" class="headerlink" title="服务慢调用或故障"></a>服务慢调用或故障</h1><p>下面的场景A调用B、A调用C、A调用D，当服务B服务不稳定时，服务A调用服务B发生了慢调用或者大量异常错误。这种场景，如果不干预，可能影响到A调用C和A调用D的状况。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%86%94%E6%96%AD%E9%99%8D%E7%BA%A7.png"></p>
+<p><strong>应对措施：</strong> A调用B配置熔断降级规则，当服务B不稳定发生慢调用或者异常时，如果触发阈值，将服务B的调用熔断；从而保护了服务A调用C、服务A调用D的正常情况。</p>
+<p><strong>熔断效果：</strong> 熔断的实现通常通过断路器实现，具体过程为：</p>
+<ul>
+<li>当满足慢调用比例、异常比例、异常数量阈值后，触发熔断（OPEN），在熔断时长内拒绝所有请求</li>
+<li>当熔断过了定义的熔断时长，状态由熔断（OPEN）变为探测（HALF_OPEN）</li>
+<li>接下来的一个请求不发生慢调用或者异常，熔断结束由探测状态（HALF_OPEN）变为（CLOSED）</li>
+<li>接下来的一个请求发生慢调用或者异常，继续熔断，由探测状态（HALF_OPEN）变为（OPEN）</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/9bf5e4df/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/43fa99ab/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/43fa99ab/" class="post-title-link" itemprop="url">SK4# 让心静下来</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-04 23:55:01" itemprop="dateCreated datePublished" datetime="2021-01-04T23:55:01+08:00">2021-01-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:36:14" itemprop="dateModified" datetime="2021-02-02T19:36:14+08:00">2021-02-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点鸡尾酒，又到了一周中最放松的时候，咱接着聊聊天。</p>
+<p>上周文章《苍天绕过谁》，一个读者朋友看了发微信给老梁，问我那朋友怎么走出来的，他最近想太多，有些睡眠障碍。</p>
+<p>写着写着咋感觉有点像苦情文了，好在有读者朋友说虽然不是技术文章，但他受益匪浅。</p>
+<p>嗯嗯，有些帮助就好，老梁想着文章能有点思考、有点故事。</p>
+<p>除了积累点技术外，也积累些生活思考，在小故事中的一点思考。</p>
+<p>如何度过困难期呢？困难千千万万，每个人都不同？困难有大有小，多大的事算困难？</p>
+<p>这事老梁其实也不知道，可不是么？帮人度苦度难那是菩萨的事情呀。。。</p>
+<p>把天聊死了，还能聊不？老梁想了想，让我给讲两个故事吧。。。</p>
+<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><p>杨博，今湖北石首市人。27岁考了全省第一（解元），28岁中进士，考了全国第21名（二甲18名）。</p>
+<p>授予翰林院编修，翰林院之前说过，这个地方是宰相培训班，帝国栋梁的摇篮。</p>
+<p>永乐初年改授洗马，洗马是官职，可以理解为幕僚，跟着太子朱高炽混，这份工作很有前途，太子未来的皇帝。</p>
+<p>嗯，看到了吧，管自己能干也不行，还得跟着赏识你的老板才行！</p>
+<p>明永乐十二年（1414年），瓦刺（蒙古族）逐渐发展壮大，经常冒犯大明边界。</p>
+<p>永乐大帝朱棣决定御驾亲征，率领50万大军远征，令太子朱高炽监国。</p>
+<p>朱棣是个厉害的皇帝，上马能打仗，下马能治国，全能型的。</p>
+<p>这次出征朱棣打赢了，瓦刺受到重创，被打怕了，以后多年不敢犯边。</p>
+<p>班师凯旋，太子朱高炽迎驾慢了点。朱棣大怒，迁怒太子，把太子的随从都扔进了诏狱。</p>
+<p>就因为迎驾慢了点就这么玩？也太搞了吧。。。明面是迎驾慢，其实是有人进了谗言诋毁太子。</p>
+<p>毕竟想当太子的还有朱高炽的弟弟朱高煦。总之诋毁起了作用，太子势力被打压。</p>
+<p>很不幸杨博也被关进了诏狱。。。这一关就是10年啊，这年杨博42岁，出来都52岁了。</p>
+<p>诏狱就是皇上下诏要关的人，这里没皇上说话基本这辈子算是交代了。</p>
+<p>诏狱刑法非常残酷，上夹棍、剥皮、舌、断脊、堕指、刺心、琵琶等几十种。用这种东西招呼人，生不如死。不是怀疑人生的问题，是后悔生出来。</p>
+<p>人生能有几个十年，一般在里面呆这么久基本算是废了。杨博就这么进去了，想送钱捞人不不知道送给谁。</p>
+<p>皇帝下的旨，难不成给皇帝送礼去？那地方过了今天不知道能不能熬过明天。</p>
+<p>很多跟杨博一起进去的忍受不了这份煎熬，死在了里面。</p>
+<p>好在杨博没受大的刑法，家里没能力给皇上送钱，给看监狱的送还是可以的，家里送了很多书给杨博。</p>
+<p>反正也出不去，也不知道哪天就没命了，索性不想了。</p>
+<p>能读一天是一天吧，杨博把所有的精力和时间全部投入到读书之中。</p>
+<p>读啥书呢？各类经史子集书籍。</p>
+<p>在杨博45岁那边，太子朱高炽的地位总算是稳固了，他弟弟被赶到山东惠民县就藩汉王。朱棣也没再为难杨博，但是一直关着直到朱棣去世，太子朱高炽继位才被放出来。</p>
+<p>毕竟因为太子才坐了十年的牢，朱高炽非常怜惜杨博。为了报答，一路重用高升，历经三朝最终官至内阁首辅、武英殿大学士。</p>
+<p>经历了十年牢灾的杨博，为人宽静、大家有争议时都能平心处之、大家都佩服。</p>
+<p>看到了吧，为人宽静、平心处之！这份豁达与蹲了十年监狱不无关系。</p>
+<p>坐牢还坐出好来了，所以有时候经历点挫折也不是坏事。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/43fa99ab/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bb2245d5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/bb2245d5/" class="post-title-link" itemprop="url">SK3# 苍天饶过谁</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-03 23:55:01" itemprop="dateCreated datePublished" datetime="2021-01-03T23:55:01+08:00">2021-01-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:36:31" itemprop="dateModified" datetime="2021-02-02T19:36:31+08:00">2021-02-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="一"><a href="#一" class="headerlink" title="一"></a>一</h2><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点女儿红，又到了一周中最放松的时候，咱接着聊聊天。</p>
+<p>上周文章《仰望星空》，老梁说多看看历史和生活中的星星，让他们给咱照亮前进的路。</p>
+<p>有朋友怼老梁，管看星星有啥用，看就能解决问题了？该踩的坑还要踩，该流的泪还要流。</p>
+<p>老梁想了想，可不是么？该受的难还得受，苍天绕过谁。。。</p>
+<h2 id="二"><a href="#二" class="headerlink" title="二"></a>二</h2><p>弘治元年（1488年）杨慎生于北京，祖籍四川成都人。爹是内阁首辅、东阁大学士杨廷和。不当爹是副国级，爷爷也是1481年的进士。</p>
+<p>进士可不是那么容易的，首先你得先考中秀才，再考中举人，才有资格参加进士考试。进士考试的录取比例大约9%，平均每年也就百八十号人。。。</p>
+<p>嗯，妥妥的官二代。</p>
+<p>总有那么有些人，长得比你帅，出生比你好，还比你更努力，杨慎就是这号人。11岁就能作诗，12岁做的文章就得到当时文学家、书法家李东阳赞赏，收到其门下学习。</p>
+<p>嗯，读书是要点天分的。</p>
+<p>明武宗正德六年（1511年），24岁的杨慎考中状元，进士及第，授翰林院修撰。刚毕业就是修撰从六品官职，县太爷是七品，多少人体制内的人，熬啊熬。熬一辈子才是副科待遇，副科也就是从九品吧。</p>
+<p>关键是在翰林院就业，这地方能进去的都是蔗吉士。啥概念，一甲三人（状元、榜眼、探花）和二甲中的头几名才有资格进去的。这是宰相培训班、帝国柱梁的摇篮。</p>
+<p>这么下去，杨慎就是做不了宰相，最少熬个副部级没问题，前途一片光明。</p>
+<p>嘉靖三年（1524年），发生了”大议礼“事件后，杨慎确挨了板子，被贬出京城，这年33岁。</p>
+<p>明武宗朱厚照，去世时没子嗣。按照兄终弟及的祖训，朱厚熜被选为帝国皇帝，即嘉靖。</p>
+<p>大议礼争来争去就是给朱厚熜他爸的主祀及封号问题。杨廷和给出的他爹封号为“皇叔考兴献大王”，他妈为“皇叔母兴国大妃”，祭祀时其亲生父母自称“侄皇帝”。原因很简单，他爹是王爷没做过皇帝，皇位是从堂兄手上继承过来的，朱厚熜不同意。</p>
+<p>在这次事件中，杨慎与两百多位官员，在左順門哭天喊地，请皇上同意他们的主张。杨慎是带头大哥之一，并说”國家養士百五十年，仗節死義，正在今日“。</p>
+<p>那会当官还真团结，一起跟皇上叫板。</p>
+<p>皇上也不客气，两百多位，一个别想跑，廷杖！廷杖就是打屁股，还褪去裤子打，被打的还是高干们，这次廷杖死了16人。</p>
+<p>杨慎也被打了，被打的皮开肉绽，差点昏死过去，然后被贬到了今云南保山市，年七十二岁终于被贬之地，终身未再复用。</p>
+<p>就这事争了三年才算完，最后嘉靖赢了，其父上尊号“皇考恭穆献皇帝”，其母尊号“圣母章圣皇太后”。</p>
+<p>惨不惨，是真的惨！自幼才华横溢、家世显赫、高中状元、进士极第，一次事件中就被扫到祖国边疆终身不许离开一直到老。</p>
+<p>如果这都不算难的话，什么才是难！受此劫难后，安邦立国、指点江山不可能了，他把余生投入到读书写作中。《明史》记载杨慎的 “明世记诵之博，著作之富，推慎为第一。詩文外，雜著至一百余種，并行于世。” </p>
+<p>下面《三国演义》第一回的开篇词就是出自杨慎大才子的《临江仙》：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">滚滚长江东逝水，浪花淘尽英雄。是非成败转头空，青山依旧在，几度夕阳红。</span><br><span class="line">白发渔樵江渚上，惯看秋月春风。一壶浊酒喜相逢，古今多少事，都付笑谈中。</span><br></pre></td></tr></table></figure>
 
 
 
-<p><strong>小结：</strong> CompositeByteBuf通过将多个ByteBuf装入component数组中，对其统一维护读写索引，在外面看起来是一个统一的buffer；类似数据库中的视图。</p>
-</div>
+<p>嗯，至于杨慎落难时如何熬过去的，只有他知道。。。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/bb2245d5/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
 
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8a7728e3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/8a7728e3/" class="post-title-link" itemprop="url">SK1# 仰望星空</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-02 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-02T22:47:01+08:00">2021-01-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:33:12" itemprop="dateModified" datetime="2021-02-02T19:33:12+08:00">2021-02-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
+<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
+<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
+<p>嗯，不是谁都能当老板。</p>
+<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
+<h1 id="多看看历史星空中的星星"><a href="#多看看历史星空中的星星" class="headerlink" title="多看看历史星空中的星星"></a>多看看历史星空中的星星</h1><p>明正统十四年（1449年）八月，明英宗朱祁镇率军50万御驾亲征瓦刺，命弟弟朱祁钰留守京城。</p>
+<p>皇上这年22岁，还是一个容易被蛊惑的年轻人，说是御驾亲征，实际由太监王振指挥。</p>
+<p>王振不懂军事，一通乱指挥后，被瓦刺首领也先在今河北省张家口市怀来县境内的土木堡围猎。</p>
+<p>20万大军损失大半，精锐尽失，皇上也被瓦刺掳走了，跟随出征的高官阵亡五十余人。</p>
+<p>国不可一日无君，八月十八日皇太后命朱祁钰监国，八月二十九日百官拥立朱祁钰为帝，即景帝。</p>
+<p>这一个月的变化真是太大了，而且瓦刺马上就要打到北京了，大明危在旦夕。</p>
+<p>景帝命于谦为兵部尚书，原来的尚书邝埜呢？也在土木堡阵亡了。然而主战还是南迁成了争论的焦点。</p>
+<p>以徐珵为代表的大臣主张南迁，北京守不住，原因很简单，精锐部队都埋葬在土木堡了，拿什么守！</p>
+<p>于谦主战认为“京师天下根本，一动则大事去矣”。呵斥 “言南迁者，可斩也”。</p>
+<p>于谦的建议得到了吏部尚书等人的支持，廷议最后决定固守北京，皇上把北京守卫重任交给了于谦。</p>
+<p>皇上心里也没底，守说着容易，20万都打没了，现在京城不到10万军队还都是老弱病残居多。</p>
+<p>有兵的话还廷议个啥，直接打就完了，这不是没兵嘛。</p>
+<p>没了精锐就拿后备军凑，于谦命令各地备操军、备倭军、运粮军按时到京城布防，违令者斩！</p>
+<p>嗯，清一色后备役。。。</p>
+<p>这些后备役差不多有10万人，并要求途径通州粮仓把粮食顺便带到京城。</p>
+<p>九月初，各路人马总算集合完毕，二十二万人，粮食问题也解决了。</p>
+<p>十月十一日瓦刺军队来了，他们只用了11天就打到了北京城下，更增加了他们拿下北京的信心。</p>
+<p>“京城必破，大元必兴”！</p>
+<p>于谦召集将领召开战前会议，聊如何退敌。</p>
+<p>大将石享提出敌军实力远超明军，应该坚壁清野，等待敌军疲惫后自然退兵。</p>
+<p>大家比较赞同这个，但是一个人反对，这个是于谦，他是总指挥，是说了算的人。</p>
+<p>找你们来，不是跟你们商量的，让你们来听令的！他的军令：</p>
+<p>“大军全部开出九门之外，列阵迎敌”</p>
+<p>“锦衣卫巡查城内，但凡查到有盔甲军士不出城作战者，格杀勿论！”</p>
+<p>“九门是京城门户，若有丢失立斩！”</p>
+<p>“临阵，将不顾军先退者，立斩！“</p>
+<p>“临阵，军不顾将先退者，后队斩前队！”</p>
+<p>“敢违军令者，格杀勿论！”</p>
+<p>“大军开战之日，众将率军出城之后，立即关闭九门，有敢擅自放入城者立斩！”</p>
+<p>嗯，在玩命！不玩命，大明就完了，这次输不起。</p>
+<p>最终于谦带领着这只大部分的后备役军队逼退了瓦刺军，取得了北京保卫战的胜利。</p>
+<p>于谦有大明再造之功！下面是他老人家的一首《石灰吟》，感受下他的风骨：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">千锤万凿出深山，烈火焚烧若等闲。</span><br><span class="line"></span><br><span class="line">粉骨碎身浑不怕，要留清白在人间。</span><br></pre></td></tr></table></figure>
+
+
+
+<p>他那是历史星空中耀眼的一颗星星，每次翻开这段历史，总是那么明亮，让人充满敬意！</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/8a7728e3/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -869,7 +1092,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-01-04 19:05:12" itemprop="dateModified" datetime="2021-01-04T19:05:12+08:00">2021-01-04</time>
+                <time title="修改时间：2021-02-02 19:30:19" itemprop="dateModified" datetime="2021-02-02T19:30:19+08:00">2021-02-02</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -892,7 +1115,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。</p>
 <h1 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h1><p><strong>ByteBuf创建</strong></p>
 <p>使用Unpooled类来创建ByteBuf，不建议使用ByteBuf的构造函数自己去创建。</p>
 <p><strong>读写索引</strong></p>
@@ -957,42 +1180,111 @@
 <p><strong>小结：</strong> 将上面例子的initialCapacity设置成1，促使写入数据时扩充容量。下面运行时截图：array被扩容到64，writerIndex从0位置移动到6. </p>
 <p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103110741.png"></p>
 <p>在写入数据时，判断剩余容量是否足够；不够则需要扩容，如果写入的数据小于4M，则双倍增长，直到容纳写写入的数据。如果写入的数据大于4M，通过（minNewCapacity / threshold * threshold）计算需要扩容的大小。</p>
-<h1 id="读出数据"><a href="#读出数据" class="headerlink" title="读出数据"></a>读出数据</h1><p>从buf中把刚才写入的数据（”瓜农“）读出来，通过工具类ByteBufUtil.readBytes来实现。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ByteBuf readByteBuf = ByteBufUtil.readBytes(UnpooledByteBufAllocator.DEFAULT,buf,str1.getBytes(CharsetUtil.UTF_8).length);</span><br><span class="line">System.out.print(readByteBuf.toString(CharsetUtil.UTF_8));</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/17c9a786/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
 
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
 
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/4eda328d/">
 
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ByteBuf <span class="title">readBytes</span><span class="params">(ByteBufAllocator alloc, ByteBuf buffer, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> release = <span class="keyword">true</span>;</span><br><span class="line">    ByteBuf dst = alloc.buffer(length); <span class="comment">// 注解@8</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        buffer.readBytes(dst); <span class="comment">// 注解@9</span></span><br><span class="line">        release = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">return</span> dst;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (release) &#123;</span><br><span class="line">            dst.release();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
 
-<p><strong>注解@8</strong> 重新构造了一个ByteBuf（dst）用于存储读取的数据</p>
-<p><strong>注解@9</strong> 读取数据，并移动读索引。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">readBytes</span><span class="params">(ByteBuf dst, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (checkBounds) &#123;</span><br><span class="line">        <span class="keyword">if</span> (length &gt; dst.writableBytes()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IndexOutOfBoundsException(String.format(</span><br><span class="line">                    <span class="string">&quot;length(%d) exceeds dst.writableBytes(%d) where dst is: %s&quot;</span>, length, dst.writableBytes(), dst));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    readBytes(dst, dst.writerIndex(), length); <span class="comment">// 注解@9.1</span></span><br><span class="line">    dst.writerIndex(dst.writerIndex() + length); <span class="comment">// 注解@9.2</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/4eda328d/" class="post-title-link" itemprop="url">SK1# 给老板画饼</a>
+        </h2>
 
-<p><strong>注解@9.1</strong> 读取字节到新的ByteBuf。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">readBytes</span><span class="params">(ByteBuf dst, <span class="keyword">int</span> dstIndex, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    checkReadableBytes(length);</span><br><span class="line">    getBytes(readerIndex, dst, dstIndex, length); <span class="comment">// 注解@9.1.1</span></span><br><span class="line">    readerIndex += length; <span class="comment">// 注解@9.1.2</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
 
-<p><strong>注解@9.1.1</strong> 通过native api UNSAFE.copyMemory() 实现byte数组之间的拷贝</p>
-<p><strong>注解@9.1.2</strong> 源byteBuf读索引readerIndex向前移动</p>
-<p><strong>注解@9.2</strong> 数据读入新构建的缓存区dst，dst的写索引向前移动</p>
-<p><strong>小结：</strong> 示例中通过构造一个新的ByteBuf（dst），将源ByteBuf（buf）的数据读入到dst。数据读取结束后，源ByteBuf（buf）readerIndex向前移动；ByteBuf（dst）的writerIndex向前移动。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103125302.png"></p>
-</div>
+              <time title="创建时间：2021-01-01 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-01T22:47:01+08:00">2021-01-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-02 19:28:22" itemprop="dateModified" datetime="2021-02-02T19:28:22+08:00">2021-02-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
+                </span>
+            </span>
 
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大家分享点干活的家伙。</p>
+<p>今天周末，这上海的天也冷了，晚上喝了点羊汤，到了一周中最放松的时刻。</p>
+<p>今天不聊技术，咱聊聊给老板画饼。 </p>
+<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><p>崇祯元年七月十四日，崇祯在平台召见袁崇焕，聊辽东的事。</p>
+<p>崇祯说卿是我大明的忠诚义士，有你在收复辽东我就放心了，卿需要多久可收复？</p>
+<p>袁崇焕答：“臣受陛下眷顾，以臣便宜行事，计五年全辽可复！”。</p>
+<p>崇祯太高兴了，说收复辽东，朕给你封侯赏赐绝不吝啬。</p>
+<p>会后，兵科给事中许誉卿向袁大人讨教平辽方略，袁大人答”聊慰上意“，看到皇上如此操劳，好言劝慰而已。许大人这下傻眼了，到时候干不成，皇上怪罪下来如何是好。</p>
+<p>再次会见时，袁大人意识到吹的大了，跟皇上要人、要钱、要权。崇祯全部答应，召集六部要求全部落实，嗯，皇上是认真的。</p>
+<p>崇祯二年十一月，皇太极率数十万大军绕道蒙古，避开山海关，突破长城，威胁北京。最后袁大人虽然统领各地援军最终逼退后金军队，北京解围。对了，袁大人在这一年多在未请示皇上的情况下，干掉了皮岛军区司令员毛文龙。</p>
+<p>崇祯二年十二月，后金退兵后，袁大人却下狱了。</p>
+<p>崇祯三年八月，袁崇焕被凌迟处死，被割了3000多刀，家人流徙三千里，财产没收。</p>
+<p>袁大人是从底层一点一点干起来的，自己的能力得到贵人兵部尚书、东阁大学士孙承宗赏识才有了后来的袁督师。对袁崇焕的奋斗史很受感动。临终绝笔诗《临刑口占》述说着他奋斗的一生。</p>
+<p>一生事业总成空，半世功名在梦中。<br>死后不愁无勇将，忠魂依旧守辽东。</p>
+<p>袁大人被杀的原因很多什么通敌、政治迫害就不聊这个了。</p>
+<p>有一点是袁大人忽悠了老板，而且忽悠的没了边，老板虽然不太懂军事，你不能这么忽悠。</p>
+<p>所谓期望越高失望越大，你说五年平辽，第二年后金打到了京城，这怎么解释？</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/4eda328d/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1042,7 +1334,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-27 13:23:22" itemprop="dateModified" datetime="2020-12-27T13:23:22+08:00">2020-12-27</time>
+                <time title="修改时间：2021-02-02 19:30:02" itemprop="dateModified" datetime="2021-02-02T19:30:02+08:00">2021-02-02</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -1065,7 +1357,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>前面的文章中写了Channel实例化、Channel初始化、Channel注册、异步通知机制、客户端发起连接、事件的轮询和处理机制。Netty作为client/server高效通信框架，事件在ChannelPipeline是如何传递的，本文就聊聊这事。</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>前面的文章中写了Channel实例化、Channel初始化、Channel注册、异步通知机制、客户端发起连接、事件的轮询和处理机制。Netty作为client/server高效通信框架，事件在ChannelPipeline是如何传递的，本文就聊聊这事。</p>
 <h1 id="事件传递过程"><a href="#事件传递过程" class="headerlink" title="事件传递过程"></a>事件传递过程</h1><p>ChannelPipeline随着Channel的创建而创建，在 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/tvy0j0Mo9H82SK4jztqu0w">Netty2# Netty组件之Channel初始化 </a> 文章中梳理了ChannelPipeline、ChannelHandlerContext、ChannelHandler的关系如下图。</p>
 <p>ChannelPipeline大管道维护了一个ChannelHandlerContext链表，头部为HeadContext，尾部为TailContext。事件传播会沿着链表逐级向下传递。</p>
 <p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201226112641.png"></p>
@@ -1098,693 +1390,9 @@
 
 
 <p><strong>小结：</strong> outBound事件在ChannelPipeline中传递时，只会选择身份为outBound的ChannelHandlerContext执行。</p>
-<h3 id="Inbound传递过程"><a href="#Inbound传递过程" class="headerlink" title="Inbound传递过程"></a>Inbound传递过程</h3><p>以上一篇文章 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/rcVDX0tNMhRGchjYHddARw">Netty6# Netty之事件轮询与处理</a> 当有新的客户端的连接时触发unsafe.read()执行。具体为NioMessageUnsafe#read()方法。具体为上文中<strong>注解@17</strong>。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 入口</span></span><br><span class="line">pipeline.fireChannelRead(readBuf.get(i));</span><br><span class="line"></span><br><span class="line"><span class="comment">// 实现</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> ChannelPipeline <span class="title">fireChannelRead</span><span class="params">(Object msg)</span> </span>&#123;</span><br><span class="line">  AbstractChannelHandlerContext.invokeChannelRead(head, msg);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">invokeChannelRead</span><span class="params">(Object msg)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (invokeHandler()) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      ((ChannelInboundHandler) handler()).channelRead(<span class="keyword">this</span>, msg);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">      notifyHandlerException(t);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    fireChannelRead(msg); <span class="comment">// 注解@6</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@6</strong> 下面的方法findContextInbound(MASK_CHANNEL_READ)，只查找Inbound的ChannelHandlerContext。具体逻辑与Outbound传递过程相似，不再重复。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ChannelHandlerContext <span class="title">fireChannelRead</span><span class="params">(<span class="keyword">final</span> Object msg)</span> </span>&#123;</span><br><span class="line">    invokeChannelRead(findContextInbound(MASK_CHANNEL_READ), msg);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>小结：</strong> inBound事件在ChannelPipeline中传递时，只会选择身份为inBound的ChannelHandlerContext执行。</p>
-<h1 id="ChannelPipeline重要API"><a href="#ChannelPipeline重要API" class="headerlink" title="ChannelPipeline重要API"></a>ChannelPipeline重要API</h1><p>ChannelPipeline的默认实现为DefaultChannelPipeline，以下API源码梳理均来自该实现类。</p>
-<table>
-<thead>
-<tr>
-<th>接口</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>ChannelPipeline addFirst(ChannelHandler… handlers)</td>
-<td>在ChannelPipeline中，将ChannelHandlerContext添加HeadContext的后面。</td>
-</tr>
-<tr>
-<td>ChannelPipeline addLast(ChannelHandler… handlers);</td>
-<td>在ChannelPipeline中，将ChannelHandlerContext添加到TailContext的前面。</td>
-</tr>
-<tr>
-<td>ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);</td>
-<td>在ChannelPipeline中，将ChannelHandlerContext添加到某ChannelHandlerContext的前面。</td>
-</tr>
-<tr>
-<td>ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);</td>
-<td>在ChannelPipeline中，将ChannelHandlerContext添加到指定的ChannelHandlerContext的后面。</td>
-</tr>
-<tr>
-<td>ChannelPipeline remove(ChannelHandler handler);</td>
-<td>在ChannelPipeline中，将ChannelHandlerContext从链表中移除。</td>
-</tr>
-<tr>
-<td>ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);</td>
-<td>在ChannelPipeline中，将新newCtx在链表中替换就得oldCtx。</td>
-</tr>
-</tbody></table>
-<h3 id="addFirst"><a href="#addFirst" class="headerlink" title="addFirst"></a>addFirst</h3><p>说明：在ChannelPipeline中，将ChannelHandlerContext添加HeadContext的后面。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> ChannelPipeline <span class="title">addFirst</span><span class="params">(EventExecutorGroup group, String name, ChannelHandler handler)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> AbstractChannelHandlerContext newCtx;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">            checkMultiplicity(handler); <span class="comment">// 注解@7</span></span><br><span class="line">            name = filterName(name, handler); <span class="comment">// 注解@8</span></span><br><span class="line"></span><br><span class="line">            newCtx = newContext(group, name, handler); </span><br><span class="line"></span><br><span class="line">            addFirst0(newCtx); <span class="comment">// 注解@9</span></span><br><span class="line">						</span><br><span class="line">          	<span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line">        callHandlerAdded0(newCtx); <span class="comment">// 注解@10</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@7：</strong>checkMultiplicity()方法校验ChannelHandler是否重复。如果ChannelHandler中有注解@Sharable标识，则允许同一个ChannelHandler添加到不同的ChannelPipeline中。<strong>未加@Sharable注解的ChannelHandler只允许添加到一个ChannelPipeline</strong>。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">checkMultiplicity</span><span class="params">(ChannelHandler handler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (handler <span class="keyword">instanceof</span> ChannelHandlerAdapter) &#123;</span><br><span class="line">        ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;</span><br><span class="line">        <span class="keyword">if</span> (!h.isSharable() &amp;&amp; h.added) &#123; <span class="comment">// 判断@Sharable注解和该Handler是否已经被添加</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ChannelPipelineException(</span><br><span class="line">                    h.getClass().getName() +</span><br><span class="line">                    <span class="string">&quot; is not a @Sharable handler, so can&#x27;t be added or removed multiple times.&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        h.added = <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>@Sharable使用示例</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Sharable</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StringEncoder</span> <span class="keyword">extends</span> <span class="title">MessageToMessageEncoder</span>&lt;<span class="title">CharSequence</span>&gt; </span>&#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@8：</strong> ChannelHandler名字判断，没有设置Handler名字则自动生成一个；设置了Handler名字，不能与该ChannelPipeline其他ChannelHandler名字重复。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> String <span class="title">filterName</span><span class="params">(String name, ChannelHandler handler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (name == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> generateName(handler); </span><br><span class="line">    &#125;</span><br><span class="line">    checkDuplicateName(name);</span><br><span class="line">    <span class="keyword">return</span> name;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@9：</strong>创建DefaultChannelHandlerContext，并加入将其加入到链表中。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addFirst0</span><span class="params">(AbstractChannelHandlerContext newCtx)</span> </span>&#123;</span><br><span class="line">	AbstractChannelHandlerContext nextCtx = head.next;</span><br><span class="line">	newCtx.prev = head;</span><br><span class="line">	newCtx.next = nextCtx;</span><br><span class="line">	head.next = newCtx;</span><br><span class="line">	nextCtx.prev = newCtx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>经过上面链表的顺序调整，addFirst将ChannelHandlerContext添加到了HeadContext的后面。</strong></p>
-<p><strong>注解@10</strong> ：当ChannelHandler添加ChannelPipeline后，回调该Handler的handlerAdded方法，也是通知机制的常用做法。</p>
-<h3 id="addLast"><a href="#addLast" class="headerlink" title="addLast"></a>addLast</h3><p>说明：在ChannelPipeline中，将ChannelHandlerContext添加到TailContext的前面。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> ChannelPipeline <span class="title">addLast</span><span class="params">(EventExecutorGroup group, String name, ChannelHandler handler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> AbstractChannelHandlerContext newCtx;</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        checkMultiplicity(handler);</span><br><span class="line"></span><br><span class="line">        newCtx = newContext(group, filterName(name, handler), handler);</span><br><span class="line"></span><br><span class="line">        addLast0(newCtx); <span class="comment">// 注解@11</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    callHandlerAdded0(newCtx);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@11</strong>  <strong>其他逻辑同addFirst，addLast0将HandlerContext添加到TailContext的前一个位置。</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addLast0</span><span class="params">(AbstractChannelHandlerContext newCtx)</span> </span>&#123;</span><br><span class="line">    AbstractChannelHandlerContext prev = tail.prev;</span><br><span class="line">    newCtx.prev = prev;</span><br><span class="line">    newCtx.next = tail;</span><br><span class="line">    prev.next = newCtx;</span><br><span class="line">    tail.prev = newCtx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>addBefore</strong></p>
-<p>说明：在ChannelPipeline中，将ChannelHandlerContext添加到某ChannelHandlerContext的前面。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> ChannelPipeline <span class="title">addBefore</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        EventExecutorGroup group, String baseName, String name, ChannelHandler handler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> AbstractChannelHandlerContext newCtx;</span><br><span class="line">    <span class="keyword">final</span> AbstractChannelHandlerContext ctx;</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        checkMultiplicity(handler);</span><br><span class="line">        name = filterName(name, handler);</span><br><span class="line">        ctx = getContextOrDie(baseName); <span class="comment">// 注解@12</span></span><br><span class="line"></span><br><span class="line">        newCtx = newContext(group, name, handler); </span><br><span class="line"></span><br><span class="line">        addBefore0(ctx, newCtx); <span class="comment">// 注解@13</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    callHandlerAdded0(newCtx);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@12</strong> 根据传入的baseName在ChannelPipleline查找对应的HandlerContext。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> AbstractChannelHandlerContext <span class="title">getContextOrDie</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">    AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(name);</span><br><span class="line">    <span class="keyword">if</span> (ctx == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NoSuchElementException(name);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> ctx;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@13</strong> 添加到链表中，添加到baseName的前面。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">addBefore0</span><span class="params">(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx)</span> </span>&#123;</span><br><span class="line">    newCtx.prev = ctx.prev;</span><br><span class="line">    newCtx.next = ctx;</span><br><span class="line">    ctx.prev.next = newCtx;</span><br><span class="line">    ctx.prev = newCtx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>addAfter</strong></p>
-<p>说明：在ChannelPipeline中，将ChannelHandlerContext添加到指定的ChannelHandlerContext的后面。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> ChannelPipeline <span class="title">addAfter</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        EventExecutorGroup group, String baseName, String name, ChannelHandler handler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> AbstractChannelHandlerContext newCtx;</span><br><span class="line">    <span class="keyword">final</span> AbstractChannelHandlerContext ctx;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        checkMultiplicity(handler);</span><br><span class="line">        name = filterName(name, handler);</span><br><span class="line">        ctx = getContextOrDie(baseName);</span><br><span class="line"></span><br><span class="line">        newCtx = newContext(group, name, handler);</span><br><span class="line"></span><br><span class="line">        addAfter0(ctx, newCtx); <span class="comment">// 注解@14</span></span><br><span class="line"></span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">    callHandlerAdded0(newCtx);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@14：</strong>调整链表顺序，调整方式同上。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">addAfter0</span><span class="params">(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx)</span> </span>&#123;</span><br><span class="line">    newCtx.prev = ctx;</span><br><span class="line">    newCtx.next = ctx.next;</span><br><span class="line">    ctx.next.prev = newCtx;</span><br><span class="line">    ctx.next = newCtx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="remove"><a href="#remove" class="headerlink" title="remove"></a>remove</h3><p>说明：在ChannelPipeline中，将ChannelHandlerContext从链表中移除。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> AbstractChannelHandlerContext <span class="title">remove</span><span class="params">(<span class="keyword">final</span> AbstractChannelHandlerContext ctx)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">assert</span> ctx != head &amp;&amp; ctx != tail; <span class="comment">// 注解@15</span></span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        atomicRemoveFromHandlerList(ctx); <span class="comment">// 注解@16</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// ... </span></span><br><span class="line">    callHandlerRemoved0(ctx);</span><br><span class="line">    <span class="keyword">return</span> ctx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@15</strong> 被移除的ChannelHandlerContext不能是HeadContext和TailContext。</p>
-<p><strong>注解@16</strong> 通过调整前后ChannelHandlerContext的指针指向实现移除操作。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">atomicRemoveFromHandlerList</span><span class="params">(AbstractChannelHandlerContext ctx)</span> </span>&#123;</span><br><span class="line">    AbstractChannelHandlerContext prev = ctx.prev;</span><br><span class="line">    AbstractChannelHandlerContext next = ctx.next;</span><br><span class="line">    prev.next = next;</span><br><span class="line">    next.prev = prev;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="replace"><a href="#replace" class="headerlink" title="replace"></a>replace</h3><p>说明：在ChannelPipeline中，将新newCtx在链表中替换就得oldCtx。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> ChannelHandler <span class="title">replace</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">final</span> AbstractChannelHandlerContext ctx, String newName, ChannelHandler newHandler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">assert</span> ctx != head &amp;&amp; ctx != tail; <span class="comment">// 注解@17</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> AbstractChannelHandlerContext newCtx;</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        checkMultiplicity(newHandler);</span><br><span class="line">        <span class="keyword">if</span> (newName == <span class="keyword">null</span>) &#123;</span><br><span class="line">            newName = generateName(newHandler);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">boolean</span> sameName = ctx.name().equals(newName);</span><br><span class="line">            <span class="keyword">if</span> (!sameName) &#123;</span><br><span class="line">                checkDuplicateName(newName);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        newCtx = newContext(ctx.executor, newName, newHandler);</span><br><span class="line">        replace0(ctx, newCtx); <span class="comment">// 注解@18</span></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="keyword">return</span> ctx.handler();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@17</strong> 被替换的ChannelHandlerContext不能是HeadContext和TailContext。</p>
-<p><strong>注解@18</strong> 下面替换逻辑中，首先将oldCtx的前后指针暂存；newCtx前后指针指向刚才的暂存；把暂存的pre的next指向newCtx，暂存的next的prev指向newCtx，此时newCtx已经替换到了链表中；将oldCtx的prev和next都指向了newCtx，目的为了已经进入了oldCtx的数据正确流转无论是inbound还是outbound数据。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">replace0</span><span class="params">(AbstractChannelHandlerContext oldCtx, AbstractChannelHandlerContext newCtx)</span> </span>&#123;</span><br><span class="line">    AbstractChannelHandlerContext prev = oldCtx.prev;</span><br><span class="line">    AbstractChannelHandlerContext next = oldCtx.next;</span><br><span class="line">    newCtx.prev = prev;</span><br><span class="line">    newCtx.next = next;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Finish the replacement of oldCtx with newCtx in the linked list.</span></span><br><span class="line">    <span class="comment">// Note that this doesn&#x27;t mean events will be sent to the new handler immediately</span></span><br><span class="line">    <span class="comment">// because we are currently at the event handler thread and no more than one handler methods can be invoked</span></span><br><span class="line">    <span class="comment">// at the same time (we ensured that in replace().)</span></span><br><span class="line">    prev.next = newCtx;</span><br><span class="line">    next.prev = newCtx;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// update the reference to the replacement so forward of buffered content will work correctly</span></span><br><span class="line">    oldCtx.prev = newCtx;</span><br><span class="line">    oldCtx.next = newCtx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>小结：</strong> ChannelPipeline提供了方便的API对链表中的ChannelHandlerContext进行插入、删除、添加、替换操作。</p>
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/86dc035b/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/86dc035b/" class="post-title-link" itemprop="url">MQ43# Raft一致性算法整理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 23:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:55:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="Raft概述"><a href="#Raft概述" class="headerlink" title="Raft概述"></a>Raft概述</h1><h2 id="Raft定义"><a href="#Raft定义" class="headerlink" title="Raft定义"></a>Raft定义</h2><p>Raft是一种用来管理日志复制的一致性算法。一致性算法允许一组机器像一个整体一样工作，即使其中的一些机器出了错误也能正常工作。</p>
-<h2 id="复制状态机"><a href="#复制状态机" class="headerlink" title="复制状态机"></a>复制状态机</h2><p>复制状态机(State Machine Replication)：通过复制服务副本，并和副本一起来协调客户端的交互，来实现容错服务。Raft复制状态机是通过复制日志来实现的，每一台服务器保存着一份日志。</p>
-<h2 id="Raft一致性"><a href="#Raft一致性" class="headerlink" title="Raft一致性"></a>Raft一致性</h2><p>Raft实现一致性是首先选择一个确定的leader，然后leader负责管理日志复制。leader接受来自客户端的请求并追加到本地日志，然后把日志复制到其它的机器并告诉其它机器什么时候可以安全的将日志应用到状态机。<code>集群存在一个leader的好处可以简化日志复制的管理</code>。例如：leader可以决定日志的追加，而不需要经其它机器的同意。<code>整个集群的数据流向也是从leader流向其它机器</code>。如果leader宕机或者网络断开，其它的机器可以重新选举一个新的leader。</p>
-<p>Raft一致性问题分解为3个相对独立的子问题</p>
-<p>Leader election：当一个leader宕机后，一个新的leader必须被选举。</p>
-<p>Log replication：leader必须响应客户端的请求，并把日志复制到整个集群来保证其它机器的日志和自己的相同。</p>
-<p>Safety：状态机的安全是Raft优先保证的。如果任意一台机器将一条特定的日志应用到自己的状态机，那么其他的机器就不能应用一条不同的日志到自己的状态机。解决这个问题的方案就是在选举是增加额外的规则约束。</p>
-<h2 id="Raft新的特性"><a href="#Raft新的特性" class="headerlink" title="Raft新的特性"></a>Raft新的特性</h2><p>强领导者（Strong Leader）：日志条目只从领导者发送向其他服务器。</p>
-<p>领导选取（Leader Selection）：Raft使用了随机定时器来选择leader。</p>
-<p>成员变化（Membership Change）：Raft使用了一种<code>联合一致性</code>的方法，使得集群中的机器发生变更的时候，整个集群也可以正常的工作。联合一致性配置是两个不同配置的大多数机器的重叠。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/86dc035b/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ea80cc10/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/ea80cc10/" class="post-title-link" itemprop="url">MQ42# RocketMQ消息轨迹</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 23:45:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:45:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <div id="vip-container"><h1 id="Broker配置"><a href="#Broker配置" class="headerlink" title="Broker配置"></a>Broker配置</h1><p>首先看下broker.conf配置的两个属性</p>
-<p>| 属性 |默认值 |</p>
-<p>| — | — |</p>
-<p>|traceTopicEnable |false |</p>
-<p>| msgTraceTopicName | RMQ_SYS_TRACE_TOPIC |</p>
-<p>在一个集群中可以配置一台机器专门负责消息轨迹的收集工作，该台机器上配置traceTopicEnable = true,</p>
-<p>borker启动的时候自动创建默认轨迹topic</p>
-<p>TopicConfigManager.java构造方法，BrokerController在启动的时候，会初始化TopicConfigManager实现trace topic的创建工作</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.brokerController.getBrokerConfig().isTraceTopicEnable()) &#123;</span><br><span class="line"></span><br><span class="line">String topic = <span class="keyword">this</span>.brokerController.getBrokerConfig().getMsgTraceTopicName();</span><br><span class="line"></span><br><span class="line">TopicConfig topicConfig = <span class="keyword">new</span> TopicConfig(topic);</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.systemTopicList.add(topic);</span><br><span class="line"></span><br><span class="line">topicConfig.setReadQueueNums(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">topicConfig.setWriteQueueNums(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="客户端发送实现"><a href="#客户端发送实现" class="headerlink" title="客户端发送实现"></a><strong>客户端发送实现</strong></h1><p>客户端发送</p>
-<p>DefaultMQProducer producer = new DefaultMQProducer(“ProducerGroupName”,true);</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">public DefaultMQProducer(final String producerGroup, RPCHook rpcHook, boolean enableMsgTrace,final String customizedTraceTopic) &#123;</span><br><span class="line"></span><br><span class="line">this.producerGroup &#x3D; producerGroup;</span><br><span class="line"></span><br><span class="line">defaultMQProducerImpl &#x3D; new DefaultMQProducerImpl(this, rpcHook);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;if client open the message trace feature</span><br><span class="line"></span><br><span class="line">if (enableMsgTrace) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">AsyncTraceDispatcher dispatcher &#x3D; new AsyncTraceDispatcher(customizedTraceTopic, rpcHook);</span><br><span class="line"></span><br><span class="line">dispatcher.setHostProducer(this.getDefaultMQProducerImpl());</span><br><span class="line"></span><br><span class="line">traceDispatcher &#x3D; dispatcher;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;为消息轨迹注册hook,在消息发送前执行</span><br><span class="line"></span><br><span class="line">this.getDefaultMQProducerImpl().registerSendMessageHook(</span><br><span class="line"></span><br><span class="line">new SendMessageTraceHookImpl(traceDispatcher));</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;system mqtrace hook init failed ,maybe can&#39;t send msg trace data&quot;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>SendMessageTraceHookImpl 实现了SendMessageHook接口，在消息发送前后会被调用</p>
-<p>AsyncTraceDispatcher 主要负责消息的发送工作；内部队列，由线程池批量（100条）发送</p>
-<h1 id="Hook调用"><a href="#Hook调用" class="headerlink" title="Hook调用"></a><strong>Hook调用</strong></h1><p>发送前hook调用</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;如果有hook在消息发送前执行，消息轨迹通过这种方式记录</span><br><span class="line"></span><br><span class="line">if (this.hasSendMessageHook()) &#123;</span><br><span class="line"></span><br><span class="line">context &#x3D; new SendMessageContext();</span><br><span class="line"></span><br><span class="line">context.setProducer(this); &#x2F;&#x2F;发送对象</span><br><span class="line"></span><br><span class="line">context.setProducerGroup(this.defaultMQProducer.getProducerGroup()); &#x2F;&#x2F;生产组</span><br><span class="line"></span><br><span class="line">context.setCommunicationMode(communicationMode); &#x2F;&#x2F;发送模式</span><br><span class="line"></span><br><span class="line">context.setBornHost(this.defaultMQProducer.getClientIP()); &#x2F;&#x2F;客户端IP</span><br><span class="line"></span><br><span class="line">context.setBrokerAddr(brokerAddr); &#x2F;&#x2F;发往broker的地址</span><br><span class="line"></span><br><span class="line">context.setMessage(msg); &#x2F;&#x2F;消息内容</span><br><span class="line"></span><br><span class="line">context.setMq(mq); &#x2F;&#x2F;消息 Queue</span><br><span class="line"></span><br><span class="line">String isTrans &#x3D; msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (isTrans !&#x3D; null &amp;&amp; isTrans.equals(&quot;true&quot;)) &#123;</span><br><span class="line"></span><br><span class="line">context.setMsgType(MessageType.Trans_Msg_Half);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (msg.getProperty(&quot;__STARTDELIVERTIME&quot;) !&#x3D; null || msg.getProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL) !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">context.setMsgType(MessageType.Delay_Msg);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookBefore(context); &#x2F;&#x2F;执行自定义个hook业务</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p>发送后hook调用</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;消息发送后执行的hook，消息轨迹会调用</span><br><span class="line"></span><br><span class="line">if (this.hasSendMessageHook()) &#123;</span><br><span class="line"></span><br><span class="line">context.setSendResult(sendResult);</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookAfter(context);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="发送轨迹"><a href="#发送轨迹" class="headerlink" title="发送轨迹"></a><strong>发送轨迹</strong></h1><p>Producer启动时注册钩子，该钩子持有负责消息发送的AsyncTraceDispatcher实例，消息发送后进而发送消息轨迹</p>
-<p><strong>发送轨迹的消息格式</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151653.png"></p>
-<h1 id="客户端消费轨迹实现"><a href="#客户端消费轨迹实现" class="headerlink" title="客户端消费轨迹实现"></a>客户端消费轨迹实现</h1><p>消费轨迹：与消息发送的轨迹实现思路相同</p>
-<p>DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(“CID_JODIE_1”,true);</p>
-<p><strong>注册消费钩子</strong></p>
-<p>ConsumeMessageTraceHookImpl实现了ConsumeMessageHook，在消费的前后会进行回调</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">public DefaultMQPushConsumer(final String consumerGroup, RPCHook rpcHook,</span><br><span class="line"></span><br><span class="line">AllocateMessageQueueStrategy allocateMessageQueueStrategy, boolean enableMsgTrace, final String customizedTraceTopic) &#123;</span><br><span class="line"></span><br><span class="line">this.consumerGroup &#x3D; consumerGroup;</span><br><span class="line"></span><br><span class="line">this.allocateMessageQueueStrategy &#x3D; allocateMessageQueueStrategy;</span><br><span class="line"></span><br><span class="line">defaultMQPushConsumerImpl &#x3D; new DefaultMQPushConsumerImpl(this, rpcHook);</span><br><span class="line"></span><br><span class="line">if (enableMsgTrace) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">AsyncTraceDispatcher dispatcher &#x3D; new AsyncTraceDispatcher(customizedTraceTopic, rpcHook);</span><br><span class="line"></span><br><span class="line">dispatcher.setHostConsumer(this.getDefaultMQPushConsumerImpl());</span><br><span class="line"></span><br><span class="line">traceDispatcher &#x3D; dispatcher;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;注册消费hook</span><br><span class="line"></span><br><span class="line">this.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(</span><br><span class="line"></span><br><span class="line">new ConsumeMessageTraceHookImpl(traceDispatcher));</span><br><span class="line"></span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(&quot;system mqtrace hook init failed ,maybe can&#39;t send msg trace data&quot;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>ConsumeMessageConcurrentlyService.ConsumeRequest.run消费前执行</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;消费前执行hook 消费轨迹会执行</span><br><span class="line"></span><br><span class="line">ConsumeMessageContext consumeMessageContext &#x3D; null;</span><br><span class="line"></span><br><span class="line">if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) &#123;</span><br><span class="line"></span><br><span class="line">consumeMessageContext &#x3D; new ConsumeMessageContext();</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setConsumerGroup(defaultMQPushConsumer.getConsumerGroup());</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setProps(new HashMap&lt;String, String&gt;());</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setMq(messageQueue);</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setMsgList(msgs);</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setSuccess(false); &#x2F;&#x2F;消费状态</span><br><span class="line"></span><br><span class="line">ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookBefore(consumeMessageContext);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>消费后执行</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) &#123;</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setStatus(status.toString());</span><br><span class="line"></span><br><span class="line">consumeMessageContext.setSuccess(ConsumeConcurrentlyStatus.CONSUME_SUCCESS &#x3D;&#x3D; status);</span><br><span class="line"></span><br><span class="line">ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookAfter(consumeMessageContext);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>消费轨迹格式</strong></p>
-<p>分为两部分，一部分为消费前，一部分为消费后</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151820.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219151831.png"></p>
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2f29fd72/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/2f29fd72/" class="post-title-link" itemprop="url">MQ41# RocketMQ特性--事物消息</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 23:43:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:43:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>从官方给的例子入手，代码如下:</p>
-<p>示例类：org.apache.rocketmq.example.transaction.TransactionProducer.java</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line">public static void main(String[] args) throws MQClientException, InterruptedException &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 定义TransactionListener</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; new TransactionListenerImpl();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 使用事务发送Producer</span><br><span class="line"></span><br><span class="line">TransactionMQProducer producer &#x3D; new TransactionMQProducer(&quot;please_rename_unique_group_name&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 定义线程池</span><br><span class="line"></span><br><span class="line">ExecutorService executorService &#x3D; new ThreadPoolExecutor(2, 5, 100, TimeUnit.SECONDS, new ArrayBlockingQueue&lt;Runnable&gt;(2000), new ThreadFactory() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public Thread newThread(Runnable r) &#123;</span><br><span class="line"></span><br><span class="line">Thread thread &#x3D; new Thread(r);</span><br><span class="line"></span><br><span class="line">thread.setName(&quot;client-transaction-msg-check-thread&quot;);</span><br><span class="line"></span><br><span class="line">return thread;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置线程池</span><br><span class="line"></span><br><span class="line">producer.setExecutorService(executorService);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置监听器</span><br><span class="line"></span><br><span class="line">producer.setTransactionListener(transactionListener);</span><br><span class="line"></span><br><span class="line">producer.setNamesrvAddr(&quot;127.0.0.1:9876&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 发送者启动</span><br><span class="line"></span><br><span class="line">producer.start();</span><br><span class="line"></span><br><span class="line">String[] tags &#x3D; new String[] &#123;&quot;TagA&quot;, &quot;TagB&quot;, &quot;TagC&quot;, &quot;TagD&quot;, &quot;TagE&quot;&#125;;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 10; i++) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">Message msg &#x3D;</span><br><span class="line"></span><br><span class="line">new Message(&quot;TopicTest1234&quot;, tags[i % tags.length], &quot;KEY&quot; + i,</span><br><span class="line"></span><br><span class="line">(&quot;Hello RocketMQ &quot; + i).getBytes(RemotingHelper.DEFAULT_CHARSET));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 消息发送</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; producer.sendMessageInTransaction(msg, null);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;%s%n&quot;, sendResult);</span><br><span class="line"></span><br><span class="line">Thread.sleep(10);</span><br><span class="line"></span><br><span class="line">&#125; catch (MQClientException | UnsupportedEncodingException e) &#123;</span><br><span class="line"></span><br><span class="line">e.printStackTrace();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 100000; i++) &#123;</span><br><span class="line"></span><br><span class="line">Thread.sleep(1000);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;发送者关闭</span><br><span class="line"></span><br><span class="line">producer.shutdown();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p>从上面客户端例子中思考一些问题：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. @1定义TransactionListener做什么用？</span><br><span class="line">2. @2定义的TransactionMQProducer与普通Produer区别在哪里？</span><br><span class="line">3. @3定义线程池executorService又是干啥的？</span><br><span class="line">4. @4事务发送者启动发送流程是怎么样？</span><br><span class="line">5. 发送事务消息如何和Broker进行交互的？</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="事务消息客户端发送流程"><a href="#事务消息客户端发送流程" class="headerlink" title="事务消息客户端发送流程"></a>事务消息客户端发送流程</h1><h2 id="事务发送与普通启动差异"><a href="#事务发送与普通启动差异" class="headerlink" title="事务发送与普通启动差异"></a>事务发送与普通启动差异</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">@1 producer.start();</span><br><span class="line"></span><br><span class="line">@2 TransactionMQProducer#start</span><br><span class="line"></span><br><span class="line">this.defaultMQProducerImpl.initTransactionEnv();</span><br><span class="line"></span><br><span class="line">super.start();</span><br><span class="line"></span><br><span class="line">@3 DefaultMQProducerImpl#initTransactionEnv()</span><br><span class="line"></span><br><span class="line">this.checkExecutor &#x3D; producer.getExecutorService();</span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：事务发送时比普通发送启动多了initTransactionEnv操作，即：给ExecutorService checkExecutor赋值。</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="事务消息发送调用链"><a href="#事务消息发送调用链" class="headerlink" title="事务消息发送调用链"></a>事务消息发送调用链</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 SendResult sendResult &#x3D; producer.sendMessageInTransaction</span><br><span class="line"></span><br><span class="line">@2 TransactionMQProducer#sendMessageInTransaction</span><br><span class="line"></span><br><span class="line">@3 DefaultMQProducerImpl#sendMessageInTransaction</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="事务消息发送分析"><a href="#事务消息发送分析" class="headerlink" title="事务消息发送分析"></a>事务消息发送分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; getCheckListener();</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; localTransactionExecuter &amp;&amp; null &#x3D;&#x3D; transactionListener) &#123;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;tranExecutor is null&quot;, null);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Validators.checkMessage(msg, this.defaultMQProducer);</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; null;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 表示消息的prepare消息</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, &quot;true&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 生产者组，用于回查本地事务事，从生产者组中选择随机选择一个生产者即可</span><br><span class="line"></span><br><span class="line">MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 消息发送</span><br><span class="line"></span><br><span class="line">sendResult &#x3D; this.send(msg);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;send message Exception&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p>方法：DefaultMQProducerImpl#sendKernelImpl</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;事务消息发送，设置PREPARED标记</span><br><span class="line"></span><br><span class="line">final String tranMsg &#x3D; msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (tranMsg !&#x3D; null &amp;&amp; Boolean.parseBoolean(tranMsg)) &#123;</span><br><span class="line"></span><br><span class="line">sysFlag |&#x3D; MessageSysFlag.TRANSACTION_PREPARED_TYPE;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 请求header中设置事务标记</span><br><span class="line"></span><br><span class="line">requestHeader.setSysFlag(sysFlag);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@6 发送消息请求的RequestCode</span><br><span class="line"></span><br><span class="line">request &#x3D; RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);</span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1获取TransactionListener即示例代码传入的Listener</span><br><span class="line">@2在消息属性中加入PROPERTY_TRANSACTION_PREPARED &#x3D; &quot;TRAN_MSG&quot;即事务半消息</span><br><span class="line">@3设置ProducerGroup Broker在事务回查时调用</span><br><span class="line">@4事务消息发送采用同步发送，发送流程与普通消息发送一致</span><br><span class="line">@5请求header中设置事务标记SEND_MESSAGE &#x3D; 10</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="事务消息发送结果分析"><a href="#事务消息发送结果分析" class="headerlink" title="事务消息发送结果分析"></a>事务消息发送结果分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">LocalTransactionState localTransactionState &#x3D; LocalTransactionState.UNKNOW;</span><br><span class="line"></span><br><span class="line">switch (sendResult.getSendStatus()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1</span><br><span class="line"></span><br><span class="line">case SEND_OK: &#123;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 执行本地事务</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; transactionListener.executeLocalTransaction(msg, arg);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">case FLUSH_DISK_TIMEOUT:</span><br><span class="line"></span><br><span class="line">case FLUSH_SLAVE_TIMEOUT:</span><br><span class="line"></span><br><span class="line">case SLAVE_NOT_AVAILABLE:</span><br><span class="line"></span><br><span class="line">localTransactionState &#x3D; LocalTransactionState.ROLLBACK_MESSAGE;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 发送半消息（Prepared）消息成功，设置transactionId。</span><br><span class="line">@2 发送半消息成功后，通过transactionListener回调客户端查询本地事务执行情况，并返回事务执行状态。</span><br><span class="line">LocalTransactionState有COMMIT_MESSAGE、ROLLBACK_MESSAGE、UNKNOW三种状态。</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="结束事务分析"><a href="#结束事务分析" class="headerlink" title="结束事务分析"></a>结束事务分析</h2><p>方法：DefaultMQProducerImpl#sendMessageInTransaction</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 结束事务，根据返回的事务状态执行提交、回滚、暂时不处理</span><br><span class="line"></span><br><span class="line">this.endTransaction(sendResult, localTransactionState, localException);</span><br><span class="line"></span><br><span class="line">&#125; catch (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.warn(&quot;local transaction execute &quot; + localTransactionState + &quot;, but end broker transaction failed&quot;, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">TransactionSendResult transactionSendResult &#x3D; new TransactionSendResult();</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">return transactionSendResult;</span><br></pre></td></tr></table></figure>
-
-
-
-<p>方法：DefaultMQProducerImpl#endTransaction</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"></span><br><span class="line">switch (localTransactionState) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 设置事务提交标记Header</span><br><span class="line"></span><br><span class="line">case COMMIT_MESSAGE: requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_COMMIT_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 设置事务回滚标记Header</span><br><span class="line"></span><br><span class="line">case ROLLBACK_MESSAGE:</span><br><span class="line"></span><br><span class="line">requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_ROLLBACK_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 设置事务未知标记Header</span><br><span class="line"></span><br><span class="line">case UNKNOW:</span><br><span class="line"></span><br><span class="line">requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_NOT_TYPE);</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 通过一次发送方式向Broker提交事务 this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, requestHeader, remark,</span><br><span class="line"></span><br><span class="line">this.defaultMQProducer.getSendMsgTimeout());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 根据本地事务执行返回的状态localTransactionState，调用结束事务方法</span><br><span class="line">@2 requestHeader设置事务提交标记0x2 &lt;&lt; 2&#x3D;8</span><br><span class="line">@3 requestHeader设置事务回滚标记0x3 &lt;&lt; 2&#x3D;12</span><br><span class="line">@4 requestHeader设置未知标记0</span><br><span class="line">@5 通过一次发送方式向Broker提交事务 RequestCode为END_TRANSACTION &#x3D; 37</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="事务消息服务端存储流程"><a href="#事务消息服务端存储流程" class="headerlink" title="事务消息服务端存储流程"></a>事务消息服务端存储流程</h1><h2 id="事务消息存储调用链"><a href="#事务消息存储调用链" class="headerlink" title="事务消息存储调用链"></a>事务消息存储调用链</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@1 SendMessageProcessor#processRequest</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendMessage(ctx, request, mqtraceContext, requestHeader)</span><br><span class="line"></span><br><span class="line">@2 SendMessageProcessor#sendMessage</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="事务半消息存储代码分析（一）"><a href="#事务半消息存储代码分析（一）" class="headerlink" title="事务半消息存储代码分析（一）"></a>事务半消息存储代码分析（一）</h2><p>方法：SendMessageProcessor#sendMessage</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;@1 可以通过配置来是否接受事务消息存储</span><br><span class="line"></span><br><span class="line">if (traFlag !&#x3D; null &amp;&amp; Boolean.parseBoolean(traFlag)) &#123;</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getBrokerConfig().isRejectTransactionMessage())&#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.NO_PERMISSION);</span><br><span class="line"></span><br><span class="line">response.setRemark(</span><br><span class="line"></span><br><span class="line">&quot;the broker[&quot; + this.brokerController.getBrokerConfig().getBrokerIP1()</span><br><span class="line"></span><br><span class="line">\+ &quot;] sending transaction message is forbidden&quot;);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 prepare消息存储</span><br><span class="line"></span><br><span class="line">putMessageResult &#x3D; this.brokerController.getTransactionalMessageService().prepareMessage(msgInner);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">putMessageResult &#x3D; this.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">@1 可以通过Broker配置属性rejectTransactionMessage来决定是否接受事务消息请求，默认为false即接受。</span><br><span class="line">@2 半消息存储</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/2f29fd72/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/302db5ac/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/302db5ac/" class="post-title-link" itemprop="url">MQ40# RocketMQ一次消费性能问题排查</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 23:41:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:41:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>在容器推广中，为了测试容器的性能，需要消息SDK与ECS上在发送和消费的性能对比；在对比消费性能时，发现容器中的消费性能居然是ECS的2倍。容器并发消费的20个线程TPS在3万左右，ECS中20个消费线程TPS在1.5万左右。</p>
-<p>问题：配置均采用8C16G，容器中的性能几乎是ECS的两倍，这不科学，事出反常必有妖。</p>
-<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><h2 id="tcpdump网络情况"><a href="#tcpdump网络情况" class="headerlink" title="tcpdump网络情况"></a>tcpdump网络情况</h2><p>tcpdump显示在消费的机器存在频繁的域名解析过程；10.x.x.185向DNS服务器100.x.x.136.domain和10.x.x.138.domain请求解析。而10.x.x.185这台机器又是消息发送者的机器IP，测试的发送和消费分别部署在两台机器上。</p>
-<p>问题：消费时为何会有消息发送方的IP呢？而且该IP还不断进行域名解析。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219150223.png"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/302db5ac/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9126d179/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/9126d179/" class="post-title-link" itemprop="url">MQ39# RocketMQ消息发送Broker端流程处理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 23:39:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:39:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="Broker处理消息的入口类SendMessageProcessor"><a href="#Broker处理消息的入口类SendMessageProcessor" class="headerlink" title="Broker处理消息的入口类SendMessageProcessor"></a>Broker处理消息的入口类SendMessageProcessor</h1><p>processRequest方法主要三件事情：</p>
-<p>1.处理consumer发回broker的消息重试</p>
-<p>2.处理批量发送</p>
-<p>3.处理单条消息发送</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException &#123;</span><br><span class="line"></span><br><span class="line">SendMessageContext mqtraceContext;</span><br><span class="line"></span><br><span class="line">switch (request.getCode()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;处理消息重试</span><br><span class="line"></span><br><span class="line">case RequestCode.CONSUMER_SEND_MSG_BACK:</span><br><span class="line"></span><br><span class="line">return this.consumerSendMsgBack(ctx, request);</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">SendMessageRequestHeader requestHeader &#x3D; parseRequestHeader(request);</span><br><span class="line"></span><br><span class="line">if (requestHeader &#x3D;&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">return null;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">mqtraceContext &#x3D; buildMsgContext(ctx, requestHeader);</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookBefore(ctx, request, mqtraceContext);</span><br><span class="line"></span><br><span class="line">RemotingCommand response;</span><br><span class="line"></span><br><span class="line">if (requestHeader.isBatch()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;批量发送</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendBatchMessage(ctx, request, mqtraceContext, requestHeader);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;处理消息发送</span><br><span class="line"></span><br><span class="line">response &#x3D; this.sendMessage(ctx, request, mqtraceContext, requestHeader);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.executeSendMessageHookAfter(response, mqtraceContext);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="单条处理流程"><a href="#单条处理流程" class="headerlink" title="单条处理流程"></a>单条处理流程</h1><p>批处理流程与单条处理基本一致</p>
-<p>SendMessageProcessor.sendMessage主要流程：</p>
-<p>1.broker可以在指定的时间开始服务通过startAcceptSendRequestTimeStamp设定</p>
-<p>2.消息校验：</p>
-<p>* broker没有写入权限并且topic为顺序topic则拒绝服务</p>
-<p>* 检查Topic不能和系统保留Topic[TBW102]冲突</p>
-<p>* 若Topic未创建，Broker开启自动创建</p>
-<p>* queueId校验，不能大于队列最大值</p>
-<p>3.判断是否超过消费次数（16次），决定是否写入死信队列</p>
-<p>4.消息内容组织</p>
-<p>* 设置Message扩展字段</p>
-<p>* 设置Message在客户端生成的时间</p>
-<p>* 设置发送Message机器的地址</p>
-<p>* 设置存储Message的Broker地址</p>
-<p>* 设置消费重试消息的次数</p>
-<p>5.消息存储（单独梳理）</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br></pre></td><td class="code"><pre><span class="line">private RemotingCommand sendMessage(final ChannelHandlerContext ctx, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final RemotingCommand request, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendMessageContext sendMessageContext, &#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">final SendMessageRequestHeader requestHeader) throws RemotingCommandException &#123;</span><br><span class="line"></span><br><span class="line">final RemotingCommand response &#x3D; RemotingCommand.createResponseCommand(SendMessageResponseHeader.class);</span><br><span class="line"></span><br><span class="line">final SendMessageResponseHeader responseHeader &#x3D; (SendMessageResponseHeader) response.readCustomHeader();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;标识RPC的SeqNumber</span><br><span class="line"></span><br><span class="line">response.setOpaque(request.getOpaque());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;埋点不清楚用处</span><br><span class="line"></span><br><span class="line">response.addExtField(MessageConst.PROPERTY_MSG_REGION, this.brokerController.getBrokerConfig().getRegionId());</span><br><span class="line"></span><br><span class="line">response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));</span><br><span class="line"></span><br><span class="line">log.debug(&quot;receive SendMessage request command, &#123;&#125;&quot;, request);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;Broker启动后在设定的时间处理请求，通过startAcceptSendRequestTimeStamp来设置</span><br><span class="line"></span><br><span class="line">final long startTimstamp &#x3D; this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getMessageStore().now() &lt; startTimstamp) &#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.SYSTEM_ERROR);</span><br><span class="line"></span><br><span class="line">response.setRemark(String.format(&quot;broker unable to service, until %s&quot;, UtilAll.timeMillisToHumanString2(startTimstamp)));</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">response.setCode(-1);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;创建Topic</span><br><span class="line"></span><br><span class="line">super.msgCheck(ctx, requestHeader, response);</span><br><span class="line"></span><br><span class="line">if (response.getCode() !&#x3D; -1) &#123;</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">final byte[] body &#x3D; request.getBody();</span><br><span class="line"></span><br><span class="line">int queueIdInt &#x3D; requestHeader.getQueueId();</span><br><span class="line"></span><br><span class="line">TopicConfig topicConfig &#x3D; this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());</span><br><span class="line"></span><br><span class="line">if (queueIdInt &lt; 0) &#123;</span><br><span class="line"></span><br><span class="line">queueIdInt &#x3D; Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">MessageExtBrokerInner msgInner &#x3D; new MessageExtBrokerInner();</span><br><span class="line"></span><br><span class="line">msgInner.setTopic(requestHeader.getTopic());</span><br><span class="line"></span><br><span class="line">msgInner.setQueueId(queueIdInt);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;判断是否超过消费次数（16次），决定是否写入死信队列</span><br><span class="line"></span><br><span class="line">if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig)) &#123;</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">msgInner.setBody(body);</span><br><span class="line"></span><br><span class="line">msgInner.setFlag(requestHeader.getFlag());</span><br><span class="line"></span><br><span class="line">MessageAccessor.setProperties(msgInner, MessageDecoder.string2messageProperties(requestHeader.getProperties()));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;Message扩展字段，比如：Unikey, Keys, Tag都在这里面</span><br><span class="line"></span><br><span class="line">msgInner.setPropertiesString(requestHeader.getProperties());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;Message在客户端生成的时间</span><br><span class="line"></span><br><span class="line">msgInner.setBornTimestamp(requestHeader.getBornTimestamp());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;发送Message机器的地址</span><br><span class="line"></span><br><span class="line">msgInner.setBornHost(ctx.channel().remoteAddress());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;存储Message的Broker地址</span><br><span class="line"></span><br><span class="line">msgInner.setStoreHost(this.getStoreHost());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;重试消息的次数</span><br><span class="line"></span><br><span class="line">msgInner.setReconsumeTimes(requestHeader.getReconsumeTimes() &#x3D;&#x3D; null ? 0 : requestHeader.getReconsumeTimes());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;判断broker是否拒绝事物消息[rejectTransactionMessage]默认false</span><br><span class="line"></span><br><span class="line">if (this.brokerController.getBrokerConfig().isRejectTransactionMessage()) &#123;</span><br><span class="line"></span><br><span class="line">String traFlag &#x3D; msgInner.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);</span><br><span class="line"></span><br><span class="line">if (traFlag !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">response.setCode(ResponseCode.NO_PERMISSION);</span><br><span class="line"></span><br><span class="line">response.setRemark(</span><br><span class="line"></span><br><span class="line">&quot;the broker[&quot; + this.brokerController.getBrokerConfig().getBrokerIP1() + &quot;] sending transaction message is forbidden&quot;);</span><br><span class="line"></span><br><span class="line">return response;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;消息存储</span><br><span class="line"></span><br><span class="line">PutMessageResult putMessageResult &#x3D; this.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">return handlePutMessageResult(putMessageResult, response, request, msgInner, responseHeader, sendMessageContext, ctx, queueIdInt);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/9126d179/#more" rel="contents">
+              <a class="btn" href="/posts/8c88e43/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1873,20 +1481,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-count">59</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

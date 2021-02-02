@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="前言 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。 内存分配器概览堆外内存&amp;堆内存     分配方式 优点 缺点    堆内存 JVM负责内存的分配与回收 数据过多会引起频繁GC和停顿；多一次拷贝，在用户态分配、I&#x2F;O通信需要数据拷贝到内核态   堆外内存 I&#x2F;O性能高，直接在内核态分配降">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty9# Netty抽象内存分配器实现原理">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/2e57625b/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="前言 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。 内存分配器概览堆外内存&amp;堆内存     分配方式 优点 缺点    堆内存 JVM负责内存的分配与回收 数据过多会引起频繁GC和停顿；多一次拷贝，在用户态分配、I&#x2F;O通信需要数据拷贝到内核态   堆外内存 I&#x2F;O性能高，直接在内核态分配降">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%B1%BB%E5%9B%BE%20(1).png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210117101614.png">
+<meta property="article:published_time" content="2021-01-16T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-01-17T04:15:46.309Z">
+<meta property="article:tag" content="Netty">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%B1%BB%E5%9B%BE%20(1).png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/2e57625b/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Netty9# Netty抽象内存分配器实现原理 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2e57625b/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Netty9# Netty抽象内存分配器实现原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-16T11:55:01+08:00">2021-01-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-17 12:15:46" itemprop="dateModified" datetime="2021-01-17T12:15:46+08:00">2021-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p> 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。</p>
+<h1 id="内存分配器概览"><a href="#内存分配器概览" class="headerlink" title="内存分配器概览"></a>内存分配器概览</h1><p><strong>堆外内存&amp;堆内存</strong> </p>
+<table>
+<thead>
+<tr>
+<th>分配方式</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>堆内存</td>
+<td>JVM负责内存的分配与回收</td>
+<td>数据过多会引起频繁GC和停顿；<br />多一次拷贝，在用户态分配、I/O通信需要数据拷贝到内核态</td>
+</tr>
+<tr>
+<td>堆外内存</td>
+<td>I/O性能高，直接在内核态分配<br />降低GC频率和停顿</td>
+<td>内存分配和收回比较慢、需要手动处理</td>
+</tr>
+</tbody></table>
+<p><strong>内存分配器类图</strong> </p>
+<p>字节缓存的分配出自ByteBufAllocator，其实现类AbstractByteBufAllocator（抽象类）、PooledByteBufAllocator（池化内存分配器）、UnpooledByteBufAllocator（非池化内存分配器）、PreferHeapByteBufAllocator（堆内存分配器）、PreferredDirectByteBufAllocator（堆外内存分配器）。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%B1%BB%E5%9B%BE%20(1).png"></p>
+<p><strong>主要接口</strong> </p>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ByteBuf buffer()</td>
+<td>分配一块字节缓存，由其实现类决定堆外内存或者堆内存</td>
+</tr>
+<tr>
+<td>ByteBuf ioBuffer()</td>
+<td>系统支持UNSAFE和CLEANER则优先分配堆外内存；否则分配堆内存。</td>
+</tr>
+<tr>
+<td>ByteBuf heapBuffer()</td>
+<td>分配堆内存字节缓存区</td>
+</tr>
+<tr>
+<td>ByteBuf directBuffer()</td>
+<td>分配堆外内存字节缓存区</td>
+</tr>
+<tr>
+<td>CompositeByteBuf compositeBuffer()</td>
+<td>分配一个CompositeByteBuf（将多个buffers组合成一个buffer）<br />由实现类决定堆内存或者堆外内存</td>
+</tr>
+</tbody></table>
+<h1 id="内存分配器API解读"><a href="#内存分配器API解读" class="headerlink" title="内存分配器API解读"></a>内存分配器API解读</h1><p>下面走查下抽象内存分配器AbstractByteBufAllocator的API。</p>
+<p><strong>构造函数</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> directByDefault;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> ByteBuf emptyBuf;</span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="title">AbstractByteBufAllocator</span><span class="params">(<span class="keyword">boolean</span> preferDirect)</span> </span>&#123;</span><br><span class="line">  directByDefault = preferDirect &amp;&amp; PlatformDependent.hasUnsafe(); <span class="comment">// 注解@1</span></span><br><span class="line">  emptyBuf = <span class="keyword">new</span> EmptyByteBuf(<span class="keyword">this</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> directByDefault是否使用堆外内存分配，满足两个条件。preferDirect布尔型用户传入；PlatformDependent.hasUnsafe() 系统是否支持UNSAFE（通过内存指针进行堆外内存分配）；即：用户传入preferDirect=true并且系统支持UNSAFE则使用堆外内存。</p>
+<p><strong>buffer()</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">buffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@2</span></span><br><span class="line">  <span class="keyword">if</span> (directByDefault) &#123;</span><br><span class="line">    <span class="keyword">return</span> directBuffer();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> heapBuffer();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@2</strong> directByDefault如果为true使用堆外内存分配DirectByteBuffer，底层使用unsafe.allocateMemory分配。</p>
+<p>directByDefault如果为false使用堆内存分配 new byte[initialCapacity]。</p>
+<p><strong>ioBuffer</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">ioBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@3</span></span><br><span class="line">  <span class="keyword">if</span> (PlatformDependent.hasUnsafe() || isDirectBufferPooled()) &#123;</span><br><span class="line">  <span class="keyword">return</span> directBuffer(DEFAULT_INITIAL_CAPACITY);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> heapBuffer(DEFAULT_INITIAL_CAPACITY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@3</strong> 如果系统支持UNSAFE或者使用池化内存，优先分配堆外内存，否则分配堆内存。</p>
+<p><strong>heapBuffer</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">heapBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@4</span></span><br><span class="line">	<span class="keyword">return</span> heapBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@4</strong> 分配堆外内存new一个byte数组（new byte[]）。</p>
+<p><strong>directBuffer</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">directBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@5</span></span><br><span class="line">	<span class="keyword">return</span> directBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5</strong> 分配堆外内存。</p>
+<p><strong>compositeBuffer</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> CompositeByteBuf <span class="title">compositeBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@6</span></span><br><span class="line">  <span class="keyword">if</span> (directByDefault) &#123;</span><br><span class="line">  	<span class="keyword">return</span> compositeDirectBuffer();</span><br><span class="line">  &#125;</span><br><span class="line">	<span class="keyword">return</span> compositeHeapBuffer();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@6</strong> 跟上面一样的，只是分配的CompositeByteBuf。下面看下这种将多个个buffer组合成一个buffer是如何实现的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> CompositeByteBuf <span class="title">compositeHeapBuffer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> compositeHeapBuffer(DEFAULT_MAX_COMPONENTS);</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> CompositeByteBuf <span class="title">compositeHeapBuffer</span><span class="params">(<span class="keyword">int</span> maxNumComponents)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> toLeakAwareBuffer(<span class="keyword">new</span> CompositeByteBuf(<span class="keyword">this</span>, <span class="keyword">false</span>, maxNumComponents));</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="title">CompositeByteBuf</span><span class="params">(ByteBufAllocator alloc, <span class="keyword">boolean</span> direct, <span class="keyword">int</span> maxNumComponents, <span class="keyword">int</span> initSize)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.alloc = ObjectUtil.checkNotNull(alloc, <span class="string">&quot;alloc&quot;</span>);</span><br><span class="line">  <span class="keyword">if</span> (maxNumComponents &lt; <span class="number">1</span>) &#123;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(</span><br><span class="line">  <span class="string">&quot;maxNumComponents: &quot;</span> + maxNumComponents + <span class="string">&quot; (expected: &gt;= 1)&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.direct = direct;</span><br><span class="line">  <span class="keyword">this</span>.maxNumComponents = maxNumComponents;</span><br><span class="line">  components = newCompArray(initSize, maxNumComponents); <span class="comment">// 注解@6.1</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@6.1</strong> 在CompositeByteBuf的构造方法中初始化了一个components，这个默认initSize=0；maxNumComponents默认为16。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Component[] newCompArray(<span class="keyword">int</span> initComponents, <span class="keyword">int</span> maxNumComponents) &#123;</span><br><span class="line">	<span class="keyword">int</span> capacityGuess = Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents);</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">new</span> Component[Math.max(initComponents, capacityGuess)]; <span class="comment">// 注解@6.2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@6.2</strong> components是Component的对象数组，数组大小默认为16. </p>
+<h1 id="CompositeByteBuf实现原理"><a href="#CompositeByteBuf实现原理" class="headerlink" title="CompositeByteBuf实现原理"></a>CompositeByteBuf实现原理</h1><p>下面通过例子来体验一把CompositeByteBuf，先直观感受下。</p>
+<p><strong>示例代码</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testCompositeByteBuf</span><span class="params">()</span></span>&#123;</span><br><span class="line">  String str1 = <span class="string">&quot;瓜农&quot;</span>;</span><br><span class="line">  String str2 = <span class="string">&quot;老梁&quot;</span>;</span><br><span class="line">  ByteBuf buf1 = Unpooled.buffer(<span class="number">10</span>);</span><br><span class="line">  buf1.writeBytes(str1.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">  System.out.println(<span class="string">&quot;buf1&#x27;s readerIndex:&quot;</span> + buf1.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;buf1&#x27;s writeIndex&quot;</span> + buf1.writerIndex());</span><br><span class="line"></span><br><span class="line">  ByteBuf buf2 = Unpooled.buffer(<span class="number">10</span>);</span><br><span class="line">  buf2.writeBytes(str2.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">  System.out.println(<span class="string">&quot;buf2&#x27;s readerIndex:&quot;</span> + buf2.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;buf2&#x27;s writeIndex&quot;</span> + buf2.writerIndex());</span><br><span class="line"></span><br><span class="line">  ByteBuf compositeByteBuf = Unpooled.wrappedBuffer(buf1,buf2);</span><br><span class="line">  System.out.println(<span class="string">&quot;compositeByteBuf&#x27;s readerIndex:&quot;</span> + compositeByteBuf.readerIndex());</span><br><span class="line">  System.out.println(<span class="string">&quot;compositeByteBuf&#x27;s writeIndex&quot;</span> + compositeByteBuf.writerIndex());</span><br><span class="line">  System.out.print(compositeByteBuf.toString(CharsetUtil.UTF_8));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>结果输出</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">buf1&#39;s readerIndex:0</span><br><span class="line">buf1&#39;s writeIndex6</span><br><span class="line">buf2&#39;s readerIndex:0</span><br><span class="line">buf2&#39;s writeIndex6</span><br><span class="line">compositeByteBuf&#39;s readerIndex:0</span><br><span class="line">compositeByteBuf&#39;s writeIndex12</span><br><span class="line">瓜农老梁</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结</strong>  Unpooled.wrappedBuffer(buf1,buf2)将两个ByteBuf进行了合并一个ByteBuf；对外提供统一的读写指针供使用。</p>
+<p>接下来看下他是如何合并的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ByteBuf <span class="title">wrappedBuffer</span><span class="params">(<span class="keyword">int</span> maxNumComponents, ByteBuf... buffers)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">switch</span> (buffers.length) &#123;</span><br><span class="line">        <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">            ByteBuf buffer = buffers[<span class="number">0</span>];</span><br><span class="line">            <span class="keyword">if</span> (buffer.isReadable()) &#123;</span><br><span class="line">                <span class="keyword">return</span> wrappedBuffer(buffer.order(BIG_ENDIAN));</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                buffer.release();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; buffers.length; i++) &#123;</span><br><span class="line">                ByteBuf buf = buffers[i];</span><br><span class="line">                <span class="keyword">if</span> (buf.isReadable()) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> CompositeByteBuf(ALLOC, <span class="keyword">false</span>, maxNumComponents, buffers, i); <span class="comment">// 注解@7</span></span><br><span class="line">                &#125;</span><br><span class="line">                buf.release();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> EMPTY_BUFFER;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7</strong> 通过创建一个CompositeByteBuf，将ByteBuf数组传入构造函数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">CompositeByteBuf(ByteBufAllocator alloc, <span class="keyword">boolean</span> direct, <span class="keyword">int</span> maxNumComponents,</span><br><span class="line">            ByteBuf[] buffers, <span class="keyword">int</span> offset) &#123;</span><br><span class="line">            <span class="keyword">this</span>(alloc, direct, maxNumComponents, buffers.length - offset);</span><br><span class="line"></span><br><span class="line">	addComponents0(<span class="keyword">false</span>, <span class="number">0</span>, buffers, offset); <span class="comment">// 注解@8</span></span><br><span class="line">	consolidateIfNeeded();</span><br><span class="line">	setIndex0(<span class="number">0</span>, capacity()); <span class="comment">// 注解@9</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@8</strong>  填充Component[]数据，每个Component元素包含了传入的ByteBuf。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompositeByteBuf <span class="title">addComponents0</span><span class="params">(<span class="keyword">boolean</span> increaseWriterIndex,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> <span class="keyword">int</span> cIndex, ByteBuf[] buffers, <span class="keyword">int</span> arrOffset)</span> </span>&#123;</span><br><span class="line">  			<span class="comment">//  buffers数组的长度；本例中arrOffset=0；count=len</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> len = buffers.length, count = len - arrOffset;</span><br><span class="line">        <span class="keyword">int</span> ci = Integer.MAX_VALUE;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            checkComponentIndex(cIndex); <span class="comment">// 合法性校验</span></span><br><span class="line">            shiftComps(cIndex, count); <span class="comment">// 注解@8.1</span></span><br><span class="line">            <span class="keyword">int</span> nextOffset = cIndex &gt; <span class="number">0</span> ? components[cIndex - <span class="number">1</span>].endOffset : <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">for</span> (ci = cIndex; arrOffset &lt; len; arrOffset++, ci++) &#123; <span class="comment">// 注解@8.2</span></span><br><span class="line">                <span class="comment">// 从数组中拿出传入的ByteBuf</span></span><br><span class="line">              	ByteBuf b = buffers[arrOffset];</span><br><span class="line">                <span class="keyword">if</span> (b == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// 构建Component</span></span><br><span class="line">                Component c = newComponent(ensureAccessible(b), nextOffset); </span><br><span class="line">              	<span class="comment">// 加入components数组</span></span><br><span class="line">                components[ci] = c;</span><br><span class="line">                <span class="comment">// 递增endOffset</span></span><br><span class="line">                nextOffset = c.endOffset;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@8.1</strong> 扩容Component数组，默认的数量为16个，当添加的buffer的数量超过16时就需要扩容了，下面看下其如何扩容的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">shiftComps</span><span class="params">(<span class="keyword">int</span> i, <span class="keyword">int</span> count)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> size = componentCount, newSize = size + count;</span><br><span class="line">        <span class="keyword">assert</span> i &gt;= <span class="number">0</span> &amp;&amp; i &lt;= size &amp;&amp; count &gt; <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (newSize &gt; components.length) &#123;</span><br><span class="line">            <span class="comment">// grow the array </span></span><br><span class="line">          	<span class="keyword">int</span> newArrSize = Math.max(size + (size &gt;&gt; <span class="number">1</span>), newSize); <span class="comment">// 注解@8.1.1</span></span><br><span class="line">            Component[] newArr;</span><br><span class="line">            <span class="comment">// 注解@8.1.2</span></span><br><span class="line">            <span class="keyword">if</span> (i == size) &#123;</span><br><span class="line">                newArr = Arrays.copyOf(components, newArrSize, Component[].class);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                newArr = <span class="keyword">new</span> Component[newArrSize];</span><br><span class="line">                <span class="keyword">if</span> (i &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    System.arraycopy(components, <span class="number">0</span>, newArr, <span class="number">0</span>, i);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (i &lt; size) &#123;</span><br><span class="line">                    System.arraycopy(components, i, newArr, i + count, size - i);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            components = newArr;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (i &lt; size) &#123;</span><br><span class="line">            System.arraycopy(components, i, components, i + count, size - i);</span><br><span class="line">        &#125;</span><br><span class="line">        componentCount = newSize;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>**注解@8.1.1 ** 默认size=16，size &gt;&gt; 1 = 8 也就是扩容会以原大小一半的容量进行扩容。</p>
+<p><strong>注解@8.1.2</strong> 下面判断根据场景通过Arrays.copyOf、System.arraycopy将Component数组扩容；插入尾部、中部、头部等情况。本示例中没有超过16，所以不会扩容，componentCount=2。</p>
+<p><strong>注解@8.2</strong> 循环拿出传入的ByteBuf数组构建Component，并将其加入Component数组中；最后移动nextOffset。关于各个参数的含义，源码给出了注释。构造函数中</p>
+<p>第一个参数：传入的ByteBuf<br>第二个参数：源ByteBuf的readerIndex<br>第三个参数：unwrapped的buffer<br>第四个参数：unwrappedIndex<br>第五个参数：offset = components[cIndex - 1].endOffset<br>第六个参数：len = buf.readableBytes()  buf为源buffer<br>第七个参数：slice = null （示例）</p>
+<p>以endOffset为例，等于插入数组中上一个Conponent的endOffset + 当前ByteBuf的可读长度，从而维护了其在整个CompositeByteBuf的写索引情况。</p>
+<p>一个buffer对应一个Component，每个Component持有源buffer并维护了其在整个CompositeByteBuf的索引情况。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210117101614.png"></p>
+<p><strong>注解@9</strong> 设置整个CompositeByteBuf的读索引和写索引，读索引初始值为0；写索引为components[size - 1].endOffset，也就是整个Conponent数组中其每个元素维护的ByteBuf可读字节（writerIndex - readerIndex）大小的总和。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setIndex0</span><span class="params">(<span class="keyword">int</span> readerIndex, <span class="keyword">int</span> writerIndex)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.readerIndex = readerIndex;</span><br><span class="line">	<span class="keyword">this</span>.writerIndex = writerIndex;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">capacity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> size = componentCount;</span><br><span class="line">  <span class="keyword">return</span> size &gt; <span class="number">0</span> ? components[size - <span class="number">1</span>].endOffset : <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> CompositeByteBuf通过将多个ByteBuf装入component数组中，对其统一维护读写索引，在外面看起来是一个统一的buffer；类似数据库中的视图。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Netty/" rel="tag"># Netty</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/17c9a786/" rel="prev" title="Netty8# Netty之ByteBuf初体验">
+      <i class="fa fa-chevron-left"></i> Netty8# Netty之ByteBuf初体验
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/f75406c8/" rel="next" title="MQ44# RocketMQ最近几个经常被问的问题">
+      MQ44# RocketMQ最近几个经常被问的问题 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E6%A6%82%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">内存分配器概览</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8API%E8%A7%A3%E8%AF%BB"><span class="nav-number">3.</span> <span class="nav-text">内存分配器API解读</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#CompositeByteBuf%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">CompositeByteBuf实现原理</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="前言字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。 基本概念ByteBuf创建 使用Unpooled类来创建ByteBuf，不建议使">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty8# Netty之ByteBuf初体验">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/17c9a786/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="前言字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。 基本概念ByteBuf创建 使用Unpooled类来创建ByteBuf，不建议使">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102104805.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102141428.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102143322.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103092431.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103110741.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103125302.png">
+<meta property="article:published_time" content="2021-01-02T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-01-04T11:05:12.918Z">
+<meta property="article:tag" content="Netty">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102104805.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/17c9a786/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Netty8# Netty之ByteBuf初体验 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/17c9a786/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Netty8# Netty之ByteBuf初体验
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-02 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-02T11:55:01+08:00">2021-01-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-04 19:05:12" itemprop="dateModified" datetime="2021-01-04T19:05:12+08:00">2021-01-04</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。</p>
+<h1 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h1><p><strong>ByteBuf创建</strong></p>
+<p>使用Unpooled类来创建ByteBuf，不建议使用ByteBuf的构造函数自己去创建。</p>
+<p><strong>读写索引</strong></p>
+<p>ByteBuf提供了两个指针readerIndex和writerIndex，分别记录读、写的开始位置。两个指针将ByteBuf分成了三个区域。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102104805.png"></p>
+<p><strong>discardable bytes</strong> </p>
+<p>这个区间的范围为0~readerIndex，已经被读过的、可废弃的区域。通过调用discardReadBytes()，可以释放discardable bytes区域。这个区域释放后，可写区域（writable bytes）部分增多。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102141428.png"></p>
+<p><strong>readable bytes</strong></p>
+<p>可读区域的范围为（writerIndex-readerIndex）</p>
+<p><strong>writable bytes</strong></p>
+<p>可写区域的范围为（capacity-writerIndex）</p>
+<p><strong>清理索引</strong></p>
+<p>调用Buffer.clear()后，读写索引全部归零，缓存buffer被释放。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102143322.png"></p>
+<h1 id="ByteBuf的构建"><a href="#ByteBuf的构建" class="headerlink" title="ByteBuf的构建"></a><strong>ByteBuf的构建</strong></h1><p>接下来通过示例窜下上面的知识点，看下源码是如何实现的，示例中将字符串写入ByteBuf中，然后再读出来打印。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testWriteUtf81</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     String str1 = <span class="string">&quot;瓜农&quot;</span>;</span><br><span class="line">     ByteBuf buf = Unpooled.buffer(<span class="number">1</span>);</span><br><span class="line">     buf.writeBytes(str1.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">     ByteBuf readByteBuf = ByteBufUtil.readBytes(UnpooledByteBufAllocator.DEFAULT,buf,str1.getBytes(CharsetUtil.UTF_8).length);</span><br><span class="line">     System.out.print(readByteBuf.toString(CharsetUtil.UTF_8));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>源码解读</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ByteBuf <span class="title">buffer</span><span class="params">(<span class="keyword">int</span> initialCapacity)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> ALLOC.heapBuffer(initialCapacity); <span class="comment">// 注解@1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">heapBuffer</span><span class="params">(<span class="keyword">int</span> initialCapacity)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> heapBuffer(initialCapacity, DEFAULT_MAX_CAPACITY); <span class="comment">// 注解@2</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">InstrumentedUnpooledUnsafeHeapByteBuf(UnpooledByteBufAllocator alloc, <span class="keyword">int</span> initialCapacity, <span class="keyword">int</span> maxCapacity) &#123;</span><br><span class="line">  <span class="keyword">super</span>(alloc, initialCapacity, maxCapacity);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">UnpooledHeapByteBuf</span><span class="params">(ByteBufAllocator alloc, <span class="keyword">int</span> initialCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>(maxCapacity);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (initialCapacity &gt; maxCapacity) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(</span><br><span class="line">      <span class="string">&quot;initialCapacity(%d) &gt; maxCapacity(%d)&quot;</span>, initialCapacity, maxCapacity));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.alloc = checkNotNull(alloc, <span class="string">&quot;alloc&quot;</span>);</span><br><span class="line">  setArray(allocateArray(initialCapacity)); <span class="comment">// 注解@3</span></span><br><span class="line">  setIndex(<span class="number">0</span>, <span class="number">0</span>); <span class="comment">// 注解@4</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> 使用ByteBufAllocator来分配ByteBuf，默认为UnpooledByteBufAllocator。</p>
+<p><strong>注解@2</strong> initialCapacity为初始容量例子中给的为16，maxCapacity为默认的DEFAULT_MAX_CAPACITY=Integer.MAX_VALUE。</p>
+<p><strong>注解@3</strong> allocateArray()的方法如下，此时使用JDK的byte[]初始化缓存区。通过setArray()，UnpooledHeapByteBuf持有byte[]缓存区。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">protected</span> <span class="keyword">byte</span>[] allocateArray(<span class="keyword">int</span> initialCapacity) &#123;</span><br><span class="line">   <span class="keyword">return</span> <span class="keyword">new</span> <span class="keyword">byte</span>[initialCapacity];</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">setArray</span><span class="params">(<span class="keyword">byte</span>[] initialArray)</span> </span>&#123;</span><br><span class="line">  array = initialArray;</span><br><span class="line">  tmpNioBuf = <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@4</strong> 初始化readerIndex和writerIndex，均为0。</p>
+<p><strong>小结</strong> ByteBuf的构建通过Unpooled来分配，示例中通过UnpooledByteBufAllocator持有byte[]、 readerIndex、writerIndex、maxCapacity完成ByteBuf的初始化。 示例中array数组大小为16；readerIndex=writerIndex=0；maxCapacity=Integer.MAX_VALUE。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103092431.png"></p>
+<h1 id="写入数据"><a href="#写入数据" class="headerlink" title="写入数据"></a>写入数据</h1><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">writeBytes</span><span class="params">(<span class="keyword">byte</span>[] src, <span class="keyword">int</span> srcIndex, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">  ensureWritable(length); <span class="comment">// 注解@5</span></span><br><span class="line">  setBytes(writerIndex, src, srcIndex, length); <span class="comment">// 注解@6</span></span><br><span class="line">  writerIndex += length; <span class="comment">// 注解@7</span></span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5</strong> 确保剩余的空间能够容纳需写入的数据。</p>
+<p>具体逻辑如下：<br>如果写入的数据长度小于已经分配的容量空间capacity则允许直接返回；</p>
+<p>如果写入的数据长度超过允许的最大容量maxCapacity直接抛出IndexOutOfBoundsException拒绝；</p>
+<p>如果写入数据长度大于已经分配的空间capacity但是小于最大最大允许空间maxCapacity，则需要扩容。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">ensureWritable0</span><span class="params">(<span class="keyword">int</span> minWritableBytes)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> writerIndex = writerIndex(); <span class="comment">// 注解@5.1</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> targetCapacity = writerIndex + minWritableBytes; <span class="comment">// 注解@5.2</span></span><br><span class="line">    <span class="keyword">if</span> (targetCapacity &lt;= capacity()) &#123; <span class="comment">// 注解@5.3</span></span><br><span class="line">        ensureAccessible();</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (checkBounds &amp;&amp; targetCapacity &gt; maxCapacity) &#123; <span class="comment">// 注解@5.4 </span></span><br><span class="line">        ensureAccessible();</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IndexOutOfBoundsException(String.format(</span><br><span class="line">                <span class="string">&quot;writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s&quot;</span>,</span><br><span class="line">                writerIndex, minWritableBytes, maxCapacity, <span class="keyword">this</span>));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Normalize the target capacity to the power of 2.</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> fastWritable = maxFastWritableBytes(); <span class="comment">// 注解@5.5 </span></span><br><span class="line">    <span class="keyword">int</span> newCapacity = fastWritable &gt;= minWritableBytes ? writerIndex + fastWritable</span><br><span class="line">            : alloc().calculateNewCapacity(targetCapacity, maxCapacity); <span class="comment">// 注解@5.6</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Adjust to the new capacity.</span></span><br><span class="line">    capacity(newCapacity); <span class="comment">// 注解@5.7</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5.1</strong>  获取当前写索引</p>
+<p><strong>注解@5.2</strong> 计算需要的容量</p>
+<p>**注解@5.3 ** 与当前已分配的容量capacity进行比较</p>
+<p><strong>注解@5.4</strong> 不能超过最大允许的容量maxCapacity</p>
+<p><strong>注解@5.5</strong> fastWritable = capacity() - writerIndex</p>
+<p><strong>注解@5.6</strong> newCapacity的判断通常走到这里应该为，剩余的空间不够了。所以通常会进入alloc().calculateNewCapacity(targetCapacity, maxCapacity)。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">calculateNewCapacity</span><span class="params">(<span class="keyword">int</span> minNewCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> threshold = CALCULATE_THRESHOLD; <span class="comment">// 4 MiB page</span></span><br><span class="line">        <span class="keyword">if</span> (minNewCapacity == threshold) &#123; <span class="comment">// 注解@5.6.1</span></span><br><span class="line">            <span class="keyword">return</span> threshold;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// If over threshold, do not double but just increase by threshold.</span></span><br><span class="line">        <span class="keyword">if</span> (minNewCapacity &gt; threshold) &#123; <span class="comment">// 注解@5.6.2</span></span><br><span class="line">            <span class="keyword">int</span> newCapacity = minNewCapacity / threshold * threshold;</span><br><span class="line">            <span class="keyword">if</span> (newCapacity &gt; maxCapacity - threshold) &#123;</span><br><span class="line">                newCapacity = maxCapacity;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                newCapacity += threshold;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> newCapacity;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Not over threshold. Double up to 4 MiB, starting from 64.</span></span><br><span class="line">        <span class="keyword">int</span> newCapacity = <span class="number">64</span>;</span><br><span class="line">        <span class="keyword">while</span> (newCapacity &lt; minNewCapacity) &#123; <span class="comment">// 注解@5.6.3</span></span><br><span class="line">            newCapacity &lt;&lt;= <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> Math.min(newCapacity, maxCapacity);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5.6.1</strong> 如果写入的数据长度刚好为4M则返回threshold=4M</p>
+<p><strong>注解@5.6.2</strong> 如果写入的数据长度大于4M，newCapacity不再翻倍增长，通过minNewCapacity / threshold * threshold计算刚容下需要的数据即可。</p>
+<p><strong>注解@5.6.3</strong> 如果写入的数据长度小于4M，则newCapacity从64翻倍增长（128、256、512…），直到newCapacity能够容纳需要写入的数据。</p>
+<p><strong>注解@5.7</strong> 确定了要扩容的容量newCapacity后，我们看下如何扩容的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">capacity</span><span class="params">(<span class="keyword">int</span> newCapacity)</span> </span>&#123;</span><br><span class="line">    checkNewCapacity(newCapacity);</span><br><span class="line">    <span class="keyword">byte</span>[] oldArray = array;</span><br><span class="line">    <span class="keyword">int</span> oldCapacity = oldArray.length;</span><br><span class="line">    <span class="keyword">if</span> (newCapacity == oldCapacity) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> bytesToCopy;</span><br><span class="line">    <span class="keyword">if</span> (newCapacity &gt; oldCapacity) &#123;</span><br><span class="line">      bytesToCopy = oldCapacity;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      trimIndicesToCapacity(newCapacity);</span><br><span class="line">      bytesToCopy = newCapacity;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">byte</span>[] newArray = allocateArray(newCapacity); <span class="comment">// 注解@5.7.1</span></span><br><span class="line">    System.arraycopy(oldArray, <span class="number">0</span>, newArray, <span class="number">0</span>, bytesToCopy); <span class="comment">// 注解@5.7.2</span></span><br><span class="line">    setArray(newArray); <span class="comment">// 注解@5.7.3</span></span><br><span class="line">    freeArray(oldArray); <span class="comment">// 注解@5.7.4</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5.7.1</strong> 使用新的容量初始化newArray=new byte[initialCapacity]</p>
+<p><strong>注解@5.7.2</strong> 将旧的oldArray数据拷贝到新的newArray=new中</p>
+<p><strong>注解@5.7.3</strong> 将UnpooledHeapByteBuf的byte[]引用替换为newArray</p>
+<p><strong>注解@5.7.4</strong> oldArray清理操作</p>
+<p><strong>注解@6</strong> 写入数据，通过System.arraycopy将数据写入array中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">setBytes</span><span class="params">(<span class="keyword">int</span> index, <span class="keyword">byte</span>[] src, <span class="keyword">int</span> srcIndex, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">  checkSrcIndex(index, length, srcIndex, src.length);</span><br><span class="line">  System.arraycopy(src, srcIndex, array, index, length);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7</strong> 移动writerIndex指针。</p>
+<p><strong>小结：</strong> 将上面例子的initialCapacity设置成1，促使写入数据时扩充容量。下面运行时截图：array被扩容到64，writerIndex从0位置移动到6. </p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103110741.png"></p>
+<p>在写入数据时，判断剩余容量是否足够；不够则需要扩容，如果写入的数据小于4M，则双倍增长，直到容纳写写入的数据。如果写入的数据大于4M，通过（minNewCapacity / threshold * threshold）计算需要扩容的大小。</p>
+<h1 id="读出数据"><a href="#读出数据" class="headerlink" title="读出数据"></a>读出数据</h1><p>从buf中把刚才写入的数据（”瓜农“）读出来，通过工具类ByteBufUtil.readBytes来实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ByteBuf readByteBuf = ByteBufUtil.readBytes(UnpooledByteBufAllocator.DEFAULT,buf,str1.getBytes(CharsetUtil.UTF_8).length);</span><br><span class="line">System.out.print(readByteBuf.toString(CharsetUtil.UTF_8));</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ByteBuf <span class="title">readBytes</span><span class="params">(ByteBufAllocator alloc, ByteBuf buffer, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> release = <span class="keyword">true</span>;</span><br><span class="line">    ByteBuf dst = alloc.buffer(length); <span class="comment">// 注解@8</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        buffer.readBytes(dst); <span class="comment">// 注解@9</span></span><br><span class="line">        release = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">return</span> dst;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (release) &#123;</span><br><span class="line">            dst.release();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@8</strong> 重新构造了一个ByteBuf（dst）用于存储读取的数据</p>
+<p><strong>注解@9</strong> 读取数据，并移动读索引。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">readBytes</span><span class="params">(ByteBuf dst, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (checkBounds) &#123;</span><br><span class="line">        <span class="keyword">if</span> (length &gt; dst.writableBytes()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IndexOutOfBoundsException(String.format(</span><br><span class="line">                    <span class="string">&quot;length(%d) exceeds dst.writableBytes(%d) where dst is: %s&quot;</span>, length, dst.writableBytes(), dst));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    readBytes(dst, dst.writerIndex(), length); <span class="comment">// 注解@9.1</span></span><br><span class="line">    dst.writerIndex(dst.writerIndex() + length); <span class="comment">// 注解@9.2</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@9.1</strong> 读取字节到新的ByteBuf。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">readBytes</span><span class="params">(ByteBuf dst, <span class="keyword">int</span> dstIndex, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    checkReadableBytes(length);</span><br><span class="line">    getBytes(readerIndex, dst, dstIndex, length); <span class="comment">// 注解@9.1.1</span></span><br><span class="line">    readerIndex += length; <span class="comment">// 注解@9.1.2</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@9.1.1</strong> 通过native api UNSAFE.copyMemory() 实现byte数组之间的拷贝</p>
+<p><strong>注解@9.1.2</strong> 源byteBuf读索引readerIndex向前移动</p>
+<p><strong>注解@9.2</strong> 数据读入新构建的缓存区dst，dst的写索引向前移动</p>
+<p><strong>小结：</strong> 示例中通过构造一个新的ByteBuf（dst），将源ByteBuf（buf）的数据读入到dst。数据读取结束后，源ByteBuf（buf）readerIndex向前移动；ByteBuf（dst）的writerIndex向前移动。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103125302.png"></p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Netty/" rel="tag"># Netty</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/8c88e43/" rel="prev" title="Netty7# Netty之事件传递">
+      <i class="fa fa-chevron-left"></i> Netty7# Netty之事件传递
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/2e57625b/" rel="next" title="Netty9# Netty抽象内存分配器实现原理">
+      Netty9# Netty抽象内存分配器实现原理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5"><span class="nav-number">2.</span> <span class="nav-text">基本概念</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ByteBuf%E7%9A%84%E6%9E%84%E5%BB%BA"><span class="nav-number">3.</span> <span class="nav-text">ByteBuf的构建</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%99%E5%85%A5%E6%95%B0%E6%8D%AE"><span class="nav-number">4.</span> <span class="nav-text">写入数据</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AF%BB%E5%87%BA%E6%95%B0%E6%8D%AE"><span class="nav-number">5.</span> <span class="nav-text">读出数据</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">54</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

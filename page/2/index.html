@@ -184,6 +184,535 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bfe41dca/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/bfe41dca/" class="post-title-link" itemprop="url">MQ38# RocketMQ消息发送（二）</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:29:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:29:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="发送接口分类"><a href="#发送接口分类" class="headerlink" title="发送接口分类"></a>发送接口分类</h1><p>* 按照发送方式分类</p>
+<ol>
+<li><p>同步发送：等待返回结果</p>
+</li>
+<li><p>异步发送：异步回调发送结果</p>
+</li>
+<li><p>一次发送：无结果返回</p>
+</li>
+</ol>
+<p>* 按一次发送消息数量分类</p>
+<ol>
+<li><p>单条消息发送</p>
+</li>
+<li><p>批量消息发送</p>
+</li>
+</ol>
+<p>* 按照是否指定MessageQueue分类</p>
+<ol>
+<li><p>随机选择发送</p>
+</li>
+<li><p>指定特定MessageQueue</p>
+</li>
+<li><p>自定义MessageQueue选择器</p>
+</li>
+</ol>
+<p><strong>详细接口</strong></p>
+<p>|接口 |描述 |</p>
+<p>| — | — |</p>
+<p>| send(final Message msg) |同步单条消息发送 |</p>
+<p>| send(final Message msg, final long timeout) |同步单条消息发送（超时设置） |</p>
+<p>| send(final Message msg, final SendCallback sendCallback) | 异步单条消息发送 |</p>
+<p>| send(final Message msg, final SendCallback sendCallback, final long timeout) |异步单条消息发送（超时） |</p>
+<p>|sendOneway(final Message msg) | 一次单条消息发送 |</p>
+<p>| send(final Message msg, final MessageQueue mq) | 同步单条发送指定Queue |</p>
+<p>| send(final Message msg, final MessageQueue mq, final long timeout) | 同步单条发送指定 Queue（超时设置） |</p>
+<p>| send(final Message msg, final MessageQueue mq, final SendCallback sendCallback) |异步单条发送指定 Queue |</p>
+<p>| send(final Message msg, final MessageQueue mq, final SendCallback sendCallback, long timeout) |异步单条发送指定 Queue（超时设置） |</p>
+<p>| sendOneway(final Message msg, final MessageQueue mq) |一次单条发送指定 Queue |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg) |同步单条发送自定义实现Queue选择器 |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg,final long timeout) |同步单条发送自定义实现Queue选择器（超时设置） |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg, final SendCallback sendCallback) |异步单条发送自定义实现Queue选择器 |</p>
+<p>| send(final Message msg, final MessageQueueSelector selector, final Object arg,final SendCallback sendCallback, final long timeout) |异步单条发送自定义实现Queue选择器（超时设置） |</p>
+<p>|sendOneway(final Message msg, final MessageQueueSelector selector, final Object arg) |一次单条发送自定义实现Queue选择器 |</p>
+<p>|send(final Collection<Message> msgs) |批量同步发送 |</p>
+<p>|send(final Collection<Message> msgs, final long timeout) |批量同步发送（超时设置） |</p>
+<p>|send(final Collection<Message> msgs, final MessageQueue mq) |批量同步指定Queue发送 |</p>
+<p>|send(final Collection<Message> msgs, final MessageQueue mq, final long timeout)|批量同步指定Queue发送（超时设置）|</p>
+<h1 id="随机发送与自定义MessageQueue选择器"><a href="#随机发送与自定义MessageQueue选择器" class="headerlink" title="随机发送与自定义MessageQueue选择器"></a>随机发送与自定义MessageQueue选择器</h1><p>* 随机发送：消息发往topic的哪个Queue是不确定的</p>
+<p>* 自定义MessageQueue发送：按照指定的算法路由到特定的MessageQueue，最常见需求，相同的key路由到相同的队列，实现发送分区有序</p>
+<p><strong>随机发送</strong></p>
+<p>* 通过自增数取模消息队列数选择队列</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> MessageQueue <span class="title">selectOneMessageQueue</span><span class="params">(<span class="keyword">final</span> TopicPublishInfo tpInfo, <span class="keyword">final</span> String lastBrokerName)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//开启高可用(开启故障延迟机制)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.sendLatencyFaultEnable) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//自增序号</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> index = tpInfo.getSendWhichQueue().getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; tpInfo.getMessageQueueList().size(); i++) &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//取模消息队列数</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (pos &lt; <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">pos = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">MessageQueue mq = tpInfo.getMessageQueueList().get(pos);</span><br><span class="line"></span><br><span class="line"><span class="comment">//判断队列是否为可用的</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (latencyFaultTolerance.isAvailable(mq.getBrokerName())) &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//正常情况下lastBrokerName==null;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//在消息重试（上次发送失败重新发送时）上次选择broker可用，优先选择</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">null</span> == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> mq;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> String notBestBroker = latencyFaultTolerance.pickOneAtLeast();</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (writeQueueNums &gt; <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> MessageQueue mq = tpInfo.selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (notBestBroker != <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line">mq.setBrokerName(notBestBroker);</span><br><span class="line"></span><br><span class="line">mq.setQueueId(tpInfo.getSendWhichQueue().getAndIncrement() % writeQueueNums);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> mq;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line">latencyFaultTolerance.remove(notBestBroker);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">log.error(<span class="string">&quot;Error occurred when selecting message queue&quot;</span>, e);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> tpInfo.selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//不开启高可用</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> tpInfo.selectOneMessageQueue(lastBrokerName);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> MessageQueue <span class="title">selectOneMessageQueue</span><span class="params">(<span class="keyword">final</span> String lastBrokerName)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//轮询消息队列的过程</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (lastBrokerName == <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> index = <span class="keyword">this</span>.sendWhichQueue.getAndIncrement();</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="keyword">this</span>.messageQueueList.size(); i++) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> pos = Math.abs(index++) % <span class="keyword">this</span>.messageQueueList.size();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (pos &lt; <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">pos = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">MessageQueue mq = <span class="keyword">this</span>.messageQueueList.get(pos);</span><br><span class="line"></span><br><span class="line"><span class="comment">//规避上次发送失败的broker</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!mq.getBrokerName().equals(lastBrokerName)) &#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> mq;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> selectOneMessageQueue();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>自定义Queue选择器</strong></p>
+<p>* 分区有序：根据key进行路由选择，相同的key会路由到相同MessageQueue</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">private static MessageQueueSelector hashSelector &#x3D; new MessageQueueSelector() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public MessageQueue select(List&lt;MessageQueue&gt; mqs, Message msg, Object arg) &#123;</span><br><span class="line"></span><br><span class="line">int id &#x3D; msg.getKeys().hashCode() % mqs.size();</span><br><span class="line"></span><br><span class="line">if (id &lt; 0) &#123;</span><br><span class="line"></span><br><span class="line">return mqs.get(-id);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">return mqs.get(id);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/bfe41dca/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d473d7d3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/d473d7d3/" class="post-title-link" itemprop="url">MQ37# RocketMQ消息发送（一）</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 23:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:19:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="消息发送代码"><a href="#消息发送代码" class="headerlink" title="消息发送代码"></a>消息发送代码</h1><p>* 需要设置produerGroup</p>
+<p>* 需要设置NameServer地址</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">DefaultMQProducer producer &#x3D; new DefaultMQProducer(&quot;melon-tst&quot;);</span><br><span class="line"></span><br><span class="line">producer.setNamesrvAddr(&quot;localhost:9876&quot;);</span><br><span class="line"></span><br><span class="line">producer.setVipChannelEnabled(false);</span><br><span class="line"></span><br><span class="line">producer.start();</span><br><span class="line"></span><br><span class="line">for(int i&#x3D;0;i&lt;100;i++)&#123;</span><br><span class="line"></span><br><span class="line">Message msg &#x3D; new Message(&quot;topic_online_test&quot;,(&quot;Hello RocketMQ&quot; + i).getBytes(RemotingHelper.DEFAULT_CHARSET));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;msg.setDelayTimeLevel(10);</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; producer.send(msg);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;%s%n&quot;,sendResult);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">producer.shutdown();</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="方法启动所做的事情"><a href="#方法启动所做的事情" class="headerlink" title="方法启动所做的事情"></a>方法启动所做的事情</h1><p>* 将instanceName从默认值DEFAULT修改为PID</p>
+<ol>
+<li><p>MQClientInstance封装了网络通信的管道，存储于factoryTable（ConcurrentHashMap）</p>
+</li>
+<li><p>factoryTable为MQClientManager的成员变量，MQClientManager是单例模式</p>
+</li>
+<li><p>key为clientId对应一个MQClientInstance，被客户端共享使用</p>
+</li>
+<li><p>clientId的组成ClientIP@InstanceName，在同一个客户端连接多个集群时需要修改ClientIP或者InstanceName以确保clientId唯一</p>
+</li>
+</ol>
+<p>* 注册producer到producerTable（ConcurrentHashMap）, key为producerGroup名称，不同的produer需要设置不同的producerGroup名称</p>
+<p>* 客户端工厂实例启动</p>
+<p>* 设置默认主题TBW102的路由信息</p>
+<p>* 向各个broker发送心跳包</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;defaultMQProducerImpl.start()</span><br><span class="line"></span><br><span class="line">public void start(final boolean startFactory) throws MQClientException &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;注意：此处的serviceState默认为CREATE_JUST 是DefaultMQProducer的成员变量</span><br><span class="line"></span><br><span class="line">switch (this.serviceState) &#123;</span><br><span class="line"></span><br><span class="line">case CREATE_JUST:</span><br><span class="line"></span><br><span class="line">this.serviceState &#x3D; ServiceState.START_FAILED;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;合法性校验</span><br><span class="line"></span><br><span class="line">this.checkConfig();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将实例的名称改成PID 避免一台机器上启动多个实例造成clientId重名</span><br><span class="line"></span><br><span class="line">if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) &#123;</span><br><span class="line"></span><br><span class="line">this.defaultMQProducer.changeInstanceNameToPID();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;获取MQClientInstance,作为生产者与NameServer,Broker沟通的通道</span><br><span class="line"></span><br><span class="line">this.mQClientFactory &#x3D; MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQProducer, rpcHook);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将当前生产者加入到MQClientInstance管理中，方便后续调用网络请求、进行心跳检测</span><br><span class="line"></span><br><span class="line">boolean registerOK &#x3D; mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;一个ProductGroup只允许注册一次</span><br><span class="line"></span><br><span class="line">if (!registerOK) &#123;</span><br><span class="line"></span><br><span class="line">this.serviceState &#x3D; ServiceState.CREATE_JUST;</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;The producer group[&quot; + this.defaultMQProducer.getProducerGroup()</span><br><span class="line"></span><br><span class="line">\+ &quot;] has been created before, specify another name please.&quot; + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),</span><br><span class="line"></span><br><span class="line">null);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置默认主题TBW102的路由信息</span><br><span class="line"></span><br><span class="line">this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());</span><br><span class="line"></span><br><span class="line">if (startFactory) &#123;</span><br><span class="line"></span><br><span class="line">mQClientFactory.start();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">log.info(&quot;the producer [&#123;&#125;] start OK. sendMessageWithVIPChannel&#x3D;&#123;&#125;&quot;, this.defaultMQProducer.getProducerGroup(),</span><br><span class="line"></span><br><span class="line">this.defaultMQProducer.isSendMessageWithVIPChannel());</span><br><span class="line"></span><br><span class="line">this.serviceState &#x3D; ServiceState.RUNNING;</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">case RUNNING:</span><br><span class="line"></span><br><span class="line">case START_FAILED:</span><br><span class="line"></span><br><span class="line">case SHUTDOWN_ALREADY:</span><br><span class="line"></span><br><span class="line">throw new MQClientException(&quot;The producer service state not OK, maybe started once, &quot;&#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">\+ this.serviceState&#x2F;&#x2F;</span><br><span class="line"></span><br><span class="line">\+ FAQUrl.suggestTodo(FAQUrl.CLIENT_SERVICE_NOT_OK),</span><br><span class="line"></span><br><span class="line">null);</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"></span><br><span class="line">\* 同一个JVM中的不同消费者和不同生产者在启动时获取的MQClientInstance实例都是同一个</span><br><span class="line"></span><br><span class="line">\* MQClientInstance封装了RocketMQ网络处理的API，是消息生产者（Producer）、消息消费者(Consumer)与NameServer、Broker打交道的网络通道</span><br><span class="line"></span><br><span class="line">\* @param clientConfig</span><br><span class="line"></span><br><span class="line">\* @param rpcHook</span><br><span class="line"></span><br><span class="line">\* @return</span><br><span class="line"></span><br><span class="line">*&#x2F;</span><br><span class="line"></span><br><span class="line">public MQClientInstance getAndCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;clientId由ip地址@实例名称构成</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;如果ProducerGroup为CLIENT_INNER_PRODUCER，实例名称为被更改为PID进程ID</span><br><span class="line"></span><br><span class="line">String clientId &#x3D; clientConfig.buildMQClientId();</span><br><span class="line"></span><br><span class="line">MQClientInstance instance &#x3D; this.factoryTable.get(clientId);</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; instance) &#123;</span><br><span class="line"></span><br><span class="line">instance &#x3D;</span><br><span class="line"></span><br><span class="line">new MQClientInstance(clientConfig.cloneClientConfig(),</span><br><span class="line"></span><br><span class="line">this.factoryIndexGenerator.getAndIncrement(), clientId, rpcHook);</span><br><span class="line"></span><br><span class="line">MQClientInstance prev &#x3D; this.factoryTable.putIfAbsent(clientId, instance);</span><br><span class="line"></span><br><span class="line">if (prev !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">instance &#x3D; prev;</span><br><span class="line"></span><br><span class="line">log.warn(&quot;Returned Previous MQClientInstance for clientId:[&#123;&#125;]&quot;, clientId);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">log.info(&quot;Created new MQClientInstance for clientId:[&#123;&#125;]&quot;, clientId);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return instance;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public String buildMQClientId() &#123;</span><br><span class="line"></span><br><span class="line">StringBuilder sb &#x3D; new StringBuilder();</span><br><span class="line"></span><br><span class="line">sb.append(this.getClientIP());</span><br><span class="line"></span><br><span class="line">sb.append(&quot;@&quot;);</span><br><span class="line"></span><br><span class="line">sb.append(this.getInstanceName());</span><br><span class="line"></span><br><span class="line">if (!UtilAll.isBlank(this.unitName)) &#123;</span><br><span class="line"></span><br><span class="line">sb.append(&quot;@&quot;);</span><br><span class="line"></span><br><span class="line">sb.append(this.unitName);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return sb.toString();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/d473d7d3/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ee41af7f/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/ee41af7f/" class="post-title-link" itemprop="url">MQ36# RocketMQ Topic创建</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 22:59:01" itemprop="dateCreated datePublished" datetime="2020-12-20T22:59:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="Topic创建的方式"><a href="#Topic创建的方式" class="headerlink" title="Topic创建的方式"></a>Topic创建的方式</h1><p>Topic的创建分为自动创建和通过命令行创建两种。通过broker配置参数autoCreateTopicEnable设置。 通常可以在非生产环境开启自动创建，生产环境待审批后再进行创建。</p>
+<p>* 命令行创建</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin updateTopic -c DefaultCluster -n localhost:9876 -t threezto-test -r 12 -w 12</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="客户端发起Topic创建请求"><a href="#客户端发起Topic创建请求" class="headerlink" title="客户端发起Topic创建请求"></a>客户端发起Topic创建请求</h1><p>* 客户端工作：向集群中各个broker主节点通知topic配置变更</p>
+<p>* 参数设定：通过参数指定读队列数量、写队列数量、权限、当指定-c时，在该集群的所有broker都会创建</p>
+<p>* 调用链</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">UpdateTopicSubCommand.execute()-&gt;defaultMQAdminExtImpl.createAndUpdateTopicConfig-&gt;MQClientAPIImpl.createTopic</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;-c指定，集群中每个broker主节点都会创建</span><br><span class="line"></span><br><span class="line">Set&lt;String&gt; masterSet &#x3D;</span><br><span class="line"></span><br><span class="line">CommandUtil.fetchMasterAddrByClusterName(defaultMQAdminExt, clusterName);</span><br><span class="line"></span><br><span class="line">for (String addr : masterSet) &#123;</span><br><span class="line"></span><br><span class="line">defaultMQAdminExt.createAndUpdateTopicConfig(addr, topicConfig);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;create topic to %s success.%n&quot;, addr);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/ee41af7f/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a0b01b06/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/a0b01b06/" class="post-title-link" itemprop="url">MQ35# RocketMQ NameServe</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 22:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T22:58:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="NameServer启动"><a href="#NameServer启动" class="headerlink" title="NameServer启动"></a>NameServer启动</h1><p>* 从生产环境实践来看，NameServer启动使用默认配置即可，运行良好。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">启动命令：nohup sh bin&#x2F;mqnamesrv &amp;</span><br></pre></td></tr></table></figure>
+
+<p>* NamesrvStartup.java 启动入口类，NameServer 启动默认端口9876</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nettyServerConfig.setListenPort(9876)</span><br></pre></td></tr></table></figure>
+
+<p>* 每10秒钟扫描一次，移除失效的broker，同时移除缓存元数据</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;初始化NameServer</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize();</span><br><span class="line"></span><br><span class="line">public boolean initialize() &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;加载KV配置</span><br><span class="line"></span><br><span class="line">this.kvConfigManager.load();</span><br><span class="line"></span><br><span class="line">this.remotingServer &#x3D; new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);</span><br><span class="line"></span><br><span class="line">this.remotingExecutor &#x3D;</span><br><span class="line"></span><br><span class="line">Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl(&quot;RemotingExecutorThread_&quot;));</span><br><span class="line"></span><br><span class="line">this.registerProcessor();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;每10秒钟扫描一次，移除失效的broker</span><br><span class="line"></span><br><span class="line">this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public void run() &#123;</span><br><span class="line"></span><br><span class="line">NamesrvController.this.routeInfoManager.scanNotActiveBroker();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;, 5, 10, TimeUnit.SECONDS);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;每隔10秒钟打印一次KV配置信息</span><br><span class="line"></span><br><span class="line">this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public void run() &#123;</span><br><span class="line"></span><br><span class="line">NamesrvController.this.kvConfigManager.printAllPeriodically();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;, 1, 10, TimeUnit.MINUTES);</span><br><span class="line"></span><br><span class="line">return true;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>* 失效时间为2分钟，即：Broker在2分钟内未上报心跳会被移除</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;失效时间为2分钟，即：Broker在2分钟内未上报心跳会被移除</span><br><span class="line"></span><br><span class="line">public void scanNotActiveBroker() &#123;</span><br><span class="line"></span><br><span class="line">Iterator&lt;Entry&lt;String, BrokerLiveInfo&gt;&gt; it &#x3D; this.brokerLiveTable.entrySet().iterator();</span><br><span class="line"></span><br><span class="line">while (it.hasNext()) &#123;</span><br><span class="line"></span><br><span class="line">Entry&lt;String, BrokerLiveInfo&gt; next &#x3D; it.next();</span><br><span class="line"></span><br><span class="line">long last &#x3D; next.getValue().getLastUpdateTimestamp();</span><br><span class="line"></span><br><span class="line">if ((last + BROKER_CHANNEL_EXPIRED_TIME) &lt; System.currentTimeMillis()) &#123;</span><br><span class="line"></span><br><span class="line">RemotingUtil.closeChannel(next.getValue().getChannel());</span><br><span class="line"></span><br><span class="line">it.remove();</span><br><span class="line"></span><br><span class="line">log.warn(&quot;The broker channel expired, &#123;&#125; &#123;&#125;ms&quot;, next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);</span><br><span class="line"></span><br><span class="line">this.onChannelDestroy(next.getKey(), next.getValue().getChannel());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">private final static long BROKER_CHANNEL_EXPIRED_TIME &#x3D; 1000 * 60 * 2;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="DefaultRequestProcessor"><a href="#DefaultRequestProcessor" class="headerlink" title="DefaultRequestProcessor"></a>DefaultRequestProcessor</h1><p>* 用于响应客户端、Broker的请求。主要向NameServer发送心跳包、获取Cluster、Broker、Topic元数据信息。</p>
+<p>* 调用链：在NameServer启动时注册，NamesrvController.initialize()-&gt;registerProcessor()。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br></pre></td><td class="code"><pre><span class="line">public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException &#123;</span><br><span class="line"></span><br><span class="line">if (log.isDebugEnabled()) &#123;</span><br><span class="line"></span><br><span class="line">log.debug(&quot;receive request, &#123;&#125; &#123;&#125; &#123;&#125;&quot;,</span><br><span class="line"></span><br><span class="line">request.getCode(),</span><br><span class="line"></span><br><span class="line">RemotingHelper.parseChannelRemoteAddr(ctx.channel()),</span><br><span class="line"></span><br><span class="line">request);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">switch (request.getCode()) &#123;</span><br><span class="line"></span><br><span class="line">case RequestCode.PUT_KV_CONFIG:&#x2F;&#x2F;增加NameServer配置信息；由DefaultMQAdminExt使用</span><br><span class="line"></span><br><span class="line">return this.putKVConfig(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_KV_CONFIG:&#x2F;&#x2F;根据NameSpace和key获取NameServer配置信息；由DefaultMQAdminExt使用</span><br><span class="line"></span><br><span class="line">return this.getKVConfig(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.DELETE_KV_CONFIG: &#x2F;&#x2F;据NameSapce和Key删除NameServerr配置信息</span><br><span class="line"></span><br><span class="line">return this.deleteKVConfig(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.REGISTER_BROKER: &#x2F;&#x2F;注册Broker信息；由BrokerOuterAPI.registerBroker使用，在BrokerController启动时调用</span><br><span class="line"></span><br><span class="line">Version brokerVersion &#x3D; MQVersion.value2Version(request.getVersion());</span><br><span class="line"></span><br><span class="line">if (brokerVersion.ordinal() &gt;&#x3D; MQVersion.Version.V3_0_11.ordinal()) &#123;</span><br><span class="line"></span><br><span class="line">return this.registerBrokerWithFilterServer(ctx, request);</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">return this.registerBroker(ctx, request);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">case RequestCode.UNREGISTER_BROKER:&#x2F;&#x2F;移除注销broker信息；由BrokerOuterAPI.unregisterBroker使用，在BrokerController.shutdown时调用</span><br><span class="line"></span><br><span class="line">return this.unregisterBroker(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_ROUTEINTO_BY_TOPIC: &#x2F;&#x2F;获取Topic路由信息 TopicRouteData</span><br><span class="line"></span><br><span class="line">return this.getRouteInfoByTopic(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_BROKER_CLUSTER_INFO:&#x2F;&#x2F;获取Cluster及Broker信息</span><br><span class="line"></span><br><span class="line">return this.getBrokerClusterInfo(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.WIPE_WRITE_PERM_OF_BROKER: &#x2F;&#x2F;去除该broker上所有topic的写权限</span><br><span class="line"></span><br><span class="line">return this.wipeWritePermOfBroker(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_ALL_TOPIC_LIST_FROM_NAMESERVER: &#x2F;&#x2F;获取所有的Topic列表</span><br><span class="line"></span><br><span class="line">return getAllTopicListFromNameserver(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.DELETE_TOPIC_IN_NAMESRV: &#x2F;&#x2F;从nameServer中删除topic</span><br><span class="line"></span><br><span class="line">return deleteTopicInNamesrv(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_KVLIST_BY_NAMESPACE: &#x2F;&#x2F;获取配置信息 configTable</span><br><span class="line"></span><br><span class="line">return this.getKVListByNamespace(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_TOPICS_BY_CLUSTER: &#x2F;&#x2F;获取该集群下的所有topic list</span><br><span class="line"></span><br><span class="line">return this.getTopicsByCluster(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_SYSTEM_TOPIC_LIST_FROM_NS: &#x2F;&#x2F; 此处意思为：系统会将集群名称、broker名称作为默认topic创建。现在获取这类topic</span><br><span class="line"></span><br><span class="line">return this.getSystemTopicListFromNs(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_UNIT_TOPIC_LIST: &#x2F;&#x2F;暂无使用</span><br><span class="line"></span><br><span class="line">return this.getUnitTopicList(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_HAS_UNIT_SUB_TOPIC_LIST: &#x2F;&#x2F;暂无使用</span><br><span class="line"></span><br><span class="line">return this.getHasUnitSubTopicList(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:&#x2F;&#x2F;暂无使用</span><br><span class="line"></span><br><span class="line">return this.getHasUnitSubUnUnitTopicList(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.UPDATE_NAMESRV_CONFIG: &#x2F;&#x2F;更新properties请求</span><br><span class="line"></span><br><span class="line">return this.updateConfig(ctx, request);</span><br><span class="line"></span><br><span class="line">case RequestCode.GET_NAMESRV_CONFIG: &#x2F;&#x2F;获取properties内容</span><br><span class="line"></span><br><span class="line">return this.getConfig(ctx, request);</span><br><span class="line"></span><br><span class="line">default:</span><br><span class="line"></span><br><span class="line">break;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return null;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/a0b01b06/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/c4a1b302/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/c4a1b302/" class="post-title-link" itemprop="url">MQ34# RocketMQ--ConsumeQueue文件与Index文件</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:58:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题：</p>
+<p>1.ConsumeQueue构建流程是怎样的？</p>
+<p>2.ConsumeQueue数据结构是怎样的？</p>
+<p>3.Index索引文件构建流程怎样的？</p>
+<p>4.Index数据结构时怎么样的？</p>
+<h1 id="ConsumeQueue-Index构建概览"><a href="#ConsumeQueue-Index构建概览" class="headerlink" title="ConsumeQueue/Index构建概览"></a>ConsumeQueue/Index构建概览</h1><h2 id="调用链条"><a href="#调用链条" class="headerlink" title="调用链条"></a>调用链条</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;Broker启动初始化</span><br><span class="line"></span><br><span class="line">@1 BrokerStartup#main</span><br><span class="line"></span><br><span class="line">start(createBrokerController(args))</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize()</span><br><span class="line"></span><br><span class="line">@2 BrokerController#initialize</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; new DefaultMessageStore</span><br><span class="line"></span><br><span class="line">@3 DefaultMessageStore#DefaultMessageStore()</span><br><span class="line"></span><br><span class="line">this.reputMessageService &#x3D; new ReputMessageService();</span><br><span class="line"></span><br><span class="line">this.dispatcherList &#x3D; new LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildConsumeQueue());</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildIndex());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;存储服务启动</span><br><span class="line"></span><br><span class="line">@4 DefaultMessageStore#start()</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;允许重复转发reputFromOffset设置为CommitLog的提交指针</span><br><span class="line"></span><br><span class="line">if (this.getMessageStoreConfig().isDuplicationEnable()) &#123;this.reputMessageService.setReputFromOffset(this.commitLog.getConfirmOffset());</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;不允许重复转发reputFromOffset设置为CommitLog内存中最大偏移量 this.reputMessageService.setReputFromOffset(this.commitLog.getMaxOffset();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.reputMessageService.start();</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：@1中分别为dispatcherList添加了CommitLogDispatcherBuildConsumeQueue和CommitLogDispatcherBuildIndex；@4中duplicationEnable默认为false即不允许重复，从CommitLog中的最大偏移量开始转发，reputMessageService线程类在Broker启动时启动，主要负责构建consumeQueue与index文件。</span><br></pre></td></tr></table></figure>
+
+<h2 id="ReputMessageService线程类职责"><a href="#ReputMessageService线程类职责" class="headerlink" title="ReputMessageService线程类职责"></a>ReputMessageService线程类职责</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219143536.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：ReputMessageServicee根据构建进度reputFromOffset查找可构建的消息数据，然后逐条解析组成构建请求，并构建consumeQueue和index文件构建；如果当前Broker为Master并且长轮询模式上通过消息到达监听器通知客户端。</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="ConsumeQueue构建流程及数据结构"><a href="#ConsumeQueue构建流程及数据结构" class="headerlink" title="ConsumeQueue构建流程及数据结构"></a>ConsumeQueue构建流程及数据结构</h1><p>在Broker启动时初始化了dispatcherList, 添加了分别负责ConsumeQueue文件和Index文件构建类；这部分关注ConsumeQueue构建。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">this.dispatcherList &#x3D; new LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构建ConsumeQueue</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildConsumeQueue());</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构建Index</span><br><span class="line"></span><br><span class="line">this.dispatcherList.addLast(new CommitLogDispatcherBuildIndex());</span><br><span class="line"></span><br><span class="line">public void doDispatch(DispatchRequest req) &#123;</span><br><span class="line"></span><br><span class="line">for (CommitLogDispatcher dispatcher : this.dispatcherList) &#123;</span><br><span class="line"></span><br><span class="line">dispatcher.dispatch(req);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/c4a1b302/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9c431d59/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -382,6 +911,95 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/55c56ee4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/55c56ee4/" class="post-title-link" itemprop="url">MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="消息拉取与处理"><a href="#消息拉取与处理" class="headerlink" title="消息拉取与处理"></a>消息拉取与处理</h1><p><strong>消息拉取</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140825.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理拉取消息请求。通过组织RequetHeader需要包含从哪里开始拉取（ConsumerGroup、Topic，Queue，queueOffset）等信息，向Broker发起请求，取回消息后对消息进行处理。当该Queue的消息数量超过1000，或者最小与最大偏移量之间的差距超过默认2000也会触发限流，即：延迟50毫秒放入请求队列。也可以通过挂起消费线程来延迟（1秒）消息拉取，从而达到消费限流作用。</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消息处理</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140851.png"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理消息部分流程：将消息提交给了processQueue红黑树缓存；同时将消息提交给consumeMessageService来处理具体的消息内容。</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/55c56ee4/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd191b8b/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -491,95 +1109,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/55c56ee4/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/55c56ee4/" class="post-title-link" itemprop="url">MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="消息拉取与处理"><a href="#消息拉取与处理" class="headerlink" title="消息拉取与处理"></a>消息拉取与处理</h1><p><strong>消息拉取</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140825.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理拉取消息请求。通过组织RequetHeader需要包含从哪里开始拉取（ConsumerGroup、Topic，Queue，queueOffset）等信息，向Broker发起请求，取回消息后对消息进行处理。当该Queue的消息数量超过1000，或者最小与最大偏移量之间的差距超过默认2000也会触发限流，即：延迟50毫秒放入请求队列。也可以通过挂起消费线程来延迟（1秒）消息拉取，从而达到消费限流作用。</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>消息处理</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140851.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理消息部分流程：将消息提交给了processQueue红黑树缓存；同时将消息提交给consumeMessageService来处理具体的消息内容。</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/55c56ee4/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/3b8a1c43/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -665,587 +1194,10 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/72491306/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/72491306/" class="post-title-link" itemprop="url">MQ28# RocketMQ存储--主从同步</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:49:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:49:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.消息存储在Master上了，如何同步到Slave上了呢？</p>
-<p>2.同步复制和异步复制流程是怎么样的？</p>
-<h1 id="Broker启动HA调用链"><a href="#Broker启动HA调用链" class="headerlink" title="Broker启动HA调用链"></a>Broker启动HA调用链</h1><p><strong>HA初始化调用链</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">@1 BrokerStartup#main</span><br><span class="line"></span><br><span class="line">start(createBrokerController(args));</span><br><span class="line"></span><br><span class="line">@2 BrokerStartup#createBrokerController</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize();</span><br><span class="line"></span><br><span class="line">@3 BrokerController#initialize</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; new DefaultMessageStore</span><br><span class="line"></span><br><span class="line">@4 DefaultMessageStore#DefaultMessageStore()</span><br><span class="line"></span><br><span class="line">this.haService &#x3D; new HAService(this);</span><br><span class="line"></span><br><span class="line">this.defaultMessageStore &#x3D; defaultMessageStore;</span><br><span class="line"></span><br><span class="line">this.acceptSocketService &#x3D;</span><br><span class="line"></span><br><span class="line">new AcceptSocketService(defaultMessageStore.getMessageStoreConfig()</span><br><span class="line"></span><br><span class="line">.getHaListenPort());</span><br><span class="line"></span><br><span class="line">this.groupTransferService &#x3D; new GroupTransferService();</span><br><span class="line"></span><br><span class="line">this.haClient &#x3D; new HAClient();</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>启动调用链</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">@1 BrokerStartup#start</span><br><span class="line"></span><br><span class="line">controller.start();</span><br><span class="line"></span><br><span class="line">@2 BrokerController#start</span><br><span class="line"></span><br><span class="line">this.messageStore.start();</span><br><span class="line"></span><br><span class="line">@3 DefaultMessageStore#start</span><br><span class="line"></span><br><span class="line">@4 this.haService.start();</span><br><span class="line"></span><br><span class="line">this.acceptSocketService.beginAccept();</span><br><span class="line"></span><br><span class="line">this.acceptSocketService.start();</span><br><span class="line"></span><br><span class="line">this.groupTransferService.start();</span><br><span class="line"></span><br><span class="line">this.haClient.start();</span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：从初始化和启动调用链中可以看到，在Broker启动时，初始化并启动了三个线程类，分别为AcceptSocketService、GroupTransferService、HAClient。</span><br></pre></td></tr></table></figure>
-
-<p><strong>问题：这三个线程类在干啥？</strong></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/72491306/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/b973d41f/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/b973d41f/" class="post-title-link" itemprop="url">MQ27# RocketMQ存储--同步刷盘和异步刷盘</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:47:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:47:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.同步刷盘是怎么工作的？</p>
-<p>2.异步刷盘是怎么工作的？</p>
-<p>3.上篇文章的疑问，写入堆外内存的消息如何落盘的？</p>
-<h1 id="Broker启动刷盘有关调用链"><a href="#Broker启动刷盘有关调用链" class="headerlink" title="Broker启动刷盘有关调用链"></a>Broker启动刷盘有关调用链</h1><p><strong>调用链</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;初始化链条</span><br><span class="line"></span><br><span class="line">@1 BrokerStartup#main</span><br><span class="line"></span><br><span class="line">start(createBrokerController(args));</span><br><span class="line"></span><br><span class="line">@2 BrokerStartup#createBrokerController</span><br><span class="line"></span><br><span class="line">final BrokerController controller &#x3D; new BrokerController(...)</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize();</span><br><span class="line"></span><br><span class="line">@3 BrokerController#initialize</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; new DefaultMessageStore(...);</span><br><span class="line"></span><br><span class="line">@4 DefaultMessageStore#DefaultMessageStore()</span><br><span class="line"></span><br><span class="line">this.commitLog &#x3D; new CommitLog(this);</span><br><span class="line"></span><br><span class="line">@5 CommitLog#CommitLog()</span><br><span class="line"></span><br><span class="line">if (FlushDiskType.SYNC_FLUSH &#x3D;&#x3D; defaultMessageStore.getMessageStoreConfig()</span><br><span class="line"></span><br><span class="line">.getFlushDiskType()) &#123;</span><br><span class="line"></span><br><span class="line">this.flushCommitLogService &#x3D; new GroupCommitService();</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">this.flushCommitLogService &#x3D; new FlushRealTimeService();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">this.commitLogService &#x3D; new CommitRealTimeService();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;启动链条</span><br><span class="line"></span><br><span class="line">@6 BrokerStartup#start</span><br><span class="line"></span><br><span class="line">controller.start();</span><br><span class="line"></span><br><span class="line">@7 BrokerController#start()</span><br><span class="line"></span><br><span class="line">this.messageStore.start();</span><br><span class="line"></span><br><span class="line">@8 DefaultMessageStore#start()</span><br><span class="line"></span><br><span class="line">this.commitLog.start();</span><br><span class="line"></span><br><span class="line">@9 CommitLog#start()</span><br><span class="line"></span><br><span class="line">this.flushCommitLogService.start();</span><br><span class="line"></span><br><span class="line">if (defaultMessageStore.getMessageStoreConfig()</span><br><span class="line"></span><br><span class="line">.isTransientStorePoolEnable()) &#123;</span><br><span class="line"></span><br><span class="line">this.commitLogService.start();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><u>小结：由调用链可以看出，初始化并启动了以下线程类</u></p>
-<p>* 同步刷盘 GroupCommitService</p>
-<p>* 异步刷盘 FlushRealTimeService</p>
-<p>* 如果开启堆外内存并且为异步刷盘 CommitRealTimeService</p>
-<p><strong>线程类关系图</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219134925.png"></p>
-<h1 id="线程类工作流程"><a href="#线程类工作流程" class="headerlink" title="线程类工作流程"></a>线程类工作流程</h1><p>既然线程类在Broker启动时就启动了，他们在做啥呢？</p>
-<p><strong>堆外内存线程类</strong>CommitRealTimeService工作流程</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219134952.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">小结：</span><br><span class="line">1.CommitRealTimeService主要工作是将写入堆外内存(writeBuffer)的消息，写入到fileChannel中，fileChannel为commitLog文件通道</span><br><span class="line">2.committedPosition用于记录将writeBuffer数据写入到fileChannel中的内存位点（相对偏移量offset）</span><br><span class="line">3.committedWhere用于记录写入fileChannel中的物理偏移量（文件名称+相对偏移量offset）</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>同步刷盘线程类GroupCommitService工作流程</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219135027.png"></p>
-<p><strong>注1：</strong></p>
-<p>* 执行onWaitEnd时交换读写容器，该线程类提供两个容器来装GroupCommitRequest</p>
-<p>* requestsWrite和requestsRead，每次执行提交(刷盘)前都会进行容器交换</p>
-<p>* 好处：读写请求容器分离，避免潜在的锁竞争</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">private void swapRequests() &#123;</span><br><span class="line"></span><br><span class="line">List&lt;GroupCommitRequest&gt; tmp &#x3D; this.requestsWrite;</span><br><span class="line"></span><br><span class="line">this.requestsWrite &#x3D; this.requestsRead;</span><br><span class="line"></span><br><span class="line">this.requestsRead &#x3D; tmp;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-
-
-<p><strong>注2:</strong></p>
-<p>* flushedPosition 标记已经刷盘内存的位点。即刷盘相对偏移量，刷盘到什么位置了，下次从此处刷盘即可</p>
-<p>* flushedWhere 标记已经刷盘的物理偏移量，根据此位置可精确查找到文件中消息的存储位置</p>
-<p>flushedWhere = 当前刷盘文件名称（该日志文件的起始物理偏移量） + flushedPosition</p>
-<p><strong>注3</strong></p>
-<p>* 流程图中标记红色部分，将刷盘结果通知给等待线程</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">小结：同步刷盘线程类GroupCommitService主要工作</span><br><span class="line">1.将请求从读容器中取出并通过mappedByteBuffer.force()将数据落盘。</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>异步刷盘线程类FlushRealTimeService工作流程</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219135125.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">小结：FlushRealTimeService主要工作</span><br><span class="line">1.不开启堆外外内存刷盘方式为mappedByteBuffer.force()</span><br><span class="line">2.开启堆外内存刷盘方式为fileChannel.force</span><br></pre></td></tr></table></figure>
-
-<p><u><strong>疑问：同步刷盘线程类GroupCommitService每执行一次都会交换读写容器，那刷盘请求什么时候放到写容器（requestsWrite）呢？</strong></u></p>
-<h1 id="消息追加与线程类的交互"><a href="#消息追加与线程类的交互" class="headerlink" title="消息追加与线程类的交互"></a>消息追加与线程类的交互</h1><p>分析完线程类后，把镜头切换到消息追加，看看消息进来后是如何跟线程类交互的？</p>
-<p><strong>调用链</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 CommitLog#putMessage</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;同步刷盘或者异步刷盘</span><br><span class="line"></span><br><span class="line">handleDiskFlush(result, putMessageResult, msg);</span><br><span class="line"></span><br><span class="line">@2 CommitLog#handleDiskFlush</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>同步刷盘主要代码</strong></p>
-<p>同步刷盘时构造刷盘请求，将请求提交给线程类GroupCommitService，service.putRequest(request)，并获取刷盘结果。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">if (FlushDiskType.SYNC_FLUSH &#x3D;&#x3D; this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) &#123;</span><br><span class="line"></span><br><span class="line">final GroupCommitService service &#x3D; (GroupCommitService) this.flushCommitLogService;</span><br><span class="line"></span><br><span class="line">GroupCommitRequest request &#x3D; new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes());</span><br><span class="line"></span><br><span class="line">service.putRequest(request);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;等待MappedFile刷盘成功状态通过countDownLatch来控制</span><br><span class="line"></span><br><span class="line">boolean flushOK &#x3D; request.waitForFlush(this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>异步刷盘主要代码</strong></p>
-<p>未开启堆外内存唤醒FlushRealTimeServicee，开启堆外内存唤醒CommitRealTimeService。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">if (!this.defaultMessageStore.getMessageStoreConfig()</span><br><span class="line"></span><br><span class="line">.isTransientStorePoolEnable()) &#123;</span><br><span class="line"></span><br><span class="line">flushCommitLogService.wakeup();</span><br><span class="line"></span><br><span class="line">&#125; else &#123;</span><br><span class="line"></span><br><span class="line">commitLogService.wakeup();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/b973d41f/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/52ef32ad/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/52ef32ad/" class="post-title-link" itemprop="url">MQ26# RocketMQ存储--消息追加</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:45:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:45:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><p>1.消息追加到何处了呢？</p>
-<p>2.消息格式是怎么样的？</p>
-<h1 id="调用链"><a href="#调用链" class="headerlink" title="调用链"></a>调用链</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">@1 CommitLog#putMessage</span><br><span class="line"></span><br><span class="line">result &#x3D; mappedFile.appendMessage(msg, this.appendMessageCallback);</span><br><span class="line"></span><br><span class="line">@2 MaapedFile#appendMessagesInner</span><br><span class="line"></span><br><span class="line">result &#x3D; cb.doAppend</span><br><span class="line"></span><br><span class="line">@3 CommitLog#DefaultAppendMessageCallback#doAppend</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h1><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219134505.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：在消息写入Buffer的过程中有3个坐标</span><br></pre></td></tr></table></figure>
-
-
-<p><strong>1. wrotePosition</strong></p>
-<p>* commitLog内存（ByteBuffer）写入位点，标记消息写到哪了，下次从该位置开始写。在消息写完后递增，递增大小为消息的长度</p>
-<p><strong>2. wroteOffset</strong></p>
-<p>* 物理偏移量，标记在commitlog物理文件中消息的位置</p>
-<p>* 物理偏移量=文件名称（fileFromOffset）+ 内存相对位置byteBuffer.position(wrotePosition)</p>
-<p><strong>3. queueOffset</strong></p>
-<p>* topicQueue逻辑偏移量，标记消息在topic的分区中的消息的位置，在消息写入后递增，递增长度为1</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">疑问？</span><br><span class="line">写入Buffer有两类，堆外内存Buffer(writeBuffer)和mmap映射Buffer(mappedByteBuffer)。mappedByteBuffer为commitLog日志文件的直接映射，而堆外内存writeBuffer是怎么落盘的呢？</span><br></pre></td></tr></table></figure>
-
-<p>此处先记录疑问，分析刷盘时回头再看。</p>
-<p>###### 四、消息格式</p>
-<p>在追加单条消息时，第4步组织消息，格式如下表格：</p>
-<p>| 序号 | 内容 | 所占空间 |</p>
-<p>| — | — | — |</p>
-<p>| 1 | msgLen消息长度 | 4个字节 |</p>
-<p>| 2 | MAGIC_CODE 魔数 | 4个字节 |</p>
-<p>| 3 | BodyCRC 校验码 | 4个字节 |</p>
-<p>| 4 | QueueId 消息所在的分区|4个字节 |</p>
-<p>| 5 | 消息Flag | 4个字节 |</p>
-<p>| 6 | queueOffset 分区偏移量| 8个字节 |</p>
-<p>| 7 | fileFromOffset + byteBuffer.position() 物理偏移量 | 8个字节 |</p>
-<p>| 8 | SysFlag 系统标记压缩等| 4个字节 |</p>
-<p>| 9 | BornTimestamp 发送时间| 8个字节 |</p>
-<p>| 10 |BornHost 发送的机器IP| 8个字节 |</p>
-<p>| 11 | StoreTimestamp 存储时间| 8个字节 |</p>
-<p>| 12 | StoreHost 存储的broker|8个字节 |</p>
-<p>| 13 | ReconsumeTimes 消费重试次数|4个字节 |</p>
-<p>| 14 | PreparedTransactionOffset 事物消息偏移量| 8字节 |</p>
-<p>| 15 | bodyLength 消息体长度 | |</p>
-<p>| 16 | body 消息体内容 | |</p>
-<p>| 17 | topicLength 主题长度| |</p>
-<p>| 18 | topicData主题内容 | |</p>
-<p>| 19 | propertiesLength 属性长度| |</p>
-<p>| 20 | propertiesData 属性内容 | |</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">**小结：1到14项是每条消息都有的，所占空间为84个字节**</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/52ef32ad/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/708c22d7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/708c22d7/" class="post-title-link" itemprop="url">MQ25# RocketMQ存储--映射文件预热</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:42:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:42:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>1.为什么创建文件（commitLog）时要预热？</p>
-<p>2.为什么要写入1G大小的假值（0）呢？</p>
-<p>3.为什么要锁定内存？</p>
-<p>4.预热流程是怎么样的？</p>
-<h1 id="调用链"><a href="#调用链" class="headerlink" title="调用链"></a>调用链</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">@1 AllocateMappedFileService#mmapOperation</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; pre write mappedFile</span><br><span class="line"></span><br><span class="line">if (mappedFile.getFileSize() &gt;&#x3D; this.messageStore.getMessageStoreConfig()</span><br><span class="line"></span><br><span class="line">.getMapedFileSizeCommitLog() &amp;&amp; this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;预热</span><br><span class="line"></span><br><span class="line">mappedFile.warmMappedFile(</span><br><span class="line"></span><br><span class="line">this.messageStore.getMessageStoreConfig().getFlushDiskType(),</span><br><span class="line"></span><br><span class="line">this.messageStore.getMessageStoreConfig()</span><br><span class="line"></span><br><span class="line">.getFlushLeastPagesWhenWarmMapedFile()</span><br><span class="line"></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 MappedFilewarmMappedFile</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h1><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133918.png"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/708c22d7/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9adc03fa/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/9adc03fa/" class="post-title-link" itemprop="url">MQ24# RocketMQ存储--日志文件创建与映射流程</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-20 20:40:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:40:01+08:00">2020-12-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>日志目录(可配置)/data/rocketmq/store/commitlog会有20位长度的日志文件。</p>
-<p>1.日志文件什么时候创建的？</p>
-<p>2.日志文件创建流程是什么？</p>
-<p>3.日志文件和内存映射是怎么样的？</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:50 00000117290188144640</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:52 00000117291261886464</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:54 00000117292335628288</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:56 00000117293409370112</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:57 00000117294483111936</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:56 00000117295556853760</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="日志映射相关类初始化"><a href="#日志映射相关类初始化" class="headerlink" title="日志映射相关类初始化"></a>日志映射相关类初始化</h1><p>在Broker启动时实例化了两个类DefaultMessageStore和AllocateMappedFileService。</p>
-<p>AllocateMappedFileService是线程类继承了Runnable接口，该线程类持有DefaultMessageStore的引用（即：可操作管理DefaultMessageStore），并启动该线程类。</p>
-<p>调用链</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;Broker启动时调用</span><br><span class="line"></span><br><span class="line">@1 BrokerStartup#main#createBrokerController()</span><br><span class="line"></span><br><span class="line">boolean initResult &#x3D; controller.initialize();</span><br><span class="line"></span><br><span class="line">@2 Controller#initialize()</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener, this.brokerConfig);</span><br><span class="line"></span><br><span class="line">@3 DefaultMessageStore#DefaultMessageStore()</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;将DefaultMessageStore自身引用传给AllocateMappedFileService</span><br><span class="line"></span><br><span class="line">this.allocateMappedFileService &#x3D; new AllocateMappedFileService(this);</span><br><span class="line"></span><br><span class="line">this.allocateMappedFileService.start();&#x2F;&#x2F;启动该线程类</span><br><span class="line"></span><br><span class="line">@4 class AllocateMappedFileService extends ServiceThread</span><br><span class="line"></span><br><span class="line">public AllocateMappedFileService(DefaultMessageStore messageStore) &#123;</span><br><span class="line"></span><br><span class="line">this.messageStore &#x3D; messageStore;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>线程类一直运行在干啥</strong></p>
-<p>既然在Broker启动时该线程类AllocateMappedFileService就启动了，那么在做什么呢？run方法为while循环，即：<strong>只要服务不停止并且mmapOperation()返回true则一直运行</strong>。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;异步处理，调用mmapOperation完成请求的处理</span><br><span class="line"></span><br><span class="line">public void run() &#123;</span><br><span class="line"></span><br><span class="line">log.info(this.getServiceName() + &quot; service started&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;while循环，只要服务部停止即调用 mmapOperation方法</span><br><span class="line"></span><br><span class="line">while (!this.isStopped() &amp;&amp; this.mmapOperation()) &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">log.info(this.getServiceName() + &quot; service end&quot;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>mmapOperation方法流程图</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133504.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：mmapOperation方法主要做了两件事：初始化MappedFile和预热MappedFile。只要服务不停止和线程不被中断，这个过程一直重复运行。</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="提交映射文件请求（AllocateRequest）"><a href="#提交映射文件请求（AllocateRequest）" class="headerlink" title="提交映射文件请求（AllocateRequest）"></a>提交映射文件请求（AllocateRequest）</h1><p>既然AllocateMappedFileService一直从容器（优先级队列和ConcurrentHashMap）中获取AllocateRequest。AllocateRequest是什么时候产生并放到容器中的呢？</p>
-<p>RocketMQ消息存储概览【源码笔记】中写入commitLog流程，获取最新的日志文件。</p>
-<p><strong>调用链</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 CommitLog#putMessage</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;文件已满或者没有映射文件重新创建一个文件</span><br><span class="line"></span><br><span class="line">if (null &#x3D;&#x3D; mappedFile || mappedFile.isFull()) &#123;</span><br><span class="line"></span><br><span class="line">mappedFile &#x3D; this.mappedFileQueue.getLastMappedFile(0);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; Mark: NewFile may be cause noise</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 MappedFileQueue#getLastMappedFile</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>流程图</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133550.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：MappedFileQueue#getLastMappedFile会向线程类AllocateMappedFileServic提交两个映射文件创建请求：分别为nextFilePath和nextNextFilePath；如果线程类AllocateMappedFileServic为null，则直接new一个MappedFile，此时只会创建一个文件</span><br></pre></td></tr></table></figure>
-
-<p><strong>下面为AllocateMappedFileServic#putRequestAndReturnMappedFile提交两个映射文件请求流程</strong></p>
-<p><strong>调用链</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">@1 MappedFileQueue#getLastMappedFile</span><br><span class="line"></span><br><span class="line">if (this.allocateMappedFileService !&#x3D; null) &#123;</span><br><span class="line"></span><br><span class="line">mappedFile &#x3D; this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,</span><br><span class="line"></span><br><span class="line">nextNextFilePath, this.mappedFileSize);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@2 AllocateMappedFileService#putRequestAndReturnMappedFile</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>流程图</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219133629.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：处理提交的映射文件请求指的是实例化两个AllocateRequest并把他们提交到requestTable（ConcurrentHashMap）和requestQueue（PriorityBlockingQueue）中，等待5秒，此段时间线程会从这两个容器中获取请求并创建MappedFile，并将结果返回。</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/9adc03fa/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1311,20 +1263,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-count">54</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-count">2</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-count">2</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

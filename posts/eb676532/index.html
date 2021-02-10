@@ -29,7 +29,7 @@
 <meta property="og:description" content="目录1234567891011121314151617一、系统优化1.最大文件数2.系统参数调整二、RocketMQ性能调优1.开启异步刷盘2.开启堆外内存设置3.开启文件预热4.开启Slave读权限5.关闭堆内存据传输    系统优化最大文件数limits.conf 设置用户能打开的最大文件数 1234567891011vim &#x2F;etc&#x2F;security&#x2F;limit">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-12-20T10:14:01.000Z">
-<meta property="article:modified_time" content="2020-12-18T15:29:41.828Z">
+<meta property="article:modified_time" content="2021-02-10T02:45:32.196Z">
 <meta property="article:tag" content="RocketMQ">
 <meta name="twitter:card" content="summary">
 
@@ -220,7 +220,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-18 23:29:41" itemprop="dateModified" datetime="2020-12-18T23:29:41+08:00">2020-12-18</time>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -249,6 +249,10 @@
 
 <h1 id="系统优化"><a href="#系统优化" class="headerlink" title="系统优化"></a>系统优化</h1><h2 id="最大文件数"><a href="#最大文件数" class="headerlink" title="最大文件数"></a>最大文件数</h2><p>limits.conf 设置用户能打开的最大文件数</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">vim &#x2F;etc&#x2F;security&#x2F;limits.conf</span><br><span class="line"></span><br><span class="line">\# End of file</span><br><span class="line"></span><br><span class="line">baseuser soft nofile 655360</span><br><span class="line"></span><br><span class="line">baseuser hard nofile 655360</span><br><span class="line"></span><br><span class="line">\* soft nofile 655360</span><br><span class="line"></span><br><span class="line">\* hard nofile 655360</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
 
 
 
@@ -285,8 +289,6 @@
 <h3 id="swappiness"><a href="#swappiness" class="headerlink" title="swappiness"></a>swappiness</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">swappiness&#x3D;0 仅在内存不足的情况下，当剩余空闲内存低于vm.min_free_kbytes limit时，使用交换空间</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;1 内核版本3.5及以上、Red Hat内核版本2.6.32-303及以上，进行最少量的交换，而不禁用交换</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;10 当系统存在足够内存时，推荐设置为该值以提高性能</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;60 默认值</span><br><span class="line"></span><br><span class="line">swappiness&#x3D;100 内核将积极的使用交换空间</span><br></pre></td></tr></table></figure>
 
 
-
-<a id="more"></a>
 
 
 
@@ -426,7 +428,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-count">60</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

@@ -21,12 +21,12 @@
     var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="前言RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？ tr">
+  <meta name="description" content="前言RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MQ22# RocketMQ内存传输及4.7消费线程参数设置">
 <meta property="og:url" content="https://yongliangcode.github.io/posts/fe0b8776/index.html">
 <meta property="og:site_name" content="瓜农老梁">
-<meta property="og:description" content="前言RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？ tr">
+<meta property="og:description" content="前言RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081609.png">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081632.png">
@@ -35,7 +35,7 @@
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219082853.png">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219082913.png">
 <meta property="article:published_time" content="2020-12-20T12:19:01.000Z">
-<meta property="article:modified_time" content="2020-12-19T07:26:32.504Z">
+<meta property="article:modified_time" content="2021-02-10T02:45:32.209Z">
 <meta property="article:tag" content="RocketMQ">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081609.png">
@@ -227,7 +227,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -251,6 +251,8 @@
 
       
         <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？</p>
+<a id="more"></a>
+
 <h1 id="transferMsgByHeap误解"><a href="#transferMsgByHeap误解" class="headerlink" title="transferMsgByHeap误解"></a>transferMsgByHeap误解</h1><p>transferMsgByHeap设置为false时，通过堆外内存传输数据，相比堆内存传输减少了数据拷贝、零字节拷贝、效率更高，所以关闭transferMsgByHeap应该成为我们的优先选择，但是实践来看，你或许会改变想法，下面是transferMsgByHeap=false，客户端大量超时错误时的日志截图。</p>
 <h2 id="Broker日志截图"><a href="#Broker日志截图" class="headerlink" title="Broker日志截图"></a>Broker日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081609.png"></p>
 <h2 id="CPU日志截图"><a href="#CPU日志截图" class="headerlink" title="CPU日志截图"></a>CPU日志截图</h2><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219081632.png"></p>
@@ -260,7 +262,7 @@
 
 
 
-<a id="more"></a>
+<!--more-->
 
 
 
@@ -385,7 +387,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-count">60</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

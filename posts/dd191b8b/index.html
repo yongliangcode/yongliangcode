@@ -21,18 +21,18 @@
     var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="问题思考1.主题队列是如何分配的？ 2.什么时候会进行负载均衡？ 3.负载均衡后是否会导致消息重复消费？ 调用链条初始化链条 12345678910111213@1 DefaultMQPushConsumerImpl#startthis.mQClientFactory&#x3D; MQClientManager.getInstance().getAndCreateMQClientInstance@">
+  <meta name="description" content="问题思考1.主题队列是如何分配的？ 2.什么时候会进行负载均衡？ 3.负载均衡后是否会导致消息重复消费？">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MQ31# RocketMQ客户端PUSH消费--负载均衡">
 <meta property="og:url" content="https://yongliangcode.github.io/posts/dd191b8b/index.html">
 <meta property="og:site_name" content="瓜农老梁">
-<meta property="og:description" content="问题思考1.主题队列是如何分配的？ 2.什么时候会进行负载均衡？ 3.负载均衡后是否会导致消息重复消费？ 调用链条初始化链条 12345678910111213@1 DefaultMQPushConsumerImpl#startthis.mQClientFactory&#x3D; MQClientManager.getInstance().getAndCreateMQClientInstance@">
+<meta property="og:description" content="问题思考1.主题队列是如何分配的？ 2.什么时候会进行负载均衡？ 3.负载均衡后是否会导致消息重复消费？">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141402.png">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141423.png">
 <meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141446.png">
 <meta property="article:published_time" content="2020-12-20T12:52:01.000Z">
-<meta property="article:modified_time" content="2020-12-19T07:26:32.539Z">
+<meta property="article:modified_time" content="2021-02-10T02:45:32.220Z">
 <meta property="article:tag" content="RocketMQ">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219141402.png">
@@ -224,7 +224,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-12-19 15:26:32" itemprop="dateModified" datetime="2020-12-19T15:26:32+08:00">2020-12-19</time>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -250,6 +250,8 @@
         <div id="vip-container"><h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.主题队列是如何分配的？</p>
 <p>2.什么时候会进行负载均衡？</p>
 <p>3.负载均衡后是否会导致消息重复消费？</p>
+<a id="more"></a>
+
 <h1 id="调用链条"><a href="#调用链条" class="headerlink" title="调用链条"></a>调用链条</h1><p><strong>初始化链条</strong></p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@1 DefaultMQPushConsumerImpl#start</span><br><span class="line"></span><br><span class="line">this.mQClientFactory</span><br><span class="line"></span><br><span class="line">&#x3D; MQClientManager.getInstance().getAndCreateMQClientInstance</span><br><span class="line"></span><br><span class="line">@2 MQClientManager#getAndCreateMQClientInstance</span><br><span class="line"></span><br><span class="line">instance &#x3D; new MQClientInstance</span><br><span class="line"></span><br><span class="line">@3 MQClientInstance#MQClientInstance</span><br><span class="line"></span><br><span class="line">this.rebalanceService &#x3D; new RebalanceService</span><br></pre></td></tr></table></figure>
 
@@ -279,7 +281,7 @@
 
 
 
-<a id="more"></a>
+<!--more-->
 
 
 
@@ -370,12 +372,12 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/posts/3b8a1c43/" rel="prev" title="MQ29# RocketMQ客户端PUSH消费概览">
-      <i class="fa fa-chevron-left"></i> MQ29# RocketMQ客户端PUSH消费概览
+    <a href="/posts/55c56ee4/" rel="prev" title="MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费">
+      <i class="fa fa-chevron-left"></i> MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费
     </a></div>
       <div class="post-nav-item">
-    <a href="/posts/55c56ee4/" rel="next" title="MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费">
-      MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费 <i class="fa fa-chevron-right"></i>
+    <a href="/posts/87a2ceec/" rel="next" title="MQ32# RocketMQ客户端消费--ProcessQueue处理队列">
+      MQ32# RocketMQ客户端消费--ProcessQueue处理队列 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -449,7 +451,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-count">60</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

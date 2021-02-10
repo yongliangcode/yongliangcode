@@ -184,6 +184,82 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/f74d0239/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/f74d0239/" class="post-title-link" itemprop="url">Netty11# 非池化内存分配</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-02-10 11:55:01 / 修改时间：09:53:21" itemprop="dateCreated datePublished" datetime="2021-02-10T11:55:01+08:00">2021-02-10</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>非池化内存的分配由UnpooledByteBufAllocator负责，本文梳理下由其负责分配的堆内存和堆外内存如何实现的 。</p>
+<p>Netty在非池化堆内存分配上Java9与Java8以下版本有啥不同呢？Netty堆外内存回收默认机制使用JDK提供的Cleaner吗？</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/f74d0239/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/821aaf66/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -215,7 +291,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:30:51" itemprop="dateModified" datetime="2021-02-02T19:30:51+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -240,88 +316,6 @@
       
           <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>非池化/池化内存如何分配的？该撸这块了，奈何到处都在调用PlatformDependent类的方法，要不各种判断，要不分配堆外内存。反正到处都能看到它，得，索性先把这个撸一把。PlatformDependent又依赖了PlatformDependent0，那就一层一层剥好了。</p>
 <p>嗯，有点碎，大伙随便看看。</p>
-<h1 id="PlatformDependent0"><a href="#PlatformDependent0" class="headerlink" title="PlatformDependent0"></a>PlatformDependent0</h1><h3 id="成员变量"><a href="#成员变量" class="headerlink" title="成员变量"></a>成员变量</h3><table>
-<thead>
-<tr>
-<th>名称</th>
-<th align="left">含义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>ADDRESS_FIELD_OFFSET</td>
-<td align="left">Buffer#address字段的内存偏移地址</td>
-</tr>
-<tr>
-<td>BYTE_ARRAY_BASE_OFFSET</td>
-<td align="left">获取内存中第一个元素的内存偏移量</td>
-</tr>
-<tr>
-<td>DIRECT_BUFFER_CONSTRUCTOR</td>
-<td align="left">DirectByteBuffer构造器对象，用于反射实例化</td>
-</tr>
-<tr>
-<td>EXPLICIT_NO_UNSAFE_CAUSE</td>
-<td align="left">平台不支持UNSAFE时，不支持异常封装在EXPLICIT_NO_UNSAFE_CAUSE中</td>
-</tr>
-<tr>
-<td>ALLOCATE_ARRAY_METHOD</td>
-<td align="left">Unsafe#allocateUninitializedArray Method对象，用于反射调用</td>
-</tr>
-<tr>
-<td>JAVA_VERSION</td>
-<td align="left">获取Java版本</td>
-</tr>
-<tr>
-<td>IS_ANDROID</td>
-<td align="left">系统是否为Android</td>
-</tr>
-<tr>
-<td>UNSAFE_UNAVAILABILITY_CAUSE</td>
-<td align="left">系统不支持UNSAFE会将异常封装在此变量中</td>
-</tr>
-<tr>
-<td>INTERNAL_UNSAFE</td>
-<td align="left">Java9中Unsafe实例对象</td>
-</tr>
-<tr>
-<td>IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE</td>
-<td align="left">启用反射访问，在Java9版本之前是禁止的；Java9以及之后版本需要开启（这点要注意，Netty到处都有对Java9之后的兼容判断）</td>
-</tr>
-<tr>
-<td>UNSAFE</td>
-<td align="left">Unsafe实例对象，操作堆外内存</td>
-</tr>
-<tr>
-<td>UNSAFE_COPY_THRESHOLD</td>
-<td align="left">Java8以及以下版本内存拷贝时的最大阈值，最大为1M（1024L * 1024L）</td>
-</tr>
-<tr>
-<td>UNALIGNED</td>
-<td align="left">java.nio.Bits#unaligned方法在当前系统是否可用</td>
-</tr>
-</tbody></table>
-<h3 id="赋值流程"><a href="#赋值流程" class="headerlink" title="赋值流程"></a>赋值流程</h3><p>这部分主要针对当前运行的系统平台是否支持UNSAFE等众多涉及到堆外内存分配的属性是否支持，以及赋值给成员变量，在static静态块中判断。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131171437.png"></p>
-<p><strong>@1 检查平台是否支持Unsafe，不支持将异常错误封装在UNSAFE_UNAVAILABILITY_CAUSE中</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131102931.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131103148.png"></p>
-<p><strong>@2 如果系统支持Unsafe，检查Unsafe类中是否包含copyMemory方法，不支持禁用Unsaf</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131103401.png"></p>
-<p><strong>@3 检查Buffer类的内存地址address功能，不支持禁用Unsafe</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131103802.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131172146.png"></p>
-<p><strong>@4 检查Unsafe类中的arrayIndexScale方法是否支持，不支持禁用Unsafe</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131104315.png"></p>
-<p><strong>@5 检查是否支持反射获取DirectBuffer的构造器，方便堆外内存分配</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131110146.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131110242.png"></p>
-<p><strong>@6 检查系统是否支持java.nio.Bits#unaligned方法</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131172239.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131172305.png"></p>
-<p><strong>@7 Java9以及以上版本检查jdk.internal.misc.Unsafe以及其方法allocateUninitializedArray，并赋值给INTERNAL_UNSAFE和ALLOCATE_ARRAY_METHOD</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131111631.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131172450.png"></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210131111747.png"></p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/821aaf66/#more" rel="contents">
@@ -379,7 +373,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:28:53" itemprop="dateModified" datetime="2021-02-02T19:28:53+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -404,24 +398,6 @@
       
           <h1 id="常见问题一"><a href="#常见问题一" class="headerlink" title="常见问题一"></a>常见问题一</h1><p><strong>问：</strong> RocketMQ消费者订阅了tag，但却收不到消息无法消费，并且根据 msgid 去查询，发现这条消息的状态为 CONSUMED_BUT_FILTERED，那这是为什么？</p>
 <p><strong>答：</strong> 在RocketMQ中，一个消费组能同时订阅多个 tag，但一个消费组的不同消费者不能分开订阅不同的tag，即同一个消费组的订阅关系必须保持一样。例如：常见错误使用方式同一个项目中，一段消费代码订阅tagA，然后拷贝到这段代码再更改为tagB。</p>
-<p><strong>正确用法</strong> </p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">subscribe</span><span class="params">()</span></span>&#123;</span><br><span class="line">	DefaultMQPushConsumer consumer = <span class="keyword">new</span> DefaultMQPushConsumer(<span class="string">&quot;melon_online_test_consumer&quot;</span>);</span><br><span class="line">	consumer.subscribe(<span class="string">&quot;melon_online_test&quot;</span>,<span class="string">&quot;tag1 || tag2 || tag3&quot;</span>);</span><br><span class="line">&#125;  </span><br></pre></td></tr></table></figure>
-
-<p><strong>错误用法</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SubscribeTest</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">subscribeA</span><span class="params">()</span></span>&#123;</span><br><span class="line">    DefaultMQPushConsumer consumer = <span class="keyword">new</span> DefaultMQPushConsumer(<span class="string">&quot;melon_online_test_consumer&quot;</span>);</span><br><span class="line">    consumer.subscribe(<span class="string">&quot;melon_online_test&quot;</span>,<span class="string">&quot;tag1&quot;</span>);</span><br><span class="line">  &#125; </span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">subscribeB</span><span class="params">()</span></span>&#123;</span><br><span class="line">    DefaultMQPushConsumer consumer = <span class="keyword">new</span> DefaultMQPushConsumer(<span class="string">&quot;melon_online_test_consumer&quot;</span>);</span><br><span class="line">    consumer.subscribe(<span class="string">&quot;melon_online_test&quot;</span>,<span class="string">&quot;tag2&quot;</span>);</span><br><span class="line">  &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-
-
-<h1 id="常见问题二"><a href="#常见问题二" class="headerlink" title="常见问题二"></a>常见问题二</h1><p><strong>问：</strong> 发现大量的RocketMQ client 大量的info日志输出，我不关心，如何禁用呢？</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210125093344.png"></p>
-<p><strong>答：</strong> 尝试以下设置，项目中使用了Slf4j<br>@1 可以配置RocketmqClient的logger设置优先级为warn</p>
-<p>@2 也可以通过-Drocketmq.client.logUseSlf4j=false 和 -Drocketmq.client.logLevel=WARN 关闭MQ客户端使用Slf4j并提高日志等级</p>
-<p>项目中没有使用Slf4j，可以通过-Drocketmq.client.logLevel=WARN调高日志等级。</p>
-<h1 id="常见问题三"><a href="#常见问题三" class="headerlink" title="常见问题三"></a>常见问题三</h1><p><strong>问：</strong> 我的服务消费后需要调用第三方接口，别人的接口调用有限制，Rocketmq消费可以限流吗？</p>
-<p><strong>答：</strong> RocketMQ本身没有类似每秒消费多少条数据的精确限流，我们可以结合Sentienl来实现，示例代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> String KEY = <span class="string">&quot;melon_topic:melon_consumer&quot;</span>; <span class="comment">// 资源名称由topic和消费组构成</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException, MQClientException </span>&#123;</span><br><span class="line">    initFlowControlRule(); <span class="comment">// Sentinel流控规则</span></span><br><span class="line">    DefaultMQPushConsumer consumer = <span class="keyword">new</span> DefaultMQPushConsumer(<span class="string">&quot;melon_consumer&quot;</span>);</span><br><span class="line">    consumer.setNamesrvAddr(<span class="string">&quot;localhost:9876&quot;</span>);</span><br><span class="line">    consumer.subscribe(<span class="string">&quot;melon_topic&quot;</span>, <span class="string">&quot;*&quot;</span>);</span><br><span class="line">    consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);</span><br><span class="line">    consumer.registerMessageListener(<span class="keyword">new</span> MessageListenerConcurrently() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ConsumeConcurrentlyStatus <span class="title">consumeMessage</span><span class="params">(List&lt;MessageExt&gt; msgs, ConsumeConcurrentlyContext context)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (MessageExt msg : msgs) &#123;</span><br><span class="line">                Entry entry = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    ContextUtil.enter(KEY); <span class="comment">// 定义资源</span></span><br><span class="line">                    entry = SphU.entry(KEY, EntryType.OUT);</span><br><span class="line">                    System.out.printf(<span class="string">&quot;%s Receive New Messages: %s %n&quot;</span>, Thread.currentThread().getName(), msg);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (BlockException ex) &#123;</span><br><span class="line">                    <span class="comment">// Blocked.被限流后消息重试</span></span><br><span class="line">                    <span class="keyword">return</span> ConsumeConcurrentlyStatus.RECONSUME_LATER;</span><br><span class="line">                &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (entry != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        entry.exit();</span><br><span class="line">                    &#125;</span><br><span class="line">                    ContextUtil.exit();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> ConsumeConcurrentlyStatus.CONSUME_SUCCESS;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    consumer.start();</span><br><span class="line">    System.out.printf(<span class="string">&quot;Consumer Started.%n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">initFlowControlRule</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    FlowRule rule = <span class="keyword">new</span> FlowRule();</span><br><span class="line">    rule.setResource(KEY);</span><br><span class="line">    rule.setCount(<span class="number">5</span>);<span class="comment">// 每秒通过5条消息</span></span><br><span class="line">    rule.setGrade(RuleConstant.FLOW_GRADE_QPS);</span><br><span class="line">    rule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_RATE_LIMITER);</span><br><span class="line">    rule.setMaxQueueingTimeMs(<span class="number">5</span> * <span class="number">1000</span>); <span class="comment">// 排队超时时间5秒</span></span><br><span class="line">    FlowRuleManager.loadRules(Collections.singletonList(rule));</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/f75406c8/#more" rel="contents">
@@ -479,7 +455,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:30:34" itemprop="dateModified" datetime="2021-02-02T19:30:34+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -503,90 +479,6 @@
 
       
           <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p> 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。</p>
-<h1 id="内存分配器概览"><a href="#内存分配器概览" class="headerlink" title="内存分配器概览"></a>内存分配器概览</h1><p><strong>堆外内存&amp;堆内存</strong> </p>
-<table>
-<thead>
-<tr>
-<th>分配方式</th>
-<th>优点</th>
-<th>缺点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>堆内存</td>
-<td>JVM负责内存的分配与回收</td>
-<td>数据过多会引起频繁GC和停顿；<br />多一次拷贝，在用户态分配、I/O通信需要数据拷贝到内核态</td>
-</tr>
-<tr>
-<td>堆外内存</td>
-<td>I/O性能高，直接在内核态分配<br />降低GC频率和停顿</td>
-<td>内存分配和收回比较慢、需要手动处理</td>
-</tr>
-</tbody></table>
-<p><strong>内存分配器类图</strong> </p>
-<p>字节缓存的分配出自ByteBufAllocator，其实现类AbstractByteBufAllocator（抽象类）、PooledByteBufAllocator（池化内存分配器）、UnpooledByteBufAllocator（非池化内存分配器）、PreferHeapByteBufAllocator（堆内存分配器）、PreferredDirectByteBufAllocator（堆外内存分配器）。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%B1%BB%E5%9B%BE%20(1).png"></p>
-<p><strong>主要接口</strong> </p>
-<table>
-<thead>
-<tr>
-<th>接口</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>ByteBuf buffer()</td>
-<td>分配一块字节缓存，由其实现类决定堆外内存或者堆内存</td>
-</tr>
-<tr>
-<td>ByteBuf ioBuffer()</td>
-<td>系统支持UNSAFE和CLEANER则优先分配堆外内存；否则分配堆内存。</td>
-</tr>
-<tr>
-<td>ByteBuf heapBuffer()</td>
-<td>分配堆内存字节缓存区</td>
-</tr>
-<tr>
-<td>ByteBuf directBuffer()</td>
-<td>分配堆外内存字节缓存区</td>
-</tr>
-<tr>
-<td>CompositeByteBuf compositeBuffer()</td>
-<td>分配一个CompositeByteBuf（将多个buffers组合成一个buffer）<br />由实现类决定堆内存或者堆外内存</td>
-</tr>
-</tbody></table>
-<h1 id="内存分配器API解读"><a href="#内存分配器API解读" class="headerlink" title="内存分配器API解读"></a>内存分配器API解读</h1><p>下面走查下抽象内存分配器AbstractByteBufAllocator的API。</p>
-<p><strong>构造函数</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> directByDefault;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> ByteBuf emptyBuf;</span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="title">AbstractByteBufAllocator</span><span class="params">(<span class="keyword">boolean</span> preferDirect)</span> </span>&#123;</span><br><span class="line">  directByDefault = preferDirect &amp;&amp; PlatformDependent.hasUnsafe(); <span class="comment">// 注解@1</span></span><br><span class="line">  emptyBuf = <span class="keyword">new</span> EmptyByteBuf(<span class="keyword">this</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@1</strong> directByDefault是否使用堆外内存分配，满足两个条件。preferDirect布尔型用户传入；PlatformDependent.hasUnsafe() 系统是否支持UNSAFE（通过内存指针进行堆外内存分配）；即：用户传入preferDirect=true并且系统支持UNSAFE则使用堆外内存。</p>
-<p><strong>buffer()</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">buffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@2</span></span><br><span class="line">  <span class="keyword">if</span> (directByDefault) &#123;</span><br><span class="line">    <span class="keyword">return</span> directBuffer();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> heapBuffer();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@2</strong> directByDefault如果为true使用堆外内存分配DirectByteBuffer，底层使用unsafe.allocateMemory分配。</p>
-<p>directByDefault如果为false使用堆内存分配 new byte[initialCapacity]。</p>
-<p><strong>ioBuffer</strong> </p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">ioBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@3</span></span><br><span class="line">  <span class="keyword">if</span> (PlatformDependent.hasUnsafe() || isDirectBufferPooled()) &#123;</span><br><span class="line">  <span class="keyword">return</span> directBuffer(DEFAULT_INITIAL_CAPACITY);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> heapBuffer(DEFAULT_INITIAL_CAPACITY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@3</strong> 如果系统支持UNSAFE或者使用池化内存，优先分配堆外内存，否则分配堆内存。</p>
-<p><strong>heapBuffer</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">heapBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@4</span></span><br><span class="line">	<span class="keyword">return</span> heapBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@4</strong> 分配堆外内存new一个byte数组（new byte[]）。</p>
-<p><strong>directBuffer</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">directBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@5</span></span><br><span class="line">	<span class="keyword">return</span> directBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@5</strong> 分配堆外内存。</p>
-<p><strong>compositeBuffer</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> CompositeByteBuf <span class="title">compositeBuffer</span><span class="params">()</span> </span>&#123; <span class="comment">// 注解@6</span></span><br><span class="line">  <span class="keyword">if</span> (directByDefault) &#123;</span><br><span class="line">  	<span class="keyword">return</span> compositeDirectBuffer();</span><br><span class="line">  &#125;</span><br><span class="line">	<span class="keyword">return</span> compositeHeapBuffer();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@6</strong> 跟上面一样的，只是分配的CompositeByteBuf。下面看下这种将多个个buffer组合成一个buffer是如何实现的。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> CompositeByteBuf <span class="title">compositeHeapBuffer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> compositeHeapBuffer(DEFAULT_MAX_COMPONENTS);</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> CompositeByteBuf <span class="title">compositeHeapBuffer</span><span class="params">(<span class="keyword">int</span> maxNumComponents)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> toLeakAwareBuffer(<span class="keyword">new</span> CompositeByteBuf(<span class="keyword">this</span>, <span class="keyword">false</span>, maxNumComponents));</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="title">CompositeByteBuf</span><span class="params">(ByteBufAllocator alloc, <span class="keyword">boolean</span> direct, <span class="keyword">int</span> maxNumComponents, <span class="keyword">int</span> initSize)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.alloc = ObjectUtil.checkNotNull(alloc, <span class="string">&quot;alloc&quot;</span>);</span><br><span class="line">  <span class="keyword">if</span> (maxNumComponents &lt; <span class="number">1</span>) &#123;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(</span><br><span class="line">  <span class="string">&quot;maxNumComponents: &quot;</span> + maxNumComponents + <span class="string">&quot; (expected: &gt;= 1)&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.direct = direct;</span><br><span class="line">  <span class="keyword">this</span>.maxNumComponents = maxNumComponents;</span><br><span class="line">  components = newCompArray(initSize, maxNumComponents); <span class="comment">// 注解@6.1</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@6.1</strong> 在CompositeByteBuf的构造方法中初始化了一个components，这个默认initSize=0；maxNumComponents默认为16。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Component[] newCompArray(<span class="keyword">int</span> initComponents, <span class="keyword">int</span> maxNumComponents) &#123;</span><br><span class="line">	<span class="keyword">int</span> capacityGuess = Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents);</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">new</span> Component[Math.max(initComponents, capacityGuess)]; <span class="comment">// 注解@6.2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@6.2</strong> components是Component的对象数组，数组大小默认为16. </p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/2e57625b/#more" rel="contents">
@@ -644,7 +536,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:38:25" itemprop="dateModified" datetime="2021-02-02T19:38:25+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:04:40" itemprop="dateModified" datetime="2021-02-10T10:04:40+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -668,26 +560,6 @@
 
       
           <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>微服务成了互联网架构的标配模式，对微服务之间的调用的流量治理和管控就尤为重要。哪些场景需要流量防控，针对这些场景又有哪些应对措施。有没有一个通用的措施来降低风险呢？这篇文章咱就聊聊这个。</p>
-<h1 id="服务被过载调用"><a href="#服务被过载调用" class="headerlink" title="服务被过载调用"></a>服务被过载调用</h1><p>当服务D的某个接口服务被上游服务过载调用时，如果不对服务D加入保护，可能整体将服务D整体拖垮。在这种场景中，我们需要对服务D配置限流，以保护服务D不被整体冲跨。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E9%99%90%E6%B5%81.png"></p>
-<p><strong>应对措施：</strong> 针对服务提供方D配置流量防护规则，对进入服务D的流量进行控制，从而对服务D提供保护。触发流控时可以有多重策略，例如：快速失败、预热模式、排队等待、预热模式+排队等待。</p>
-<p><strong>快速失败：</strong> 发生流控时直接抛出异常。</p>
-<p><strong>预热模式：</strong> 发生流控时，流量缓慢增加的一种模式，效果如下图所示，流量QPS从200缓慢增加到600。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210109141101.png"></p>
-<p><strong>排队等待：</strong> 请求匀速通过，过多请求需要排队，此时排队有超时时间，超过排队时间抛出流控异常。效果如下图所示：请求QPS保持1000的匀速通过。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210109141720.png"></p>
-<p><strong>预热模式+排队等待：</strong> 这种模式是预热和排队等待的叠加模式，请求以匀速的方式缓慢增加。如下图：请求从0缓慢增加到500，匀速通过一段时间后，再增加到1000。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210109142131.png"></p>
-<h1 id="服务慢调用或故障"><a href="#服务慢调用或故障" class="headerlink" title="服务慢调用或故障"></a>服务慢调用或故障</h1><p>下面的场景A调用B、A调用C、A调用D，当服务B服务不稳定时，服务A调用服务B发生了慢调用或者大量异常错误。这种场景，如果不干预，可能影响到A调用C和A调用D的状况。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%86%94%E6%96%AD%E9%99%8D%E7%BA%A7.png"></p>
-<p><strong>应对措施：</strong> A调用B配置熔断降级规则，当服务B不稳定发生慢调用或者异常时，如果触发阈值，将服务B的调用熔断；从而保护了服务A调用C、服务A调用D的正常情况。</p>
-<p><strong>熔断效果：</strong> 熔断的实现通常通过断路器实现，具体过程为：</p>
-<ul>
-<li>当满足慢调用比例、异常比例、异常数量阈值后，触发熔断（OPEN），在熔断时长内拒绝所有请求</li>
-<li>当熔断过了定义的熔断时长，状态由熔断（OPEN）变为探测（HALF_OPEN）</li>
-<li>接下来的一个请求不发生慢调用或者异常，熔断结束由探测状态（HALF_OPEN）变为（CLOSED）</li>
-<li>接下来的一个请求发生慢调用或者异常，继续熔断，由探测状态（HALF_OPEN）变为（OPEN）</li>
-</ul>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/9bf5e4df/#more" rel="contents">
@@ -745,7 +617,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:36:14" itemprop="dateModified" datetime="2021-02-02T19:36:14+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -777,32 +649,6 @@
 <p>如何度过困难期呢？困难千千万万，每个人都不同？困难有大有小，多大的事算困难？</p>
 <p>这事老梁其实也不知道，可不是么？帮人度苦度难那是菩萨的事情呀。。。</p>
 <p>把天聊死了，还能聊不？老梁想了想，让我给讲两个故事吧。。。</p>
-<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><p>杨博，今湖北石首市人。27岁考了全省第一（解元），28岁中进士，考了全国第21名（二甲18名）。</p>
-<p>授予翰林院编修，翰林院之前说过，这个地方是宰相培训班，帝国栋梁的摇篮。</p>
-<p>永乐初年改授洗马，洗马是官职，可以理解为幕僚，跟着太子朱高炽混，这份工作很有前途，太子未来的皇帝。</p>
-<p>嗯，看到了吧，管自己能干也不行，还得跟着赏识你的老板才行！</p>
-<p>明永乐十二年（1414年），瓦刺（蒙古族）逐渐发展壮大，经常冒犯大明边界。</p>
-<p>永乐大帝朱棣决定御驾亲征，率领50万大军远征，令太子朱高炽监国。</p>
-<p>朱棣是个厉害的皇帝，上马能打仗，下马能治国，全能型的。</p>
-<p>这次出征朱棣打赢了，瓦刺受到重创，被打怕了，以后多年不敢犯边。</p>
-<p>班师凯旋，太子朱高炽迎驾慢了点。朱棣大怒，迁怒太子，把太子的随从都扔进了诏狱。</p>
-<p>就因为迎驾慢了点就这么玩？也太搞了吧。。。明面是迎驾慢，其实是有人进了谗言诋毁太子。</p>
-<p>毕竟想当太子的还有朱高炽的弟弟朱高煦。总之诋毁起了作用，太子势力被打压。</p>
-<p>很不幸杨博也被关进了诏狱。。。这一关就是10年啊，这年杨博42岁，出来都52岁了。</p>
-<p>诏狱就是皇上下诏要关的人，这里没皇上说话基本这辈子算是交代了。</p>
-<p>诏狱刑法非常残酷，上夹棍、剥皮、舌、断脊、堕指、刺心、琵琶等几十种。用这种东西招呼人，生不如死。不是怀疑人生的问题，是后悔生出来。</p>
-<p>人生能有几个十年，一般在里面呆这么久基本算是废了。杨博就这么进去了，想送钱捞人不不知道送给谁。</p>
-<p>皇帝下的旨，难不成给皇帝送礼去？那地方过了今天不知道能不能熬过明天。</p>
-<p>很多跟杨博一起进去的忍受不了这份煎熬，死在了里面。</p>
-<p>好在杨博没受大的刑法，家里没能力给皇上送钱，给看监狱的送还是可以的，家里送了很多书给杨博。</p>
-<p>反正也出不去，也不知道哪天就没命了，索性不想了。</p>
-<p>能读一天是一天吧，杨博把所有的精力和时间全部投入到读书之中。</p>
-<p>读啥书呢？各类经史子集书籍。</p>
-<p>在杨博45岁那边，太子朱高炽的地位总算是稳固了，他弟弟被赶到山东惠民县就藩汉王。朱棣也没再为难杨博，但是一直关着直到朱棣去世，太子朱高炽继位才被放出来。</p>
-<p>毕竟因为太子才坐了十年的牢，朱高炽非常怜惜杨博。为了报答，一路重用高升，历经三朝最终官至内阁首辅、武英殿大学士。</p>
-<p>经历了十年牢灾的杨博，为人宽静、大家有争议时都能平心处之、大家都佩服。</p>
-<p>看到了吧，为人宽静、平心处之！这份豁达与蹲了十年监狱不无关系。</p>
-<p>坐牢还坐出好来了，所以有时候经历点挫折也不是坏事。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/43fa99ab/#more" rel="contents">
@@ -860,7 +706,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:36:31" itemprop="dateModified" datetime="2021-02-02T19:36:31+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -888,30 +734,6 @@
 <p>上周文章《仰望星空》，老梁说多看看历史和生活中的星星，让他们给咱照亮前进的路。</p>
 <p>有朋友怼老梁，管看星星有啥用，看就能解决问题了？该踩的坑还要踩，该流的泪还要流。</p>
 <p>老梁想了想，可不是么？该受的难还得受，苍天绕过谁。。。</p>
-<h2 id="二"><a href="#二" class="headerlink" title="二"></a>二</h2><p>弘治元年（1488年）杨慎生于北京，祖籍四川成都人。爹是内阁首辅、东阁大学士杨廷和。不当爹是副国级，爷爷也是1481年的进士。</p>
-<p>进士可不是那么容易的，首先你得先考中秀才，再考中举人，才有资格参加进士考试。进士考试的录取比例大约9%，平均每年也就百八十号人。。。</p>
-<p>嗯，妥妥的官二代。</p>
-<p>总有那么有些人，长得比你帅，出生比你好，还比你更努力，杨慎就是这号人。11岁就能作诗，12岁做的文章就得到当时文学家、书法家李东阳赞赏，收到其门下学习。</p>
-<p>嗯，读书是要点天分的。</p>
-<p>明武宗正德六年（1511年），24岁的杨慎考中状元，进士及第，授翰林院修撰。刚毕业就是修撰从六品官职，县太爷是七品，多少人体制内的人，熬啊熬。熬一辈子才是副科待遇，副科也就是从九品吧。</p>
-<p>关键是在翰林院就业，这地方能进去的都是蔗吉士。啥概念，一甲三人（状元、榜眼、探花）和二甲中的头几名才有资格进去的。这是宰相培训班、帝国柱梁的摇篮。</p>
-<p>这么下去，杨慎就是做不了宰相，最少熬个副部级没问题，前途一片光明。</p>
-<p>嘉靖三年（1524年），发生了”大议礼“事件后，杨慎确挨了板子，被贬出京城，这年33岁。</p>
-<p>明武宗朱厚照，去世时没子嗣。按照兄终弟及的祖训，朱厚熜被选为帝国皇帝，即嘉靖。</p>
-<p>大议礼争来争去就是给朱厚熜他爸的主祀及封号问题。杨廷和给出的他爹封号为“皇叔考兴献大王”，他妈为“皇叔母兴国大妃”，祭祀时其亲生父母自称“侄皇帝”。原因很简单，他爹是王爷没做过皇帝，皇位是从堂兄手上继承过来的，朱厚熜不同意。</p>
-<p>在这次事件中，杨慎与两百多位官员，在左順門哭天喊地，请皇上同意他们的主张。杨慎是带头大哥之一，并说”國家養士百五十年，仗節死義，正在今日“。</p>
-<p>那会当官还真团结，一起跟皇上叫板。</p>
-<p>皇上也不客气，两百多位，一个别想跑，廷杖！廷杖就是打屁股，还褪去裤子打，被打的还是高干们，这次廷杖死了16人。</p>
-<p>杨慎也被打了，被打的皮开肉绽，差点昏死过去，然后被贬到了今云南保山市，年七十二岁终于被贬之地，终身未再复用。</p>
-<p>就这事争了三年才算完，最后嘉靖赢了，其父上尊号“皇考恭穆献皇帝”，其母尊号“圣母章圣皇太后”。</p>
-<p>惨不惨，是真的惨！自幼才华横溢、家世显赫、高中状元、进士极第，一次事件中就被扫到祖国边疆终身不许离开一直到老。</p>
-<p>如果这都不算难的话，什么才是难！受此劫难后，安邦立国、指点江山不可能了，他把余生投入到读书写作中。《明史》记载杨慎的 “明世记诵之博，著作之富，推慎为第一。詩文外，雜著至一百余種，并行于世。” </p>
-<p>下面《三国演义》第一回的开篇词就是出自杨慎大才子的《临江仙》：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">滚滚长江东逝水，浪花淘尽英雄。是非成败转头空，青山依旧在，几度夕阳红。</span><br><span class="line">白发渔樵江渚上，惯看秋月春风。一壶浊酒喜相逢，古今多少事，都付笑谈中。</span><br></pre></td></tr></table></figure>
-
-
-
-<p>嗯，至于杨慎落难时如何熬过去的，只有他知道。。。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/bb2245d5/#more" rel="contents">
@@ -969,7 +791,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:33:12" itemprop="dateModified" datetime="2021-02-02T19:33:12+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -998,43 +820,6 @@
 <p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
 <p>嗯，不是谁都能当老板。</p>
 <p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-<h1 id="多看看历史星空中的星星"><a href="#多看看历史星空中的星星" class="headerlink" title="多看看历史星空中的星星"></a>多看看历史星空中的星星</h1><p>明正统十四年（1449年）八月，明英宗朱祁镇率军50万御驾亲征瓦刺，命弟弟朱祁钰留守京城。</p>
-<p>皇上这年22岁，还是一个容易被蛊惑的年轻人，说是御驾亲征，实际由太监王振指挥。</p>
-<p>王振不懂军事，一通乱指挥后，被瓦刺首领也先在今河北省张家口市怀来县境内的土木堡围猎。</p>
-<p>20万大军损失大半，精锐尽失，皇上也被瓦刺掳走了，跟随出征的高官阵亡五十余人。</p>
-<p>国不可一日无君，八月十八日皇太后命朱祁钰监国，八月二十九日百官拥立朱祁钰为帝，即景帝。</p>
-<p>这一个月的变化真是太大了，而且瓦刺马上就要打到北京了，大明危在旦夕。</p>
-<p>景帝命于谦为兵部尚书，原来的尚书邝埜呢？也在土木堡阵亡了。然而主战还是南迁成了争论的焦点。</p>
-<p>以徐珵为代表的大臣主张南迁，北京守不住，原因很简单，精锐部队都埋葬在土木堡了，拿什么守！</p>
-<p>于谦主战认为“京师天下根本，一动则大事去矣”。呵斥 “言南迁者，可斩也”。</p>
-<p>于谦的建议得到了吏部尚书等人的支持，廷议最后决定固守北京，皇上把北京守卫重任交给了于谦。</p>
-<p>皇上心里也没底，守说着容易，20万都打没了，现在京城不到10万军队还都是老弱病残居多。</p>
-<p>有兵的话还廷议个啥，直接打就完了，这不是没兵嘛。</p>
-<p>没了精锐就拿后备军凑，于谦命令各地备操军、备倭军、运粮军按时到京城布防，违令者斩！</p>
-<p>嗯，清一色后备役。。。</p>
-<p>这些后备役差不多有10万人，并要求途径通州粮仓把粮食顺便带到京城。</p>
-<p>九月初，各路人马总算集合完毕，二十二万人，粮食问题也解决了。</p>
-<p>十月十一日瓦刺军队来了，他们只用了11天就打到了北京城下，更增加了他们拿下北京的信心。</p>
-<p>“京城必破，大元必兴”！</p>
-<p>于谦召集将领召开战前会议，聊如何退敌。</p>
-<p>大将石享提出敌军实力远超明军，应该坚壁清野，等待敌军疲惫后自然退兵。</p>
-<p>大家比较赞同这个，但是一个人反对，这个是于谦，他是总指挥，是说了算的人。</p>
-<p>找你们来，不是跟你们商量的，让你们来听令的！他的军令：</p>
-<p>“大军全部开出九门之外，列阵迎敌”</p>
-<p>“锦衣卫巡查城内，但凡查到有盔甲军士不出城作战者，格杀勿论！”</p>
-<p>“九门是京城门户，若有丢失立斩！”</p>
-<p>“临阵，将不顾军先退者，立斩！“</p>
-<p>“临阵，军不顾将先退者，后队斩前队！”</p>
-<p>“敢违军令者，格杀勿论！”</p>
-<p>“大军开战之日，众将率军出城之后，立即关闭九门，有敢擅自放入城者立斩！”</p>
-<p>嗯，在玩命！不玩命，大明就完了，这次输不起。</p>
-<p>最终于谦带领着这只大部分的后备役军队逼退了瓦刺军，取得了北京保卫战的胜利。</p>
-<p>于谦有大明再造之功！下面是他老人家的一首《石灰吟》，感受下他的风骨：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">千锤万凿出深山，烈火焚烧若等闲。</span><br><span class="line"></span><br><span class="line">粉骨碎身浑不怕，要留清白在人间。</span><br></pre></td></tr></table></figure>
-
-
-
-<p>他那是历史星空中耀眼的一颗星星，每次翻开这段历史，总是那么明亮，让人充满敬意！</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/8a7728e3/#more" rel="contents">
@@ -1092,7 +877,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:30:19" itemprop="dateModified" datetime="2021-02-02T19:30:19+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -1116,70 +901,6 @@
 
       
           <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。</p>
-<h1 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h1><p><strong>ByteBuf创建</strong></p>
-<p>使用Unpooled类来创建ByteBuf，不建议使用ByteBuf的构造函数自己去创建。</p>
-<p><strong>读写索引</strong></p>
-<p>ByteBuf提供了两个指针readerIndex和writerIndex，分别记录读、写的开始位置。两个指针将ByteBuf分成了三个区域。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102104805.png"></p>
-<p><strong>discardable bytes</strong> </p>
-<p>这个区间的范围为0~readerIndex，已经被读过的、可废弃的区域。通过调用discardReadBytes()，可以释放discardable bytes区域。这个区域释放后，可写区域（writable bytes）部分增多。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102141428.png"></p>
-<p><strong>readable bytes</strong></p>
-<p>可读区域的范围为（writerIndex-readerIndex）</p>
-<p><strong>writable bytes</strong></p>
-<p>可写区域的范围为（capacity-writerIndex）</p>
-<p><strong>清理索引</strong></p>
-<p>调用Buffer.clear()后，读写索引全部归零，缓存buffer被释放。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210102143322.png"></p>
-<h1 id="ByteBuf的构建"><a href="#ByteBuf的构建" class="headerlink" title="ByteBuf的构建"></a><strong>ByteBuf的构建</strong></h1><p>接下来通过示例窜下上面的知识点，看下源码是如何实现的，示例中将字符串写入ByteBuf中，然后再读出来打印。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testWriteUtf81</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     String str1 = <span class="string">&quot;瓜农&quot;</span>;</span><br><span class="line">     ByteBuf buf = Unpooled.buffer(<span class="number">1</span>);</span><br><span class="line">     buf.writeBytes(str1.getBytes(CharsetUtil.UTF_8));</span><br><span class="line">     ByteBuf readByteBuf = ByteBufUtil.readBytes(UnpooledByteBufAllocator.DEFAULT,buf,str1.getBytes(CharsetUtil.UTF_8).length);</span><br><span class="line">     System.out.print(readByteBuf.toString(CharsetUtil.UTF_8));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>源码解读</strong> </p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ByteBuf <span class="title">buffer</span><span class="params">(<span class="keyword">int</span> initialCapacity)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> ALLOC.heapBuffer(initialCapacity); <span class="comment">// 注解@1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">heapBuffer</span><span class="params">(<span class="keyword">int</span> initialCapacity)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> heapBuffer(initialCapacity, DEFAULT_MAX_CAPACITY); <span class="comment">// 注解@2</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">InstrumentedUnpooledUnsafeHeapByteBuf(UnpooledByteBufAllocator alloc, <span class="keyword">int</span> initialCapacity, <span class="keyword">int</span> maxCapacity) &#123;</span><br><span class="line">  <span class="keyword">super</span>(alloc, initialCapacity, maxCapacity);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">UnpooledHeapByteBuf</span><span class="params">(ByteBufAllocator alloc, <span class="keyword">int</span> initialCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>(maxCapacity);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (initialCapacity &gt; maxCapacity) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(</span><br><span class="line">      <span class="string">&quot;initialCapacity(%d) &gt; maxCapacity(%d)&quot;</span>, initialCapacity, maxCapacity));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.alloc = checkNotNull(alloc, <span class="string">&quot;alloc&quot;</span>);</span><br><span class="line">  setArray(allocateArray(initialCapacity)); <span class="comment">// 注解@3</span></span><br><span class="line">  setIndex(<span class="number">0</span>, <span class="number">0</span>); <span class="comment">// 注解@4</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@1</strong> 使用ByteBufAllocator来分配ByteBuf，默认为UnpooledByteBufAllocator。</p>
-<p><strong>注解@2</strong> initialCapacity为初始容量例子中给的为16，maxCapacity为默认的DEFAULT_MAX_CAPACITY=Integer.MAX_VALUE。</p>
-<p><strong>注解@3</strong> allocateArray()的方法如下，此时使用JDK的byte[]初始化缓存区。通过setArray()，UnpooledHeapByteBuf持有byte[]缓存区。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">protected</span> <span class="keyword">byte</span>[] allocateArray(<span class="keyword">int</span> initialCapacity) &#123;</span><br><span class="line">   <span class="keyword">return</span> <span class="keyword">new</span> <span class="keyword">byte</span>[initialCapacity];</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">setArray</span><span class="params">(<span class="keyword">byte</span>[] initialArray)</span> </span>&#123;</span><br><span class="line">  array = initialArray;</span><br><span class="line">  tmpNioBuf = <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@4</strong> 初始化readerIndex和writerIndex，均为0。</p>
-<p><strong>小结</strong> ByteBuf的构建通过Unpooled来分配，示例中通过UnpooledByteBufAllocator持有byte[]、 readerIndex、writerIndex、maxCapacity完成ByteBuf的初始化。 示例中array数组大小为16；readerIndex=writerIndex=0；maxCapacity=Integer.MAX_VALUE。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103092431.png"></p>
-<h1 id="写入数据"><a href="#写入数据" class="headerlink" title="写入数据"></a>写入数据</h1><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">writeBytes</span><span class="params">(<span class="keyword">byte</span>[] src, <span class="keyword">int</span> srcIndex, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">  ensureWritable(length); <span class="comment">// 注解@5</span></span><br><span class="line">  setBytes(writerIndex, src, srcIndex, length); <span class="comment">// 注解@6</span></span><br><span class="line">  writerIndex += length; <span class="comment">// 注解@7</span></span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@5</strong> 确保剩余的空间能够容纳需写入的数据。</p>
-<p>具体逻辑如下：<br>如果写入的数据长度小于已经分配的容量空间capacity则允许直接返回；</p>
-<p>如果写入的数据长度超过允许的最大容量maxCapacity直接抛出IndexOutOfBoundsException拒绝；</p>
-<p>如果写入数据长度大于已经分配的空间capacity但是小于最大最大允许空间maxCapacity，则需要扩容。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">ensureWritable0</span><span class="params">(<span class="keyword">int</span> minWritableBytes)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> writerIndex = writerIndex(); <span class="comment">// 注解@5.1</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> targetCapacity = writerIndex + minWritableBytes; <span class="comment">// 注解@5.2</span></span><br><span class="line">    <span class="keyword">if</span> (targetCapacity &lt;= capacity()) &#123; <span class="comment">// 注解@5.3</span></span><br><span class="line">        ensureAccessible();</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (checkBounds &amp;&amp; targetCapacity &gt; maxCapacity) &#123; <span class="comment">// 注解@5.4 </span></span><br><span class="line">        ensureAccessible();</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IndexOutOfBoundsException(String.format(</span><br><span class="line">                <span class="string">&quot;writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s&quot;</span>,</span><br><span class="line">                writerIndex, minWritableBytes, maxCapacity, <span class="keyword">this</span>));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Normalize the target capacity to the power of 2.</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> fastWritable = maxFastWritableBytes(); <span class="comment">// 注解@5.5 </span></span><br><span class="line">    <span class="keyword">int</span> newCapacity = fastWritable &gt;= minWritableBytes ? writerIndex + fastWritable</span><br><span class="line">            : alloc().calculateNewCapacity(targetCapacity, maxCapacity); <span class="comment">// 注解@5.6</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Adjust to the new capacity.</span></span><br><span class="line">    capacity(newCapacity); <span class="comment">// 注解@5.7</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@5.1</strong>  获取当前写索引</p>
-<p><strong>注解@5.2</strong> 计算需要的容量</p>
-<p>**注解@5.3 ** 与当前已分配的容量capacity进行比较</p>
-<p><strong>注解@5.4</strong> 不能超过最大允许的容量maxCapacity</p>
-<p><strong>注解@5.5</strong> fastWritable = capacity() - writerIndex</p>
-<p><strong>注解@5.6</strong> newCapacity的判断通常走到这里应该为，剩余的空间不够了。所以通常会进入alloc().calculateNewCapacity(targetCapacity, maxCapacity)。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">calculateNewCapacity</span><span class="params">(<span class="keyword">int</span> minNewCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> threshold = CALCULATE_THRESHOLD; <span class="comment">// 4 MiB page</span></span><br><span class="line">        <span class="keyword">if</span> (minNewCapacity == threshold) &#123; <span class="comment">// 注解@5.6.1</span></span><br><span class="line">            <span class="keyword">return</span> threshold;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// If over threshold, do not double but just increase by threshold.</span></span><br><span class="line">        <span class="keyword">if</span> (minNewCapacity &gt; threshold) &#123; <span class="comment">// 注解@5.6.2</span></span><br><span class="line">            <span class="keyword">int</span> newCapacity = minNewCapacity / threshold * threshold;</span><br><span class="line">            <span class="keyword">if</span> (newCapacity &gt; maxCapacity - threshold) &#123;</span><br><span class="line">                newCapacity = maxCapacity;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                newCapacity += threshold;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> newCapacity;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Not over threshold. Double up to 4 MiB, starting from 64.</span></span><br><span class="line">        <span class="keyword">int</span> newCapacity = <span class="number">64</span>;</span><br><span class="line">        <span class="keyword">while</span> (newCapacity &lt; minNewCapacity) &#123; <span class="comment">// 注解@5.6.3</span></span><br><span class="line">            newCapacity &lt;&lt;= <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> Math.min(newCapacity, maxCapacity);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@5.6.1</strong> 如果写入的数据长度刚好为4M则返回threshold=4M</p>
-<p><strong>注解@5.6.2</strong> 如果写入的数据长度大于4M，newCapacity不再翻倍增长，通过minNewCapacity / threshold * threshold计算刚容下需要的数据即可。</p>
-<p><strong>注解@5.6.3</strong> 如果写入的数据长度小于4M，则newCapacity从64翻倍增长（128、256、512…），直到newCapacity能够容纳需要写入的数据。</p>
-<p><strong>注解@5.7</strong> 确定了要扩容的容量newCapacity后，我们看下如何扩容的。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">capacity</span><span class="params">(<span class="keyword">int</span> newCapacity)</span> </span>&#123;</span><br><span class="line">    checkNewCapacity(newCapacity);</span><br><span class="line">    <span class="keyword">byte</span>[] oldArray = array;</span><br><span class="line">    <span class="keyword">int</span> oldCapacity = oldArray.length;</span><br><span class="line">    <span class="keyword">if</span> (newCapacity == oldCapacity) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> bytesToCopy;</span><br><span class="line">    <span class="keyword">if</span> (newCapacity &gt; oldCapacity) &#123;</span><br><span class="line">      bytesToCopy = oldCapacity;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      trimIndicesToCapacity(newCapacity);</span><br><span class="line">      bytesToCopy = newCapacity;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">byte</span>[] newArray = allocateArray(newCapacity); <span class="comment">// 注解@5.7.1</span></span><br><span class="line">    System.arraycopy(oldArray, <span class="number">0</span>, newArray, <span class="number">0</span>, bytesToCopy); <span class="comment">// 注解@5.7.2</span></span><br><span class="line">    setArray(newArray); <span class="comment">// 注解@5.7.3</span></span><br><span class="line">    freeArray(oldArray); <span class="comment">// 注解@5.7.4</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@5.7.1</strong> 使用新的容量初始化newArray=new byte[initialCapacity]</p>
-<p><strong>注解@5.7.2</strong> 将旧的oldArray数据拷贝到新的newArray=new中</p>
-<p><strong>注解@5.7.3</strong> 将UnpooledHeapByteBuf的byte[]引用替换为newArray</p>
-<p><strong>注解@5.7.4</strong> oldArray清理操作</p>
-<p><strong>注解@6</strong> 写入数据，通过System.arraycopy将数据写入array中。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ByteBuf <span class="title">setBytes</span><span class="params">(<span class="keyword">int</span> index, <span class="keyword">byte</span>[] src, <span class="keyword">int</span> srcIndex, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">  checkSrcIndex(index, length, srcIndex, src.length);</span><br><span class="line">  System.arraycopy(src, srcIndex, array, index, length);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@7</strong> 移动writerIndex指针。</p>
-<p><strong>小结：</strong> 将上面例子的initialCapacity设置成1，促使写入数据时扩充容量。下面运行时截图：array被扩容到64，writerIndex从0位置移动到6. </p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210103110741.png"></p>
-<p>在写入数据时，判断剩余容量是否足够；不够则需要扩容，如果写入的数据小于4M，则双倍增长，直到容纳写写入的数据。如果写入的数据大于4M，通过（minNewCapacity / threshold * threshold）计算需要扩容的大小。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/17c9a786/#more" rel="contents">
@@ -1237,7 +958,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:28:22" itemprop="dateModified" datetime="2021-02-02T19:28:22+08:00">2021-02-02</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -1263,136 +984,9 @@
           <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大家分享点干活的家伙。</p>
 <p>今天周末，这上海的天也冷了，晚上喝了点羊汤，到了一周中最放松的时刻。</p>
 <p>今天不聊技术，咱聊聊给老板画饼。 </p>
-<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><p>崇祯元年七月十四日，崇祯在平台召见袁崇焕，聊辽东的事。</p>
-<p>崇祯说卿是我大明的忠诚义士，有你在收复辽东我就放心了，卿需要多久可收复？</p>
-<p>袁崇焕答：“臣受陛下眷顾，以臣便宜行事，计五年全辽可复！”。</p>
-<p>崇祯太高兴了，说收复辽东，朕给你封侯赏赐绝不吝啬。</p>
-<p>会后，兵科给事中许誉卿向袁大人讨教平辽方略，袁大人答”聊慰上意“，看到皇上如此操劳，好言劝慰而已。许大人这下傻眼了，到时候干不成，皇上怪罪下来如何是好。</p>
-<p>再次会见时，袁大人意识到吹的大了，跟皇上要人、要钱、要权。崇祯全部答应，召集六部要求全部落实，嗯，皇上是认真的。</p>
-<p>崇祯二年十一月，皇太极率数十万大军绕道蒙古，避开山海关，突破长城，威胁北京。最后袁大人虽然统领各地援军最终逼退后金军队，北京解围。对了，袁大人在这一年多在未请示皇上的情况下，干掉了皮岛军区司令员毛文龙。</p>
-<p>崇祯二年十二月，后金退兵后，袁大人却下狱了。</p>
-<p>崇祯三年八月，袁崇焕被凌迟处死，被割了3000多刀，家人流徙三千里，财产没收。</p>
-<p>袁大人是从底层一点一点干起来的，自己的能力得到贵人兵部尚书、东阁大学士孙承宗赏识才有了后来的袁督师。对袁崇焕的奋斗史很受感动。临终绝笔诗《临刑口占》述说着他奋斗的一生。</p>
-<p>一生事业总成空，半世功名在梦中。<br>死后不愁无勇将，忠魂依旧守辽东。</p>
-<p>袁大人被杀的原因很多什么通敌、政治迫害就不聊这个了。</p>
-<p>有一点是袁大人忽悠了老板，而且忽悠的没了边，老板虽然不太懂军事，你不能这么忽悠。</p>
-<p>所谓期望越高失望越大，你说五年平辽，第二年后金打到了京城，这怎么解释？</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/4eda328d/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8c88e43/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/8c88e43/" class="post-title-link" itemprop="url">Netty7# Netty之事件传递</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-12-26 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-26T11:55:01+08:00">2020-12-26</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-02 19:30:02" itemprop="dateModified" datetime="2021-02-02T19:30:02+08:00">2021-02-02</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>前面的文章中写了Channel实例化、Channel初始化、Channel注册、异步通知机制、客户端发起连接、事件的轮询和处理机制。Netty作为client/server高效通信框架，事件在ChannelPipeline是如何传递的，本文就聊聊这事。</p>
-<h1 id="事件传递过程"><a href="#事件传递过程" class="headerlink" title="事件传递过程"></a>事件传递过程</h1><p>ChannelPipeline随着Channel的创建而创建，在 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/tvy0j0Mo9H82SK4jztqu0w">Netty2# Netty组件之Channel初始化 </a> 文章中梳理了ChannelPipeline、ChannelHandlerContext、ChannelHandler的关系如下图。</p>
-<p>ChannelPipeline大管道维护了一个ChannelHandlerContext链表，头部为HeadContext，尾部为TailContext。事件传播会沿着链表逐级向下传递。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201226112641.png"></p>
-<h3 id="Inbound-amp-Outbound标识"><a href="#Inbound-amp-Outbound标识" class="headerlink" title="Inbound&amp;Outbound标识"></a>Inbound&amp;Outbound标识</h3><p>当ChannelHandlerContext创建时，它是Inbound还是Outbound，是哪个方向的就确定了。下面分析是这种身份是如何确定的。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor,</span><br><span class="line">                              String name, Class&lt;? extends ChannelHandler&gt; handlerClass) &#123;</span><br><span class="line">    <span class="keyword">this</span>.name = ObjectUtil.checkNotNull(name, <span class="string">&quot;name&quot;</span>);</span><br><span class="line">    <span class="keyword">this</span>.pipeline = pipeline;</span><br><span class="line">    <span class="keyword">this</span>.executor = executor;</span><br><span class="line">    <span class="keyword">this</span>.executionMask = mask(handlerClass); <span class="comment">// 注解@1</span></span><br><span class="line">    ordered = executor == <span class="keyword">null</span> || executor <span class="keyword">instanceof</span> OrderedEventExecutor;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@1</strong> 父类的构造函数中有一个mask(handlerClass)方法，这个方法确定了ChannelHandlerContext的身份。如下代码ChannelInboundHandler.class.isAssignableFrom(handlerType)即如果是ChannelInboundHandler类型mask |= MASK_ALL_INBOUND；反之如果是ChannelOutboundHandler类型，mask |= MASK_ALL_OUTBOUND；<strong>通过赋予mask不同的值来区分是哪个方向的Handler</strong>。isSkippable中的逻辑判断主要对加注解@Skip的方法不再进行事件回调。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">mask0</span><span class="params">(Class&lt;? extends ChannelHandler&gt; handlerType)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> mask = MASK_EXCEPTION_CAUGHT;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (ChannelInboundHandler.class.isAssignableFrom(handlerType)) &#123;</span><br><span class="line">            mask |= MASK_ALL_INBOUND; <span class="comment">// 标识为INBOUND</span></span><br><span class="line">            <span class="keyword">if</span> (isSkippable(handlerType, <span class="string">&quot;channelRegistered&quot;</span>, ChannelHandlerContext.class))&#123;</span><br><span class="line">                mask &amp;= ~MASK_CHANNEL_REGISTERED;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) &#123;</span><br><span class="line">            mask |= MASK_ALL_OUTBOUND; <span class="comment">// 标识为OUTBOUND</span></span><br><span class="line">            <span class="keyword">if</span> (isSkippable(handlerType, <span class="string">&quot;bind&quot;</span>, ChannelHandlerContext.class,</span><br><span class="line">                    SocketAddress.class, ChannelPromise.class)) &#123;</span><br><span class="line">                mask &amp;= ~MASK_BIND;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">       <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> mask;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="Outbound传递过程"><a href="#Outbound传递过程" class="headerlink" title="Outbound传递过程"></a>Outbound传递过程</h3><p><strong>示例入口</strong> </p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ChannelFuture future = b.connect(HOST, PORT).sync(); </span><br><span class="line">future.channel().writeAndFlush(<span class="string">&quot;Hi&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>以writeAndFlush方法跟踪下Outbound事件在ChannelPipeline的传递过程。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> ChannelFuture <span class="title">writeAndFlush</span><span class="params">(Object msg)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> tail.writeAndFlush(msg); <span class="comment">// 注解@2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">private <span class="keyword">void</span> <span class="function"><span class="title">write</span>(<span class="params"><span class="built_in">Object</span> msg, boolean flush, ChannelPromise promise</span>)</span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">  	final AbstractChannelHandlerContext next = findContextOutbound(flush ?</span><br><span class="line">            (MASK_WRITE | MASK_FLUSH) : MASK_WRITE); <span class="comment">// 注解@3</span></span><br><span class="line">    final <span class="built_in">Object</span> m = pipeline.touch(msg, next);</span><br><span class="line">    EventExecutor executor = next.executor();</span><br><span class="line">    <span class="keyword">if</span> (executor.inEventLoop()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (flush) &#123;</span><br><span class="line">            next.invokeWriteAndFlush(m, promise);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            next.invokeWrite(m, promise);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        final WriteTask task = WriteTask.newInstance(next, m, promise, flush);</span><br><span class="line">        <span class="keyword">if</span> (!safeExecute(executor, task, promise, m, !flush)) &#123;</span><br><span class="line">            <span class="comment">//...</span></span><br><span class="line">            task.cancel();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> AbstractChannelHandlerContext <span class="title">findContextOutbound</span><span class="params">(<span class="keyword">int</span> mask)</span> </span>&#123;</span><br><span class="line">    AbstractChannelHandlerContext ctx = <span class="keyword">this</span>;</span><br><span class="line">    EventExecutor currentExecutor = executor();</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        ctx = ctx.prev;</span><br><span class="line">    &#125; <span class="keyword">while</span> (skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND)); <span class="comment">// 注解@4</span></span><br><span class="line">    <span class="keyword">return</span> ctx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">skipContext</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        AbstractChannelHandlerContext ctx, EventExecutor currentExecutor, <span class="keyword">int</span> mask, <span class="keyword">int</span> onlyMask)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> (ctx.executionMask &amp; (onlyMask | mask)) == <span class="number">0</span> ||</span><br><span class="line">            (ctx.executor() == currentExecutor &amp;&amp; (ctx.executionMask &amp; mask) == <span class="number">0</span>); <span class="comment">// 注解@5</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注解@2</strong> 从链表尾部TailContext开始执行。</p>
-<p><strong>注解@3</strong> 我们示例writeAndFlush所以findContextOutbound的mask为(MASK_WRITE | MASK_FLUSH)</p>
-<p><strong>注解@4</strong> 循环链表查找，注意skipContext是判断的跳过逻辑。我们查找Outbound的ChannelHandlerContext，遇到Inbound的都会跳过。</p>
-<p><strong>注解@5</strong> 判断是否跳过，这段逻辑是位操作，不好阅读。下面示例抽取各个入参的值测试下：如果下一个ChannelHandlerContext为inBound，则skipContext返回true，从而在查找outBound的do/while循环中跳过。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> executionMask =  MASK_EXCEPTION_CAUGHT |= MASK_ALL_INBOUND; <span class="comment">// inBound 身份标识</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> mask = MASK_WRITE | MASK_FLUSH; <span class="comment">// writeAndFlush 标识</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> onlyMask = MASK_ONLY_OUTBOUND; <span class="comment">// outBound操作集合</span></span><br><span class="line"></span><br><span class="line">System.out.println((executionMask &amp; (onlyMask | mask))==<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">输出为：<span class="keyword">true</span></span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>小结：</strong> outBound事件在ChannelPipeline中传递时，只会选择身份为outBound的ChannelHandlerContext执行。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/8c88e43/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1481,7 +1075,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-count">60</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

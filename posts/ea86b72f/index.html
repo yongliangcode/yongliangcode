@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言在Nacos服务端分析服务注册逻辑，就绕不开Distro协议。该协议为临时一致性协议，数据存储在缓存中。阿里专门为注册中心而设计的。后面文章逐步还原该协议承担的职责，本文先分析寻址模式。 内容提要寻址概念 寻址是指如何发现Nacos集群中节点变化的，当检测到变化时能后及时更新节点信息。  寻址模式 Nacos支持两种寻址模式分别为「文件寻址」和「地址服务器寻址」 默认为文件寻址，可以通过参数「">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos5# Distro协议寻址模式">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/ea86b72f/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言在Nacos服务端分析服务注册逻辑，就绕不开Distro协议。该协议为临时一致性协议，数据存储在缓存中。阿里专门为注册中心而设计的。后面文章逐步还原该协议承担的职责，本文先分析寻址模式。 内容提要寻址概念 寻址是指如何发现Nacos集群中节点变化的，当检测到变化时能后及时更新节点信息。  寻址模式 Nacos支持两种寻址模式分别为「文件寻址」和「地址服务器寻址」 默认为文件寻址，可以通过参数「">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-06-20T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.830Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/ea86b72f/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos5# Distro协议寻址模式 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ea86b72f/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos5# Distro协议寻址模式
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-06-20 11:55:01" itemprop="dateCreated datePublished" datetime="2021-06-20T11:55:01+08:00">2021-06-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在Nacos服务端分析服务注册逻辑，就绕不开Distro协议。该协议为临时一致性协议，数据存储在缓存中。阿里专门为注册中心而设计的。后面文章逐步还原该协议承担的职责，本文先分析寻址模式。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="寻址概念"><a href="#寻址概念" class="headerlink" title="寻址概念"></a>寻址概念</h3><ul>
+<li>寻址是指如何发现Nacos集群中节点变化的，当检测到变化时能后及时更新节点信息。</li>
+</ul>
+<h3 id="寻址模式"><a href="#寻址模式" class="headerlink" title="寻址模式"></a>寻址模式</h3><ul>
+<li>Nacos支持两种寻址模式分别为「文件寻址」和「地址服务器寻址」</li>
+<li>默认为文件寻址，可以通过参数「nacos.core.member.lookup.type」设置取值为「file」或者「address-server」</li>
+<li>文件寻址路径默认为 「${user.home}/nacos/conf/cluster.conf」</li>
+<li>文件寻址cluster.conf配置文件的内容格式为「ip1:port,ip2:port」</li>
+<li>地址服务器寻址默认为：<a target="_blank" rel="noopener" href="http://jmenv.tbsite.net:8080/serverlist%EF%BC%9B%E5%85%B6%E4%B8%AD%E5%9F%9F%E5%90%8D%E3%80%81%E7%AB%AF%E5%8F%A3%E3%80%81url%E5%9D%87%E5%8F%AF%E8%87%AA%E5%AE%9A%E4%B9%89">http://jmenv.tbsite.net:8080/serverlist；其中域名、端口、url均可自定义</a></li>
+<li>检测到集群节点变更时会更新缓存并发布MembersChangeEvent事件</li>
+<li>为防止新节点没有初始化好，当检测到新节点加入时先设置该节点状态为DOWN，该节点不参与通信</li>
+<li>过几秒通过节点之间通信将已初始化的新节点状态由DOWN设置为UP，该节点正式参与通信</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="寻址初始化"><a href="#寻址初始化" class="headerlink" title="寻址初始化"></a>寻址初始化</h1><p>寻址是指如何发现Nacos集群中节点变化的，当检测到变化时能后及时更新节点信息。Nacos提供了两种寻址模式，分别为 <strong>文件寻址</strong> 和<strong>地址服务器寻址</strong>。如果单机启动就本机一个节点也无所谓寻址。</p>
+<p>接下来看下源码部分如何实现的。在DistroProtocol类中有一个成员变量ServerMemberManager memberManager，寻址的逻辑即封装在ServerMemberManager中。</p>
+<p>坐标：ServerMemberManager#init()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">  Loggers.CORE.info(<span class="string">&quot;Nacos-related cluster resource initialization&quot;</span>);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 注解@1 </span></span><br><span class="line">  <span class="keyword">this</span>.port = EnvUtil.getProperty(<span class="string">&quot;server.port&quot;</span>, Integer.class, <span class="number">8848</span>);</span><br><span class="line">  <span class="comment">// 注解@2</span></span><br><span class="line">  <span class="keyword">this</span>.localAddress = InetUtils.getSelfIP() + <span class="string">&quot;:&quot;</span> + port;</span><br><span class="line">  <span class="comment">// 注解@3</span></span><br><span class="line">  <span class="keyword">this</span>.self = MemberUtil.singleParse(<span class="keyword">this</span>.localAddress);</span><br><span class="line">  <span class="comment">// 注解@4</span></span><br><span class="line">  <span class="keyword">this</span>.self.setExtendVal(MemberMetaDataConstants.VERSION, VersionUtils.version);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.self.setAbilities(initMemberAbilities());</span><br><span class="line">  <span class="comment">// 注解@5</span></span><br><span class="line">  serverList.put(self.getAddress(), self);</span><br><span class="line"> 	<span class="comment">// 注解@6</span></span><br><span class="line">  registerClusterEvent();</span><br><span class="line">  <span class="comment">// 注解@7</span></span><br><span class="line">  initAndStartLookup();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (serverList.isEmpty()) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.SERVER_ERROR, <span class="string">&quot;cannot get serverlist, so exit.&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  Loggers.CORE.info(<span class="string">&quot;The cluster resource is initialized&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> 可以通过server.port指定服务端端口，默认8848</p>
+<p><strong>注解@2</strong> 获取本地地址</p>
+<p><strong>注解@3</strong> 拆分IP和Port组装Member对象</p>
+<p><strong>注解@4</strong> 设置版本取自pom文件 version=${project.version}</p>
+<p><strong>注解@5</strong> 缓存本节点信息</p>
+<p><strong>注解@6</strong> 发布MembersChangeEvent事件并订阅IPChangeEvent事件</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">registerClusterEvent</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 发布MembersChangeEvent事件</span></span><br><span class="line">  NotifyCenter.registerToPublisher(MembersChangeEvent.class,</span><br><span class="line">                                   EnvUtil.getProperty(<span class="string">&quot;nacos.member-change-event.queue.size&quot;</span>, Integer.class, <span class="number">128</span>));</span><br><span class="line">  <span class="comment">// 订阅IPChangeEvent事件</span></span><br><span class="line">  NotifyCenter.registerSubscriber(<span class="keyword">new</span> Subscriber&lt;InetUtils.IPChangeEvent&gt;() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(InetUtils.IPChangeEvent event)</span> </span>&#123;</span><br><span class="line">      String newAddress = event.getNewIP() + <span class="string">&quot;:&quot;</span> + port;</span><br><span class="line">      ServerMemberManager.<span class="keyword">this</span>.localAddress = newAddress;</span><br><span class="line">      EnvUtil.setLocalAddress(localAddress);</span><br><span class="line"></span><br><span class="line">      Member self = ServerMemberManager.<span class="keyword">this</span>.self;</span><br><span class="line">      self.setIp(event.getNewIP());</span><br><span class="line"></span><br><span class="line">      String oldAddress = event.getOldIP() + <span class="string">&quot;:&quot;</span> + port;</span><br><span class="line">      ServerMemberManager.<span class="keyword">this</span>.serverList.remove(oldAddress);</span><br><span class="line">      ServerMemberManager.<span class="keyword">this</span>.serverList.put(newAddress, self);</span><br><span class="line"></span><br><span class="line">      ServerMemberManager.<span class="keyword">this</span>.memberAddressInfos.remove(oldAddress);</span><br><span class="line">      ServerMemberManager.<span class="keyword">this</span>.memberAddressInfos.add(newAddress);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Class&lt;? extends Event&gt; subscribeType() &#123;</span><br><span class="line">      <span class="keyword">return</span> InetUtils.IPChangeEvent.class;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="寻址适配器"><a href="#寻址适配器" class="headerlink" title="寻址适配器"></a>寻址适配器</h1><p><strong>注解@7</strong> 初始化寻址模式适配器并启动；寻址模式分别为单机、配置文件、地址服务</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initAndStartLookup</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">  <span class="comment">// 注解@7.1</span></span><br><span class="line">  <span class="keyword">this</span>.lookup = LookupFactory.createLookUp(<span class="keyword">this</span>);</span><br><span class="line">  isUseAddressServer = <span class="keyword">this</span>.lookup.useAddressServer();</span><br><span class="line">  <span class="comment">// 注解@7.2</span></span><br><span class="line">  <span class="keyword">this</span>.lookup.start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7.1</strong> 获取寻址模式适配器</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> MemberLookup <span class="title">createLookUp</span><span class="params">(ServerMemberManager memberManager)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!EnvUtil.getStandaloneMode()) &#123;</span><br><span class="line">    <span class="comment">// 注解@7.1.1</span></span><br><span class="line">    String lookupType = EnvUtil.getProperty(LOOKUP_MODE_TYPE);</span><br><span class="line">    LookupType type = chooseLookup(lookupType);</span><br><span class="line">    <span class="comment">// 注解@7.1.2</span></span><br><span class="line">    LOOK_UP = find(type);</span><br><span class="line">    currentLookupType = type;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// 注解@7.1.3</span></span><br><span class="line">    LOOK_UP = <span class="keyword">new</span> StandaloneMemberLookup();</span><br><span class="line">  &#125;</span><br><span class="line">  LOOK_UP.injectMemberManager(memberManager);</span><br><span class="line">  Loggers.CLUSTER.info(<span class="string">&quot;Current addressing mode selection : &#123;&#125;&quot;</span>, LOOK_UP.getClass().getSimpleName());</span><br><span class="line">  <span class="keyword">return</span> LOOK_UP;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7.1.1</strong> 寻址类型可以通过「nacos.core.member.lookup.type」参数指定，取值为「file」或者「address-server」</p>
+<p><strong>注解@7.1.2</strong> 根据不同的类型实例化不同的MemberLookup分别为：FileConfigMemberLookup和AddressServerMemberLookup</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> MemberLookup <span class="title">find</span><span class="params">(LookupType type)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (LookupType.FILE_CONFIG.equals(type)) &#123;</span><br><span class="line">        LOOK_UP = <span class="keyword">new</span> FileConfigMemberLookup();</span><br><span class="line">        <span class="keyword">return</span> LOOK_UP;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (LookupType.ADDRESS_SERVER.equals(type)) &#123;</span><br><span class="line">        LOOK_UP = <span class="keyword">new</span> AddressServerMemberLookup();</span><br><span class="line">        <span class="keyword">return</span> LOOK_UP;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7.1.3</strong> 如果采用standalone模式实例化StandaloneMemberLookup</p>
+<p><strong>注解@7.2</strong> 寻址适配器启动</p>
+<p><strong>standalone寻址适配器启动</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (start.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>)) &#123;</span><br><span class="line">    String url = InetUtils.getSelfIP() + <span class="string">&quot;:&quot;</span> + EnvUtil.getPort();</span><br><span class="line">    afterLookup(MemberUtil.readServerConf(Collections.singletonList(url)));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 坐标StandaloneMemberLookup#start()，获取本地地址执行afterLookup</p>
+<p><strong>文件寻址适配器启动</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (start.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>)) &#123;</span><br><span class="line">            readClusterConfFromDisk();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                WatchFileCenter.registerWatcher(EnvUtil.getConfPath(), watcher);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                Loggers.CLUSTER.error(<span class="string">&quot;An exception occurred in the launch file monitor : &#123;&#125;&quot;</span>, e.getMessage());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">readClusterConfFromDisk</span><span class="params">()</span> </span>&#123;</span><br><span class="line">   Collection&lt;Member&gt; tmpMembers = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">   <span class="keyword">try</span> &#123;</span><br><span class="line">     List&lt;String&gt; tmp = EnvUtil.readClusterConf(); <span class="comment">// 从磁盘文件读取节点列表</span></span><br><span class="line">     tmpMembers = MemberUtil.readServerConf(tmp);</span><br><span class="line">   &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">     Loggers.CLUSTER</span><br><span class="line">       .error(<span class="string">&quot;nacos-XXXX [serverlist] failed to get serverlist from disk!, error : &#123;&#125;&quot;</span>, e.getMessage());</span><br><span class="line">   &#125;</span><br><span class="line">	</span><br><span class="line">   afterLookup(tmpMembers);</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 默认从 ${user.home}/nacos/conf/cluster.conf文件中读取集群地址信息，文件格式为：「ip1:port,ip2:port」。读取后执行afterLookup。并注册FileWatcher监听cluster.conf的变化，有变更会被监听并更新缓存地址列表。</p>
+<p><strong>地址服务器寻址适配器</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (start.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>)) &#123;</span><br><span class="line">    <span class="keyword">this</span>.maxFailCount = Integer.parseInt(EnvUtil.getProperty(<span class="string">&quot;maxHealthCheckFailCount&quot;</span>, <span class="string">&quot;12&quot;</span>));</span><br><span class="line">    initAddressSys();</span><br><span class="line">    run();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>每5秒定时请求地址服务器</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> success = <span class="keyword">false</span>;</span><br><span class="line">    Throwable ex = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">int</span> maxRetry = EnvUtil.getProperty(<span class="string">&quot;nacos.core.address-server.retry&quot;</span>, Integer.class, <span class="number">5</span>);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; maxRetry; i++) &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            syncFromAddressUrl();</span><br><span class="line">            success = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">            ex = e;</span><br><span class="line">            Loggers.CLUSTER.error(<span class="string">&quot;[serverlist] exception, error : &#123;&#125;&quot;</span>, ExceptionUtil.getAllExceptionMsg(ex));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!success) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.SERVER_ERROR, ex);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    GlobalExecutor.scheduleByCommon(<span class="keyword">new</span> AddressServerSyncTask(), <span class="number">5_000L</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>处理地址列表</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">syncFromAddressUrl</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    RestResult&lt;String&gt; result = restTemplate</span><br><span class="line">            .get(addressServerUrl, Header.EMPTY, Query.EMPTY, genericType.getType());</span><br><span class="line">    <span class="keyword">if</span> (result.ok()) &#123;</span><br><span class="line">        isAddressServerHealth = <span class="keyword">true</span>;</span><br><span class="line">        Reader reader = <span class="keyword">new</span> StringReader(result.getData());</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            afterLookup(MemberUtil.readServerConf(EnvUtil.analyzeClusterConf(reader)));</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">            Loggers.CLUSTER.error(<span class="string">&quot;[serverlist] exception for analyzeClusterConf, error : &#123;&#125;&quot;</span>,</span><br><span class="line">                    ExceptionUtil.getAllExceptionMsg(e));</span><br><span class="line">        &#125;</span><br><span class="line">        addressServerFailCount = <span class="number">0</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        addressServerFailCount++;</span><br><span class="line">        <span class="keyword">if</span> (addressServerFailCount &gt;= maxFailCount) &#123;</span><br><span class="line">            isAddressServerHealth = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Loggers.CLUSTER.error(<span class="string">&quot;[serverlist] failed to get serverlist, error code &#123;&#125;&quot;</span>, result.getCode());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 域名默认为「jmenv.tbsite.net」可以通过参数「address.server.domain」指定服务器地址；端口默认为「8080」可以通过参数「address.server.port」指定；url默认为「/serverlist」可以通过参数指定「address.server.url」。</p>
+<p>默认为：<a target="_blank" rel="noopener" href="http://jmenv.tbsite.net:8080/serverlist%EF%BC%9B%E6%AF%8F5%E7%A7%92%E9%92%9F%E5%AE%9A%E6%97%B6%E5%90%91%E5%9C%B0%E5%9D%80%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%AF%B7%E6%B1%82%E8%8E%B7%E5%8F%96%E5%9C%B0%E5%9D%80%E5%88%97%E8%A1%A8%EF%BC%9B%E8%8E%B7%E5%8F%96%E5%88%97%E8%A1%A8%E5%90%8E%E6%89%A7%E8%A1%8CafterLookup%E3%80%82">http://jmenv.tbsite.net:8080/serverlist；每5秒钟定时向地址服务器请求获取地址列表；获取列表后执行afterLookup。</a></p>
+<h1 id="节点变更"><a href="#节点变更" class="headerlink" title="节点变更"></a>节点变更</h1><p>三种适配器寻址最后都调用到了afterLookup，接下来看下这块逻辑。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterLookup</span><span class="params">(Collection&lt;Member&gt; members)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.memberManager.memberChange(members);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">synchronized</span> <span class="keyword">boolean</span> <span class="title">memberChange</span><span class="params">(Collection&lt;Member&gt; members)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (members == <span class="keyword">null</span> || members.isEmpty()) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 是否包含本地地址</span></span><br><span class="line">  <span class="keyword">boolean</span> isContainSelfIp = members.stream()</span><br><span class="line">    .anyMatch(ipPortTmp -&gt; Objects.equals(localAddress, ipPortTmp.getAddress()));</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (isContainSelfIp) &#123;</span><br><span class="line">    isInIpList = <span class="keyword">true</span>;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    isInIpList = <span class="keyword">false</span>;</span><br><span class="line">    members.add(<span class="keyword">this</span>.self);</span><br><span class="line">    Loggers.CLUSTER.warn(<span class="string">&quot;[serverlist] self ip &#123;&#125; not in serverlist &#123;&#125;&quot;</span>, self, members);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 集群中地址列表是否有变化</span></span><br><span class="line">  <span class="keyword">boolean</span> hasChange = members.size() != serverList.size();</span><br><span class="line">  ConcurrentSkipListMap&lt;String, Member&gt; tmpMap = <span class="keyword">new</span> ConcurrentSkipListMap&lt;&gt;();</span><br><span class="line">  Set&lt;String&gt; tmpAddressInfo = <span class="keyword">new</span> ConcurrentHashSet&lt;&gt;();</span><br><span class="line">  <span class="keyword">for</span> (Member member : members) &#123;</span><br><span class="line">    <span class="keyword">final</span> String address = member.getAddress();</span><br><span class="line">    Member existMember = serverList.get(address);</span><br><span class="line">    <span class="keyword">if</span> (existMember == <span class="keyword">null</span>) &#123; <span class="comment">// 有新的节点加入</span></span><br><span class="line">      hasChange = <span class="keyword">true</span>;</span><br><span class="line">     <span class="comment">// 新增的节点先设置状态为DOWN，过几秒中通过心跳更改状态UP。防止新节点未成功启动而发请求</span></span><br><span class="line">     member.setState(NodeState.DOWN); </span><br><span class="line">      tmpMap.put(address, member);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">     <span class="comment">// 已存在，还会被更新</span></span><br><span class="line">      tmpMap.put(address, existMember); </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (NodeState.UP.equals(member.getState())) &#123;</span><br><span class="line">      tmpAddressInfo.add(address);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  serverList = tmpMap;</span><br><span class="line">  memberAddressInfos = tmpAddressInfo;</span><br><span class="line"></span><br><span class="line">  Collection&lt;Member&gt; finalMembers = allMembers();</span><br><span class="line"></span><br><span class="line">  Loggers.CLUSTER.warn(<span class="string">&quot;[serverlist] updated to : &#123;&#125;&quot;</span>, finalMembers);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (hasChange) &#123; <span class="comment">// 集群节点有变更</span></span><br><span class="line">    MemberUtil.syncToFile(finalMembers); <span class="comment">// 同步写入磁盘文件cluster.conf中</span></span><br><span class="line">    Event event = MembersChangeEvent.builder().members(finalMembers).build();</span><br><span class="line">    NotifyCenter.publishEvent(event); <span class="comment">// 发布MembersChangeEvent事件</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> hasChange;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 通过寻址适配器获取的集群节点列表，会与缓存的节点信息进行比较。如果有变更会更新缓存、把全部节点写入磁盘文件cluster.conf、同时发布MembersChangeEvent事件。</p>
+<p><strong>小结：</strong> Nacos集群中的节点变更了怎么发现呢？Nacos提供两种模式一个是通过动态监听配置文件cluster.conf；另外一种是通过定时5秒去地址中心获取。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/d65dffb2/" rel="prev" title="Nacos4# 服务端响应连接和注册源码分析（一）">
+      <i class="fa fa-chevron-left"></i> Nacos4# 服务端响应连接和注册源码分析（一）
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/3266629d/" rel="next" title="SK8# 过一种笃定的生活">
+      SK8# 过一种笃定的生活 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%BB%E5%9D%80%E6%A6%82%E5%BF%B5"><span class="nav-number">2.0.1.</span> <span class="nav-text">寻址概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%BB%E5%9D%80%E6%A8%A1%E5%BC%8F"><span class="nav-number">2.0.2.</span> <span class="nav-text">寻址模式</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%BB%E5%9D%80%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">3.</span> <span class="nav-text">寻址初始化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%BB%E5%9D%80%E9%80%82%E9%85%8D%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">寻址适配器</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%8A%82%E7%82%B9%E5%8F%98%E6%9B%B4"><span class="nav-number">5.</span> <span class="nav-text">节点变更</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

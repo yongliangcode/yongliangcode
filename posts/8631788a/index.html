@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="前言在前面文章『Netty12# 池化内存框架流程』Netty会将不同的内存尺寸缓存起来，每个线程绑定了专属逻辑内存区域（PoolArena），减少资源竞争。每个线程绑定了缓存PoolThreadCache，内存分配时，先从当前线程绑定的PoolThreadCache缓存分配。下图为涉及到相关类的关系图：  工作过程： @1 通过引导类传入NioEventLoopGroup，线程工厂创建的线程均为">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty14# 池化内存之线程缓存">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/8631788a/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="前言在前面文章『Netty12# 池化内存框架流程』Netty会将不同的内存尺寸缓存起来，每个线程绑定了专属逻辑内存区域（PoolArena），减少资源竞争。每个线程绑定了缓存PoolThreadCache，内存分配时，先从当前线程绑定的PoolThreadCache缓存分配。下图为涉及到相关类的关系图：  工作过程： @1 通过引导类传入NioEventLoopGroup，线程工厂创建的线程均为">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6%20(3).png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%BC%93%E5%AD%98%E7%BB%93%E6%9E%84%E5%9B%BE%E7%A4%BA.png">
+<meta property="article:published_time" content="2021-03-06T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.881Z">
+<meta property="article:tag" content="Netty">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6%20(3).png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/8631788a/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Netty14# 池化内存之线程缓存 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8631788a/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Netty14# 池化内存之线程缓存
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在前面文章『Netty12# 池化内存框架流程』Netty会将不同的内存尺寸缓存起来，每个线程绑定了专属逻辑内存区域（PoolArena），减少资源竞争。每个线程绑定了缓存PoolThreadCache，内存分配时，先从当前线程绑定的PoolThreadCache缓存分配。下图为涉及到相关类的关系图：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6%20(3).png"></p>
+<p>工作过程：</p>
+<p>@1 通过引导类传入NioEventLoopGroup，线程工厂创建的线程均为FastThreadLocalThread</p>
+<p>@2 FastThreadLocalThread持有InternalThreadLocalMap（内部维护一个对象数组）</p>
+<p>@3 当通过PooledByteBufAllocator#newDirectBuffer分配内存时，通过调用PoolThreadLocalCache#get()完成对InternalThreadLocalMap的第一次填充，对象数组下标为线程索引号，其对应的值为PoolThreadCache。</p>
+<p>@4 PoolThreadCache是被当前线程缓存的对象</p>
+<a id="more"></a>
+
+
+
+<h1 id="线程缓存梳理"><a href="#线程缓存梳理" class="headerlink" title="线程缓存梳理"></a>线程缓存梳理</h1><p>PoolThreadLocalCache继承了线程类FastThreadLocal，FastThreadLocal的作用类似ThreadLocal，传递线程上下文变量。本小节梳理PoolThreadLocalCache工作流程。</p>
+<h3 id="构造函数"><a href="#构造函数" class="headerlink" title="构造函数"></a>构造函数</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">PoolThreadLocalCache</span> <span class="keyword">extends</span> <span class="title">FastThreadLocal</span>&lt;<span class="title">PoolThreadCache</span>&gt; </span>&#123;</span><br><span class="line">       <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> useCacheForAllThreads;</span><br><span class="line"></span><br><span class="line">       PoolThreadLocalCache(<span class="keyword">boolean</span> useCacheForAllThreads) &#123;</span><br><span class="line">           <span class="keyword">this</span>.useCacheForAllThreads = useCacheForAllThreads;</span><br><span class="line">       &#125;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>小结：构造函数就一个变量useCacheForAllThreads，默认true，使用线程缓存，可以通过-Dio.netty.allocator.useCacheForAllThread制定。</p>
+<h3 id="初始化方法赋值"><a href="#初始化方法赋值" class="headerlink" title="初始化方法赋值"></a>初始化方法赋值</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">synchronized</span> PoolThreadCache <span class="title">initialValue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> PoolArena&lt;<span class="keyword">byte</span>[]&gt; heapArena = leastUsedArena(heapArenas);</span><br><span class="line">    <span class="keyword">final</span> PoolArena&lt;ByteBuffer&gt; directArena = leastUsedArena(directArenas); <span class="comment">// 注解@1</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> Thread current = Thread.currentThread();</span><br><span class="line">    <span class="keyword">if</span> (useCacheForAllThreads || current <span class="keyword">instanceof</span> FastThreadLocalThread) &#123; <span class="comment">// 注解@2</span></span><br><span class="line">      <span class="keyword">final</span> PoolThreadCache cache = <span class="keyword">new</span> PoolThreadCache(</span><br><span class="line">        heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,</span><br><span class="line">        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">final</span> EventExecutor executor = ThreadExecutorMap.currentExecutor();</span><br><span class="line">        <span class="keyword">if</span> (executor != <span class="keyword">null</span>) &#123;</span><br><span class="line">          executor.scheduleAtFixedRate(trimTask, DEFAULT_CACHE_TRIM_INTERVAL_MILLIS,</span><br><span class="line">          DEFAULT_CACHE_TRIM_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> cache;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// No caching so just use 0 as sizes.</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> PoolThreadCache(heapArena, directArena, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>); <span class="comment">// 注解@3</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注解@1：heapArenas/directArenas：Arena数组，元素为HeapArena/DirectArena。调用了同一个方法leastUsedArena()。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> &lt;T&gt; <span class="function">PoolArena&lt;T&gt; <span class="title">leastUsedArena</span><span class="params">(PoolArena&lt;T&gt;[] arenas)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (arenas == <span class="keyword">null</span> || arenas.length == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  PoolArena&lt;T&gt; minArena = arenas[<span class="number">0</span>];</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; arenas.length; i++) &#123;</span><br><span class="line">    PoolArena&lt;T&gt; arena = arenas[i];</span><br><span class="line">    <span class="keyword">if</span> (arena.numThreadCaches.get() &lt; minArena.numThreadCaches.get()) &#123;</span><br><span class="line">      minArena = arena;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">return</span> minArena;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>每个线程都会绑定PoolArena，在leastUsedArena()轮询一遍，获取当前绑定线程数最少的PoolArena。</p>
+<p>注解@2：当useCacheForAllThreads=true（默认true）和当前thread属于FastThreadLocalThread才构造PoolThreadCache进行缓存。</p>
+<p>DEFAULT_CACHE_TRIM_INTERVAL_MILLIS：定时释放缓存。默认为0表示关闭，可以通过-Dio.netty.allocator.cacheTrimIntervalMillis指定。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Runnable trimTask = <span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            PooledByteBufAllocator.<span class="keyword">this</span>.trimCurrentThreadCache();</span><br><span class="line">        &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">trimCurrentThreadCache</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        PoolThreadCache cache = threadCache.getIfExists();</span><br><span class="line">        <span class="keyword">if</span> (cache != <span class="keyword">null</span>) &#123;</span><br><span class="line">            cache.trim();</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过定时调度调用PoolThreadCache的trim()方法将线程缓存释放。</p>
+<p>注解@3：禁用线程缓存依然是构造PoolThreadCache，只是传入的参数为0.</p>
+<p>小结：初始化赋值过程实际是为了创建一个PoolThreadCache对象。</p>
+<h3 id="初始化方法调用"><a href="#初始化方法调用" class="headerlink" title="初始化方法调用"></a>初始化方法调用</h3><p>初始化方法PoolThreadLocalCache#initialValue()什么时候调用的呢？在第一次调用FastThreadLocal#get()时进行的初始化。例如：在PooledByteBufAllocator#newDirectBuffer()方法中PoolThreadCache cache = threadCache.get();</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> V <span class="title">get</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();</span><br><span class="line">        Object v = threadLocalMap.indexedVariable(index);</span><br><span class="line">        <span class="keyword">if</span> (v != InternalThreadLocalMap.UNSET) &#123;</span><br><span class="line">            <span class="keyword">return</span> (V) v;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> initialize(threadLocalMap);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>初始化后，会将放入InternalThreadLocalMap, 其中维护了一个对象数组Object[]，下标即为index，每创建一个线程FastThreadLocal，都会递增一个index。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> V <span class="title">initialize</span><span class="params">(InternalThreadLocalMap threadLocalMap)</span> </span>&#123;</span><br><span class="line">        V v = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            v = initialValue();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            PlatformDependent.throwException(e);</span><br><span class="line">        &#125;</span><br><span class="line">				<span class="comment">// 放入InternalThreadLocalMap中实际为数组</span></span><br><span class="line">        threadLocalMap.setIndexedVariable(index, v); </span><br><span class="line">        addToVariablesToRemove(threadLocalMap, <span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">return</span> v;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> index;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">FastThreadLocal</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 每创建一个fast线程都会分配一个index</span></span><br><span class="line">	index = InternalThreadLocalMap.nextVariableIndex();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>小结：初始化方法initialValue()，在第一次调用threadCache.get()的时候执行。并将初始化的结果PoolThreadCache放入InternalThreadLocalMap（实际为对象数组）。</p>
+<h3 id="FastThreadLocalThread的调用"><a href="#FastThreadLocalThread的调用" class="headerlink" title="FastThreadLocalThread的调用"></a>FastThreadLocalThread的调用</h3><p>在初始化赋值注解@2中，只有满足两个条件才会缓存，if (useCacheForAllThreads || current instanceof FastThreadLocalThread) 。其中一个是当前线程属于FastThreadLocalThread。那问题是我们有用FastThreadLocalThread吗？</p>
+<p>在通过引导类构建Netty客户端和服务端时会传入EventLoopGroup，我们以NioEventLoopGroup看下它创建的是什么线程。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">EventLoopGroup group &#x3D; new NioEventLoopGroup();</span><br></pre></td></tr></table></figure>
+
+<p>通过NioEventLoopGroup的构造函数可以跟到下面内容：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="title">MultithreadEventExecutorGroup</span><span class="params">(<span class="keyword">int</span> nThreads, Executor executor,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            EventExecutorChooserFactory chooserFactory, Object... args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (nThreads &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(<span class="string">&quot;nThreads: %d (expected: &gt; 0)&quot;</span>, nThreads));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (executor == <span class="keyword">null</span>) &#123;</span><br><span class="line">            executor = <span class="keyword">new</span> ThreadPerTaskExecutor(newDefaultThreadFactory());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// ... </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过newDefaultThreadFactory()看下线程工厂类DefaultThreadFactory中如何创建线程的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> Thread <span class="title">newThread</span><span class="params">(Runnable r)</span> </span>&#123;</span><br><span class="line">       Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());</span><br><span class="line">       <span class="keyword">try</span> &#123;</span><br><span class="line">           <span class="keyword">if</span> (t.isDaemon() != daemon) &#123;</span><br><span class="line">               t.setDaemon(daemon);</span><br><span class="line">           &#125;</span><br><span class="line"></span><br><span class="line">           <span class="keyword">if</span> (t.getPriority() != priority) &#123;</span><br><span class="line">               t.setPriority(priority);</span><br><span class="line">           &#125;</span><br><span class="line">       &#125; <span class="keyword">catch</span> (Exception ignored) &#123;</span><br><span class="line">           <span class="comment">// Doesn&#x27;t matter even if failed to set.</span></span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> t;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"> <span class="function"><span class="keyword">protected</span> Thread <span class="title">newThread</span><span class="params">(Runnable r, String name)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">new</span> FastThreadLocalThread(threadGroup, r, name); <span class="comment">// 实际为FastThreadLocalThread实例。</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过newThread创建的实际为FastThreadLocalThread实例。</p>
+<p>小结：我们通过Bootstrap引导类传入的NioEventLoopGroup，使用的线程为FastThreadLocalThread。</p>
+<h1 id="构造缓存数组"><a href="#构造缓存数组" class="headerlink" title="构造缓存数组"></a>构造缓存数组</h1><p>PoolThreadCache 缓存了三个级别的缓存类型，分别为tiny、small、normal。</p>
+<h3 id="构造函数-1"><a href="#构造函数-1" class="headerlink" title="构造函数"></a>构造函数</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">PoolThreadCache(PoolArena&lt;<span class="keyword">byte</span>[]&gt; heapArena, PoolArena&lt;ByteBuffer&gt; directArena,</span><br><span class="line">                    <span class="keyword">int</span> tinyCacheSize, <span class="keyword">int</span> smallCacheSize, <span class="keyword">int</span> normalCacheSize,</span><br><span class="line">                    <span class="keyword">int</span> maxCachedBufferCapacity, <span class="keyword">int</span> freeSweepAllocationThreshold) &#123;</span><br><span class="line">  </span><br><span class="line">      <span class="keyword">if</span> (directArena != <span class="keyword">null</span>) &#123;</span><br><span class="line">        </span><br><span class="line">        tinySubPageDirectCaches = createSubPageCaches(</span><br><span class="line">          tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);</span><br><span class="line">        </span><br><span class="line">        smallSubPageDirectCaches = createSubPageCaches(</span><br><span class="line">          smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small);</span><br><span class="line"></span><br><span class="line">        numShiftsNormalDirect = log2(directArena.pageSize);</span><br><span class="line">        normalDirectCaches = createNormalCaches(</span><br><span class="line">          normalCacheSize, maxCachedBufferCapacity, directArena);</span><br><span class="line"></span><br><span class="line">        directArena.numThreadCaches.getAndIncrement();</span><br><span class="line">      &#125;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>参数说明</strong> </p>
+<p>heapArena：最少持有线程数(使用率最少)的逻辑堆内存PoolArena，PoolArena[]数组长度默认为核数的2倍</p>
+<p>directArena：最少持有线程数(使用率最少)的逻辑堆外直接内存PoolArena，PoolArena[]数组长度默认为核数的2倍</p>
+<p>tinyCacheSize：默认tiny类型缓存池大小512</p>
+<p>smallCacheSize：默认small类型缓存池大小为256</p>
+<p>normalCacheSize：默认normal类型缓存池大小为64</p>
+<p>maxCachedBufferCapacity：默认为32KB，用于限制normal缓存数组的长度</p>
+<p>freeSweepAllocationThreshold：默认8192，分配次数阈值，超过后释放内存池</p>
+<p>构造函数中，主要给三种类型的缓存数组赋值，包括堆内存和堆外直接内存，结构一致，只走查堆外直接内存。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// tiny类型缓存数组</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> MemoryRegionCache&lt;ByteBuffer&gt;[] tinySubPageDirectCaches;</span><br><span class="line"><span class="comment">// small类型缓存数组</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> MemoryRegionCache&lt;ByteBuffer&gt;[] smallSubPageDirectCaches;</span><br><span class="line"><span class="comment">// normal类型缓存数组</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> MemoryRegionCache&lt;ByteBuffer&gt;[] normalDirectCaches;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="createSubPageCaches"><a href="#createSubPageCaches" class="headerlink" title="createSubPageCaches"></a>createSubPageCaches</h3><p>tiny类型缓存数组与small类型缓存数组调用调用相同的createSubPageCaches()方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> &lt;T&gt; MemoryRegionCache&lt;T&gt;[] createSubPageCaches(</span><br><span class="line">            <span class="keyword">int</span> cacheSize, <span class="keyword">int</span> numCaches, SizeClass sizeClass) &#123;</span><br><span class="line">        <span class="keyword">if</span> (cacheSize &gt; <span class="number">0</span> &amp;&amp; numCaches &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="meta">@SuppressWarnings(&quot;unchecked&quot;)</span></span><br><span class="line">            MemoryRegionCache&lt;T&gt;[] cache = <span class="keyword">new</span> MemoryRegionCache[numCaches];</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; cache.length; i++) &#123;</span><br><span class="line">                cache[i] = <span class="keyword">new</span> SubPageMemoryRegionCache&lt;T&gt;(cacheSize, sizeClass);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> cache;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法入参</strong></p>
+<p>cacheSize：MemoryRegionCache包含队列Queue的大小，tiny类型512，small类型256</p>
+<p>numCaches：不同缓存类型的规格数量。</p>
+<p>tiny类型规格数量为32，计算方式 PoolArena.numTinySubpagePools=512 &gt;&gt;&gt; 4=32</p>
+<p>small类型规格数量为4，计算方式 heapArena.numSmallSubpagePools=pageShifts - 9=13 - 9 = 4</p>
+<p>小结：tiny类型会构建MemoryRegionCache的数组长度为32，每个数组元素为SubPageMemoryRegionCache（包含Queue的大小为512）；</p>
+<p>small类型会构建MemoryRegionCache的数组长度为4，每个数组元素为SubPageMemoryRegionCache（包含Queue的大小为256）</p>
+<h3 id="createNormalCaches"><a href="#createNormalCaches" class="headerlink" title="createNormalCaches"></a>createNormalCaches</h3><p>Normal类型缓存数组调用createNormalCaches()方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> &lt;T&gt; MemoryRegionCache&lt;T&gt;[] createNormalCaches(</span><br><span class="line">            <span class="keyword">int</span> cacheSize, <span class="keyword">int</span> maxCachedBufferCapacity, PoolArena&lt;T&gt; area) &#123;</span><br><span class="line">        <span class="keyword">if</span> (cacheSize &gt; <span class="number">0</span> &amp;&amp; maxCachedBufferCapacity &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> max = Math.min(area.chunkSize, maxCachedBufferCapacity);</span><br><span class="line">            <span class="keyword">int</span> arraySize = Math.max(<span class="number">1</span>, log2(max / area.pageSize) + <span class="number">1</span>);</span><br><span class="line">            <span class="meta">@SuppressWarnings(&quot;unchecked&quot;)</span></span><br><span class="line">            MemoryRegionCache&lt;T&gt;[] cache = <span class="keyword">new</span> MemoryRegionCache[arraySize];</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; cache.length; i++) &#123;</span><br><span class="line">                cache[i] = <span class="keyword">new</span> NormalMemoryRegionCache&lt;T&gt;(cacheSize);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> cache;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法入参</strong> </p>
+<p>cacheSize：Normal类型64</p>
+<p>maxCachedBufferCapacity：32K</p>
+<p><strong>数组大小计算</strong> </p>
+<p>int arraySize = Math.max(1, log2(max / area.pageSize) + 1);</p>
+<p>int max：maxCachedBufferCapacity=32KB；area.chunkSize = 16M，Max.min(32KB，16M) = 32K</p>
+<p>pageSize：area.pageSize=8K</p>
+<p>log2(max / area.pageSize)，代入log2(4)公式 </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">log2</span><span class="params">(<span class="keyword">int</span> val)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">int</span> res = <span class="number">0</span>;</span><br><span class="line">       <span class="keyword">while</span> (val &gt; <span class="number">1</span>) &#123;</span><br><span class="line">           val &gt;&gt;= <span class="number">1</span>;</span><br><span class="line">           res++;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> res;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>经过计算数组大小arraySize= 3</p>
+<p>小结：Normal类型会构建MemoryRegionCache的数组长度为3，每个数组元素为SubPageMemoryRegionCache（包含Queue的大小为64）。</p>
+<h1 id="缓存数组结构"><a href="#缓存数组结构" class="headerlink" title="缓存数组结构"></a>缓存数组结构</h1><h3 id="缓存数组结构-1"><a href="#缓存数组结构-1" class="headerlink" title="缓存数组结构"></a>缓存数组结构</h3><p>上面tiny、small、normal无论哪种类型都在构建MemoryRegionCache数组，通过看下MemoryRegionCache的结构看下缓存的不同点。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">abstract</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MemoryRegionCache</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> size;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Queue&lt;Entry&lt;T&gt;&gt; queue;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> SizeClass sizeClass;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> allocations;</span><br><span class="line"></span><br><span class="line">        MemoryRegionCache(<span class="keyword">int</span> size, SizeClass sizeClass) &#123;</span><br><span class="line">            <span class="keyword">this</span>.size = MathUtil.safeFindNextPositivePowerOfTwo(size);</span><br><span class="line">            queue = PlatformDependent.newFixedMpscQueue(<span class="keyword">this</span>.size);</span><br><span class="line">            <span class="keyword">this</span>.sizeClass = sizeClass;</span><br><span class="line">        &#125;</span><br><span class="line">		<span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以对外直接内存Queue&lt;Entry<T>&gt; queue封装的均为ByteBuffer。下面看下不同类型缓存的ByteBuffer是如何分布的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">add</span><span class="params">(PoolArena&lt;?&gt; area, PoolChunk chunk, ByteBuffer nioBuffer,</span></span></span><br><span class="line"><span class="function"><span class="params">               <span class="keyword">long</span> handle, <span class="keyword">int</span> normCapacity, SizeClass sizeClass)</span> </span>&#123;</span><br><span class="line">       MemoryRegionCache&lt;?&gt; cache = cache(area, normCapacity, sizeClass);</span><br><span class="line">       <span class="keyword">if</span> (cache == <span class="keyword">null</span>) &#123;</span><br><span class="line">           <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> cache.add(chunk, nioBuffer, handle);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过cache()方法来判断缓存的三种类型判断</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> MemoryRegionCache&lt;?&gt; cache(PoolArena&lt;?&gt; area, <span class="keyword">int</span> normCapacity, SizeClass sizeClass) &#123;</span><br><span class="line">        <span class="keyword">switch</span> (sizeClass) &#123;</span><br><span class="line">        <span class="keyword">case</span> Normal:</span><br><span class="line">            <span class="keyword">return</span> cacheForNormal(area, normCapacity);</span><br><span class="line">        <span class="keyword">case</span> Small:</span><br><span class="line">            <span class="keyword">return</span> cacheForSmall(area, normCapacity);</span><br><span class="line">        <span class="keyword">case</span> Tiny:</span><br><span class="line">            <span class="keyword">return</span> cacheForTiny(area, normCapacity);</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> Error();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>下面逐个看看每个里面的结构，先看Tiny类型。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> MemoryRegionCache&lt;?&gt; cacheForTiny(PoolArena&lt;?&gt; area, <span class="keyword">int</span> normCapacity) &#123;</span><br><span class="line">        <span class="comment">// idx = normCapacity 除以 16</span></span><br><span class="line">        <span class="keyword">int</span> idx = PoolArena.tinyIdx(normCapacity);</span><br><span class="line">        <span class="keyword">if</span> (area.isDirect()) &#123;</span><br><span class="line">            <span class="comment">// tiny有32个规格类型即32个MemoryRegionCache实例</span></span><br><span class="line">          	<span class="comment">// 例如：normCapacity=32 则返回第2个数组元素MemoryRegionCache</span></span><br><span class="line">            <span class="keyword">return</span> cache(tinySubPageDirectCaches, idx);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> cache(tinySubPageHeapCaches, idx);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">tinyIdx</span><span class="params">(<span class="keyword">int</span> normCapacity)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> normCapacity &gt;&gt;&gt; <span class="number">4</span>; <span class="comment">// 相当于直接将normCapacity除以16</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>过程：Tiny类型中根据需要分配的大小除以16<br>示例1：normCapacity=0，idx=0，返回 tinySubPageDirectCaches[0]，也就是 tinySubPageDirectCaches[0]没有缓存。</p>
+<p>示例2：normCapacity=16，idx=1，返回 tinySubPageDirectCaches[1]，也就是 tinySubPageDirectCaches[1]中的Queue的buffer大小均为16字节。</p>
+<p>示例3：normCapacity=32，idx=2，返回 tinySubPageDirectCaches[2]，也就是 tinySubPageDirectCaches[2]中的Queue的buffer大小均为32字节。</p>
+<p>…</p>
+<p>示例4：   normCapacity=496，idx=31，返回 tinySubPageDirectCaches[31]，也就是 tinySubPageDirectCaches[31]中的Queue的buffer大小均为496字节。</p>
+<p>接着看Small类型的存储格式</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> MemoryRegionCache&lt;?&gt; cacheForSmall(PoolArena&lt;?&gt; area, <span class="keyword">int</span> normCapacity) &#123;</span><br><span class="line">   <span class="keyword">int</span> idx = PoolArena.smallIdx(normCapacity);</span><br><span class="line">   <span class="keyword">if</span> (area.isDirect()) &#123;</span><br><span class="line">        <span class="keyword">return</span> cache(smallSubPageDirectCaches, idx);</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> cache(smallSubPageHeapCaches, idx);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">smallIdx</span><span class="params">(<span class="keyword">int</span> normCapacity)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> tableIdx = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">int</span> i = normCapacity &gt;&gt;&gt; <span class="number">10</span>;</span><br><span class="line">        <span class="keyword">while</span> (i != <span class="number">0</span>) &#123;</span><br><span class="line">            i &gt;&gt;&gt;= <span class="number">1</span>;</span><br><span class="line">            tableIdx ++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> tableIdx;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>过程：Small类型的分配normCapacity &gt;&gt;&gt; 10，代入计算看看System.out.println(smallIdx(normCapacity))。</p>
+<p>示例1：normCapacity=512，idx = 0，返回smallSubPageDirectCaches[0]，也就是smallSubPageDirectCaches[0]中Queue的Buffer大小均为512字节。</p>
+<p>示例2：normCapacity=1024，idx = 1，返回smallSubPageDirectCaches[1]，也就是smallSubPageDirectCaches[1]中Queue的Buffer大小均为1024字节。</p>
+<p>示例3：normCapacity=2048，idx = 2，返回smallSubPageDirectCaches[2]，也就是smallSubPageDirectCaches[2]中Queue的Buffer大小均为2048字节。</p>
+<p>示例3：normCapacity=4096，idx = 3，返回smallSubPageDirectCaches[3]，也就是smallSubPageDirectCaches[3]中Queue的Buffer大小均为4096字节。</p>
+<p>最后看下Normal类型</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> MemoryRegionCache&lt;?&gt; cacheForNormal(PoolArena&lt;?&gt; area, <span class="keyword">int</span> normCapacity) &#123;</span><br><span class="line">        <span class="keyword">if</span> (area.isDirect()) &#123;</span><br><span class="line">            <span class="keyword">int</span> idx = log2(normCapacity &gt;&gt; numShiftsNormalDirect);</span><br><span class="line">            <span class="keyword">return</span> cache(normalDirectCaches, idx);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">int</span> idx = log2(normCapacity &gt;&gt; numShiftsNormalHeap);</span><br><span class="line">        <span class="keyword">return</span> cache(normalHeapCaches, idx);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>过程：先把numShiftsNormalDirect算下</p>
+<p>numShiftsNormalDirect = log2(directArena.pageSize) = log2(8192) = 13.</p>
+<p>代入公式计算下 int idx = log2(normCapacity &gt;&gt; 13)</p>
+<p>示例1：normCapacity=8192（8K），idx = 0，返回normalDirectCaches[0]，也就是normalDirectCaches[0]中Queue的Buffer大小均为8KB。</p>
+<p>示例2：normCapacity=16384（16K），idx = 1，返回normalDirectCaches[1]，也就是normalDirectCaches[0]中Queue的Buffer大小均为16KB。</p>
+<p>示例3：normCapacity=32768（32K），idx = 2，返回normalDirectCaches[2]，也就是normalDirectCaches[0]中Queue的Buffer大小均为32KB。</p>
+<p>小结：通过上面的过程分析，能够得出MemoryRegionCache的缓存结构如下，其中每个数组元素的队列中缓存的大小都是相同的，也就是Queue&lt;Entry<T>&gt; queue中的T即ByteBuffer。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%BC%93%E5%AD%98%E7%BB%93%E6%9E%84%E5%9B%BE%E7%A4%BA.png"></p>
+<h3 id="缓存归队"><a href="#缓存归队" class="headerlink" title="缓存归队"></a>缓存归队</h3><p>再回到添加方法中，上面通过cache()方法分析了缓存数组结构，返回不同类型的MemoryRegionCache。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">add</span><span class="params">(PoolArena&lt;?&gt; area, PoolChunk chunk, ByteBuffer nioBuffer,</span></span></span><br><span class="line"><span class="function"><span class="params">                <span class="keyword">long</span> handle, <span class="keyword">int</span> normCapacity, SizeClass sizeClass)</span> </span>&#123;</span><br><span class="line">        MemoryRegionCache&lt;?&gt; cache = cache(area, normCapacity, sizeClass);</span><br><span class="line">        <span class="keyword">if</span> (cache == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> cache.add(chunk, nioBuffer, handle); <span class="comment">// 注解@1</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>注解@1：下面是将chunk（真正一块连续内存）, nioBuffer, handle（指向内存的指针）放入队列的过程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">add</span><span class="params">(PoolChunk&lt;T&gt; chunk, ByteBuffer nioBuffer, <span class="keyword">long</span> handle)</span> </span>&#123;</span><br><span class="line">     Entry&lt;T&gt; entry = newEntry(chunk, nioBuffer, handle); <span class="comment">// 注解@2 </span></span><br><span class="line">     <span class="keyword">boolean</span> queued = queue.offer(entry); <span class="comment">// 注解@3</span></span><br><span class="line">     <span class="keyword">if</span> (!queued) &#123;</span><br><span class="line">       <span class="comment">// If it was not possible to cache the chunk, immediately recycle the entry</span></span><br><span class="line">       entry.recycle();</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     <span class="keyword">return</span> queued;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注解@2：构造Entry对象</p>
+<p>注解@3：将Entry放入所在规格的队列Queue中。</p>
+<p>小结：还有allocate()方法留在下节梳理，就内存数组结构简单做个小结：</p>
+<p>@1 Netty以chunk为单位（16M）向系统申请物理内存，Netty池化内存分成了4种内存类型。Tiny（0<del>512Byte），Small（512Byte</del>8KB），Normal（8KB~16MB），Huge（&gt;16M）</p>
+<p>@2 Netty对Tiny、Small、Normal做了缓存，针对不同的类型通过”数组+队列“继续切成不同的尺寸，每个尺寸内的缓存ByteBuffer大小相同，不同尺寸之间缓存的Buffer大小以2的N次增长。</p>
+<p>@3 Tiny类型从0到496被划分为32个尺寸（数组）</p>
+<p>@4 Small类型从512到4096（4K）被划分4个尺寸</p>
+<p>@5 Normal类型从8192（8K）到32768（32K）被划分为3个尺寸</p>
+<p>@6 在内存分配时，先根据需要分配的内存大小判断属于那种内存类型；进而计算出属于该内存类型的哪个尺寸。</p>
+<p>@7 每个尺寸都维护有队列Queue，定位到尺寸规格也就拿到Queue中的实际缓存（PoolChunk）和指针（handle）并完成所需分配内存buffer的初始化。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Netty/" rel="tag"># Netty</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/48a2a5be/" rel="prev" title="SK5# 丢掉幻想准备战斗">
+      <i class="fa fa-chevron-left"></i> SK5# 丢掉幻想准备战斗
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/dd40ab43/" rel="next" title="FA2# 集群流控使用场景和实现原理">
+      FA2# 集群流控使用场景和实现原理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E7%BC%93%E5%AD%98%E6%A2%B3%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">线程缓存梳理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0"><span class="nav-number">2.0.1.</span> <span class="nav-text">构造函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E6%96%B9%E6%B3%95%E8%B5%8B%E5%80%BC"><span class="nav-number">2.0.2.</span> <span class="nav-text">初始化方法赋值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E6%96%B9%E6%B3%95%E8%B0%83%E7%94%A8"><span class="nav-number">2.0.3.</span> <span class="nav-text">初始化方法调用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#FastThreadLocalThread%E7%9A%84%E8%B0%83%E7%94%A8"><span class="nav-number">2.0.4.</span> <span class="nav-text">FastThreadLocalThread的调用</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9E%84%E9%80%A0%E7%BC%93%E5%AD%98%E6%95%B0%E7%BB%84"><span class="nav-number">3.</span> <span class="nav-text">构造缓存数组</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0-1"><span class="nav-number">3.0.1.</span> <span class="nav-text">构造函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#createSubPageCaches"><span class="nav-number">3.0.2.</span> <span class="nav-text">createSubPageCaches</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#createNormalCaches"><span class="nav-number">3.0.3.</span> <span class="nav-text">createNormalCaches</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E6%95%B0%E7%BB%84%E7%BB%93%E6%9E%84"><span class="nav-number">4.</span> <span class="nav-text">缓存数组结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E6%95%B0%E7%BB%84%E7%BB%93%E6%9E%84-1"><span class="nav-number">4.0.1.</span> <span class="nav-text">缓存数组结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E5%BD%92%E9%98%9F"><span class="nav-number">4.0.2.</span> <span class="nav-text">缓存归队</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

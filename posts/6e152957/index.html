@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言在上文分析中客户端会有长轮询，不断轮询阻塞队列「listenExecutebell」去比较客户端和服务端配置内容md5是否一致，不一致则通知我们注册的Listener完成回调。当阻塞队里有元素时会立即执行，没有元素等待5秒钟执行。那都在什么时候往队列中添加元素的从而触发立即执行。 内容提要长轮询回顾 监听配置内容的变更通过长轮询实现 具体实现为轮询阻塞队列  阻塞队列添加时机 客户端添加Lis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos14# 配置管理服务端流程">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/6e152957/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言在上文分析中客户端会有长轮询，不断轮询阻塞队列「listenExecutebell」去比较客户端和服务端配置内容md5是否一致，不一致则通知我们注册的Listener完成回调。当阻塞队里有元素时会立即执行，没有元素等待5秒钟执行。那都在什么时候往队列中添加元素的从而触发立即执行。 内容提要长轮询回顾 监听配置内容的变更通过长轮询实现 具体实现为轮询阻塞队列  阻塞队列添加时机 客户端添加Lis">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730172935.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730174331.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730193829.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731111536.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731193633.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731194211.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731194350.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801091854.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801092420.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801094245.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801102703.png">
+<meta property="article:published_time" content="2021-08-21T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.828Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730172935.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/6e152957/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos14# 配置管理服务端流程 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6e152957/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos14# 配置管理服务端流程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-21 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-21T11:55:01+08:00">2021-08-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在上文分析中客户端会有长轮询，不断轮询阻塞队列「listenExecutebell」去比较客户端和服务端配置内容md5是否一致，不一致则通知我们注册的Listener完成回调。当阻塞队里有元素时会立即执行，没有元素等待5秒钟执行。那都在什么时候往队列中添加元素的从而触发立即执行。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="长轮询回顾"><a href="#长轮询回顾" class="headerlink" title="长轮询回顾"></a>长轮询回顾</h3><ul>
+<li>监听配置内容的变更通过长轮询实现</li>
+<li>具体实现为轮询阻塞队列</li>
+</ul>
+<h3 id="阻塞队列添加时机"><a href="#阻塞队列添加时机" class="headerlink" title="阻塞队列添加时机"></a>阻塞队列添加时机</h3><ul>
+<li>客户端添加Listener时添加</li>
+<li>客户端删除Listener时添加</li>
+<li>服务端通知内容变更时添加</li>
+<li>建立gRPC连接时添加</li>
+</ul>
+<h3 id="服务端变更发布流程"><a href="#服务端变更发布流程" class="headerlink" title="服务端变更发布流程"></a>服务端变更发布流程</h3><ul>
+<li>通过配置中心发起变更请求</li>
+<li>配置变更内容被写入数据库</li>
+<li>向本节点连接的Client发送变更通知</li>
+<li>向集群中的其他节点发送变更通知</li>
+</ul>
+<h3 id="向Client发送变更通知"><a href="#向Client发送变更通知" class="headerlink" title="向Client发送变更通知"></a>向Client发送变更通知</h3><ul>
+<li>首先构建DumpTask</li>
+<li>处理DumpTask时发布ConfigDumpEvent事件</li>
+<li>处理ConfigDumpEvent时发布LocalDataChangeEvent事件</li>
+<li>处理LocalDataChangeEvent事件：@1 先从缓存中拿出注册Client列表 @2 根据client从缓存获取gRPC连接 @3 构建ConfigChangeNotifyRequest @4 通过gRPC向客户端发送变更通知</li>
+<li>客户端处理变更通知，客户端接到请求后向阻塞队列添加new Object元素，详细客户端的长轮询流程见上篇</li>
+</ul>
+<h3 id="向其他节点发送变更通知"><a href="#向其他节点发送变更通知" class="headerlink" title="向其他节点发送变更通知"></a>向其他节点发送变更通知</h3><ul>
+<li>通过gRPC向集群中其他节点发送变更通知</li>
+<li>集群节点收到变更通知后再下发给连接自己的Client</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="长轮询回顾-1"><a href="#长轮询回顾-1" class="headerlink" title="长轮询回顾"></a>长轮询回顾</h1><p><strong>长轮询判断</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startInternal</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    executor.schedule(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">true</span>) &#123; <span class="comment">// 一直运行</span></span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="comment">// 最长等待5秒</span></span><br><span class="line">                    listenExecutebell.poll(<span class="number">5L</span>, TimeUnit.SECONDS);</span><br><span class="line">                    executeConfigListen();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    LOGGER.error(<span class="string">&quot;[ rpc listen execute ] [rpc listen] exception&quot;</span>, e);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="number">0L</span>, TimeUnit.MILLISECONDS);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>队列添加元素</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">notifyListenConfig</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    listenExecutebell.offer(bellItem);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 配置内容变更机制是通过长轮询实现的。</p>
+<h1 id="阻塞队列添加时机-1"><a href="#阻塞队列添加时机-1" class="headerlink" title="阻塞队列添加时机"></a><strong>阻塞队列添加时机</strong></h1><p><strong>1.客户端添加Listener时添加</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addListeners</span><span class="params">(String dataId, String group, List&lt;? extends Listener&gt; listeners)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">  	<span class="comment">// 通过队列中增加一个对象，长轮询立即执行</span></span><br><span class="line">  	agent.notifyListenConfig();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>2.客户端删除Listener时添加</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeListener</span><span class="params">(String dataId, String group, Listener listener)</span> </span>&#123;</span><br><span class="line">    group = null2defaultGroup(group);</span><br><span class="line">    CacheData cache = getCache(dataId, group);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> != cache) &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (cache) &#123;</span><br><span class="line">            cache.removeListener(listener);</span><br><span class="line">            <span class="keyword">if</span> (cache.getListeners().isEmpty()) &#123;</span><br><span class="line">                cache.setSyncWithServer(<span class="keyword">false</span>);</span><br><span class="line">                agent.removeCache(dataId, group);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeCache</span><span class="params">(String dataId, String group)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Notify to rpc un listen ,and remove cache if success.</span></span><br><span class="line">  notifyListenConfig();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>3.服务端通知内容变更时添加</strong> </p>
+<p>在与服务端建立gRPC通道时会添加Handler用于处理服务端推送的请求，收到推送请求后向阻塞队列添加元素。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initRpcClientHandler</span><span class="params">(<span class="keyword">final</span> RpcClient rpcClientInner)</span> </span>&#123;</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Register Config Change /Config ReSync Handler</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    rpcClientInner.registerServerRequestHandler((request) -&gt; &#123;</span><br><span class="line">        <span class="keyword">if</span> (request <span class="keyword">instanceof</span> ConfigChangeNotifyRequest) &#123;</span><br><span class="line">            ConfigChangeNotifyRequest configChangeNotifyRequest = (ConfigChangeNotifyRequest) request;</span><br><span class="line">            LOGGER.info(<span class="string">&quot;[&#123;&#125;] [server-push] config changed. dataId=&#123;&#125;, group=&#123;&#125;,tenant=&#123;&#125;&quot;</span>,</span><br><span class="line">                    rpcClientInner.getName(), configChangeNotifyRequest.getDataId(),</span><br><span class="line">                    configChangeNotifyRequest.getGroup(), configChangeNotifyRequest.getTenant());</span><br><span class="line">            String groupKey = GroupKey</span><br><span class="line">                    .getKeyTenant(configChangeNotifyRequest.getDataId(), configChangeNotifyRequest.getGroup(),</span><br><span class="line">                            configChangeNotifyRequest.getTenant());</span><br><span class="line"></span><br><span class="line">            CacheData cacheData = cacheMap.get().get(groupKey);</span><br><span class="line">            <span class="keyword">if</span> (cacheData != <span class="keyword">null</span>) &#123;</span><br><span class="line">                cacheData.setSyncWithServer(<span class="keyword">false</span>);</span><br><span class="line">                notifyListenConfig(); <span class="comment">// 向阻塞队列中添加元素</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ConfigChangeNotifyResponse();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;);</span><br><span class="line">  	<span class="comment">// ....</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>4.建立gRPC连接时添加</strong></p>
+<p>在建立gRPC连接时会向阻塞队列中添加元素。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">rpcClientInner.registerConnectionListener(<span class="keyword">new</span> ConnectionEventListener() &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onConnected</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        LOGGER.info(<span class="string">&quot;[&#123;&#125;] Connected,notify listen context...&quot;</span>, rpcClientInner.getName());</span><br><span class="line">        notifyListenConfig(); <span class="comment">// 向队列中添加元素</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onDisConnect</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        String taskId = rpcClientInner.getLabels().get(<span class="string">&quot;taskId&quot;</span>);</span><br><span class="line">        LOGGER.info(<span class="string">&quot;[&#123;&#125;] DisConnected,clear listen context...&quot;</span>, rpcClientInner.getName());</span><br><span class="line">        Collection&lt;CacheData&gt; values = cacheMap.get().values();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (CacheData cacheData : values) &#123;</span><br><span class="line">            <span class="keyword">if</span> (StringUtils.isNotBlank(taskId)) &#123;</span><br><span class="line">                <span class="keyword">if</span> (Integer.valueOf(taskId).equals(cacheData.getTaskId())) &#123;</span><br><span class="line">                    cacheData.setSyncWithServer(<span class="keyword">false</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                cacheData.setSyncWithServer(<span class="keyword">false</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 阻塞队列添加元素的四种情况，添加后长轮询立即执行配置内容校验。</p>
+<h1 id="服务端变更发布流程-1"><a href="#服务端变更发布流程-1" class="headerlink" title="服务端变更发布流程"></a><strong>服务端变更发布流程</strong></h1><p><strong>1.发布配置变更请求</strong> </p>
+<p>服务端的发布内容变更，通过变更请求跟踪下，后端处理请求通过ConfigController#publishConfig()实现。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730172935.png"></p>
+<p><strong>2.处理配置变更请求</strong> </p>
+<ul>
+<li>将变更配置更新到数据库</li>
+<li>发布ConfigDataChangeEvent事件</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730174331.png"></p>
+<p><strong>3.订阅ConfigDataChangeEvent</strong> </p>
+<p>翻到订阅该事件的处理逻辑，看看其干了什么事情，AsyncNotifyService构造函数中的onEvent()方法。从代码中可以看出当收到ConfigDataChangeEvent时，逻辑如下：</p>
+<ul>
+<li>获取集群中所有节点列表</li>
+<li>每个节点封装NotifySingleRpcTask</li>
+<li>异步向各个节点通知配置信息变更</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210730193829.png"></p>
+<p><strong>4.NotifySingleRpcTask逻辑</strong> </p>
+<p>在代码AsyncNotifyService#AsyncRpcTask部分查看逻辑框架，任务运行主要干了两件事：</p>
+<ul>
+<li>向连接本节点的<em>Client</em>发送配置变更通知</li>
+<li>向集群中的其他节点发送变更通知</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731111536.png"></p>
+<p><strong>小结：</strong> 当我们从Nacos配置中心界面提交变更配置时：1.入库； 2.向本节点连接的Client发送变更通知；3.向集群中的其他节点发送变更通知。</p>
+<h1 id="向Client发送变更通知-1"><a href="#向Client发送变更通知-1" class="headerlink" title="向Client发送变更通知"></a>向Client发送变更通知</h1><p><strong>1.首先构建DumpTask</strong> </p>
+<p>代码坐标DumpService#dump()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dump</span><span class="params">(String dataId, String group, String tenant, String tag, <span class="keyword">long</span> lastModified, String handleIp,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">boolean</span> isBeta)</span> </span>&#123;</span><br><span class="line">    String groupKey = GroupKey2.getKey(dataId, group, tenant);</span><br><span class="line">    dumpTaskMgr.addTask(groupKey, <span class="keyword">new</span> DumpTask(groupKey, tag, lastModified, handleIp, isBeta));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>2.处理DumpTask时发布ConfigDumpEvent事件</strong> </p>
+<p>代码坐标DumpProcessor#process()</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731193633.png"></p>
+<p><strong>3.处理ConfigDumpEvent时发布LocalDataChangeEvent事件</strong> </p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731194211.png"></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210731194350.png"></p>
+<p><strong>4.处理LocalDataChangeEvent事件</strong> </p>
+<p>关注RpcConfigChangeNotifier#onEvent处理过程</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(LocalDataChangeEvent event)</span> </span>&#123;</span><br><span class="line">    String groupKey = event.groupKey;</span><br><span class="line">    <span class="keyword">boolean</span> isBeta = event.isBeta;</span><br><span class="line">    List&lt;String&gt; betaIps = event.betaIps;</span><br><span class="line">    String[] strings = GroupKey.parseKey(groupKey);</span><br><span class="line">    String dataId = strings[<span class="number">0</span>];</span><br><span class="line">    String group = strings[<span class="number">1</span>];</span><br><span class="line">    String tenant = strings.length &gt; <span class="number">2</span> ? strings[<span class="number">2</span>] : <span class="string">&quot;&quot;</span>;</span><br><span class="line">    String tag = event.tag;</span><br><span class="line">    configDataChanged(groupKey, dataId, group, tenant, isBeta, betaIps, tag);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>例如：注册在缓存的client=1627734181270_127.0.0.1_53522</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801091854.png"></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801092420.png"></p>
+<p><strong>5.客户端处理变更通知</strong> </p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801094245.png"></p>
+<p><strong>小结：</strong> 走查了服务端如何将变更通知送达到连接该节点的客户端的。</p>
+<h1 id="向其他节点发送变更通知-1"><a href="#向其他节点发送变更通知-1" class="headerlink" title="向其他节点发送变更通知"></a>向其他节点发送变更通知</h1><p><strong>1.接上面「服务端变更发布流程」最后步骤「向集群中的其他节点发送变更通知」</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">configClusterRpcClientProxy</span><br><span class="line">        .syncConfigChange(member, syncRequest, <span class="keyword">new</span> AsyncRpcNotifyCallBack(task));</span><br></pre></td></tr></table></figure>
+
+<p>从缓存中获取与其他节点的rpcClient连接，key=Cluster-1.2.3.4:1111</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">asyncRequest</span><span class="params">(Member member, Request request, RequestCallBack callBack)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    RpcClient client = RpcClientFactory.getClient(memberClientKey(member));</span><br><span class="line">    <span class="keyword">if</span> (client != <span class="keyword">null</span>) &#123;</span><br><span class="line">        client.asyncRequest(request, callBack);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(CLIENT_INVALID_PARAM, <span class="string">&quot;No rpc client related to member: &quot;</span> + member);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>2.其他节点处理请求入口</strong> </p>
+<p>GrpcRequestAcceptor#request只列出部分代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 执行RequestHandler逻辑</span></span><br><span class="line">Response response = requestHandler.handleRequest(request, requestMeta);</span><br></pre></td></tr></table></figure>
+
+<p><strong>3.其他节点由ConfigChangeClusterSyncRequestHandler处理ConfigChangeClusterSyncRequest</strong> </p>
+<p>即：完成向客户端发送变更通知</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210801102703.png"></p>
+<p><strong>小结：</strong> 当集群其他节点收到变更通知后，会向连接到本节点的Client发送变更通知，逻辑同上一小结「向Client发送变更通知」，从而完成全部向所有Client下发变更通知。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/11be6e51/" rel="prev" title="Nacos13# 配置管理客户端流程">
+      <i class="fa fa-chevron-left"></i> Nacos13# 配置管理客户端流程
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%95%BF%E8%BD%AE%E8%AF%A2%E5%9B%9E%E9%A1%BE"><span class="nav-number">2.0.1.</span> <span class="nav-text">长轮询回顾</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E6%B7%BB%E5%8A%A0%E6%97%B6%E6%9C%BA"><span class="nav-number">2.0.2.</span> <span class="nav-text">阻塞队列添加时机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%8F%98%E6%9B%B4%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B"><span class="nav-number">2.0.3.</span> <span class="nav-text">服务端变更发布流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%91Client%E5%8F%91%E9%80%81%E5%8F%98%E6%9B%B4%E9%80%9A%E7%9F%A5"><span class="nav-number">2.0.4.</span> <span class="nav-text">向Client发送变更通知</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%91%E5%85%B6%E4%BB%96%E8%8A%82%E7%82%B9%E5%8F%91%E9%80%81%E5%8F%98%E6%9B%B4%E9%80%9A%E7%9F%A5"><span class="nav-number">2.0.5.</span> <span class="nav-text">向其他节点发送变更通知</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%95%BF%E8%BD%AE%E8%AF%A2%E5%9B%9E%E9%A1%BE-1"><span class="nav-number">3.</span> <span class="nav-text">长轮询回顾</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E6%B7%BB%E5%8A%A0%E6%97%B6%E6%9C%BA-1"><span class="nav-number">4.</span> <span class="nav-text">阻塞队列添加时机</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%8F%98%E6%9B%B4%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B-1"><span class="nav-number">5.</span> <span class="nav-text">服务端变更发布流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%91Client%E5%8F%91%E9%80%81%E5%8F%98%E6%9B%B4%E9%80%9A%E7%9F%A5-1"><span class="nav-number">6.</span> <span class="nav-text">向Client发送变更通知</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%91%E5%85%B6%E4%BB%96%E8%8A%82%E7%82%B9%E5%8F%91%E9%80%81%E5%8F%98%E6%9B%B4%E9%80%9A%E7%9F%A5-1"><span class="nav-number">7.</span> <span class="nav-text">向其他节点发送变更通知</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

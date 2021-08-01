@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/c4a1b302/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6531e1a8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/c4a1b302/" class="post-title-link" itemprop="url">MQ34# RocketMQ--ConsumeQueue文件与Index文件</a>
+            <a href="/posts/6531e1a8/" class="post-title-link" itemprop="url">FA3# ZK做注册中心不是最好的选择</a>
         </h2>
 
         <div class="post-meta">
@@ -208,14 +208,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:58:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-04-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-04-06T11:55:01+08:00">2021-04-06</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -223,7 +223,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
                 </span>
             </span>
 
@@ -238,14 +238,26 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题：</p>
-<p>1.ConsumeQueue构建流程是怎样的？</p>
-<p>2.ConsumeQueue数据结构是怎样的？</p>
-<p>3.Index索引文件构建流程怎样的？</p>
-<p>4.Index数据结构时怎么样的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Zookeeper作为注册中心不是跑的好好的吗？为什么要替换，是不是闲的？在过去的一段时间替换它的优先级的确不高，然而腾出手来是要替换掉它的，只是因为Zookeeper不适合做注册中心。换句话说选择注册中心时有更好的选择。</p>
+<h1 id="CAP定理与举例"><a href="#CAP定理与举例" class="headerlink" title="CAP定理与举例"></a>CAP定理与举例</h1><h3 id="CAP定理"><a href="#CAP定理" class="headerlink" title="CAP定理"></a>CAP定理</h3><p>CAP定理已经深入每个开发者心里，我们一起回顾下，下面摘自维基百科定义。</p>
+<p>CAP定理（CAP theorem），又被称作布鲁尔定理（Brewer’s theorem），它指出对于一个分布式计算系统来说，不可能同时满足以下三点：</p>
+<ul>
+<li>一致性（Consistency）：等同于所有节点访问同一份最新的数据副本</li>
+<li>可用性（Availability）每次请求都能获取到非错的响应——但是不保证获取的数据为最新数据</li>
+<li>分区容错性（Partition tolerance）以实际效果而言，分区相当于对通信的时限要求。系统如果不能在时限内达成数据一致性，就意味着发生了分区的情况，必须就当前操作在C和A之间做出选择</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/CAP%E5%AE%9A%E7%90%86%E6%96%B02.png"></p>
+<h3 id="举例说明"><a href="#举例说明" class="headerlink" title="举例说明"></a>举例说明</h3><p>例如：有5个节点被网络分区，分区1有三个节点，分区2有两个节点。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%BD%91%E7%BB%9C%E5%88%86%E5%8C%BA%E7%A4%BA%E4%BE%8B.png"></p>
+<ul>
+<li>如果保证两个分区节点都可用（AP），由于网络不通，那么无法保证两个分区数据一致性（CP）</li>
+<li>如果保证两个分区数据一致性（CP），由于网络不通，那么会导致至少一个分区不可用</li>
+<li>如果既想保证所有节点一致性，还要保证节点都可用（CA），那么网络就必须是好的，不能出现网络分区，失去了分区容错性（P）</li>
+</ul>
+<p>因此，三者不可兼得。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/c4a1b302/#more" rel="contents">
+              <a class="btn" href="/posts/6531e1a8/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -269,7 +281,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9c431d59/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/cf517bd1/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -283,7 +295,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/9c431d59/" class="post-title-link" itemprop="url">MQ33# RocketMQ消费--Broker端处理逻辑</a>
+            <a href="/posts/cf517bd1/" class="post-title-link" itemprop="url">SK7# 大咖分享随记</a>
         </h2>
 
         <div class="post-meta">
@@ -293,14 +305,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:56:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:56:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-19 22:55:01" itemprop="dateCreated datePublished" datetime="2021-03-19T22:55:01+08:00">2021-03-19</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -308,7 +320,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -323,12 +335,18 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.Broker是如何处理消费流程的？</p>
-<p>2.消费进度是如何流转的？</p>
-<p>说明：本文分析均为PUSH消费模式</p>
+          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>到了一周中最放松的时刻，老梁回到家，家人往往都睡了。</p>
+<p>老梁就找点吃的喝的，今天喝了大半罐RIO强爽8°C白桃酒，有点晕晕乎乎的。</p>
+<p>老梁坐在沙发上抱着电脑跟大伙聊聊天，今天聊点啥呢？</p>
+<p>前些天公司请了头部公司研究员大咖来分享，大领导口干舌燥费了好大劲请来的。</p>
+<p>大咖抽出宝贵的时间来分享，听的人不少，听进去的不多，听了去实践就更少了，大部分过几天就忘的差不多了。</p>
+<p>这种情况领导们也知道，才要求组织者们去收集启发感受，沉淀下来点东西。</p>
+<p>老梁也被拉进去要求写一篇，组织者说已经跟领导吹出去了，不写凑不够数量。</p>
+<p>大咖分享的是质量和效能，下面是老梁瞎想的，不一点对，各位随便看看。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/9c431d59/#more" rel="contents">
+              <a class="btn" href="/posts/cf517bd1/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -352,7 +370,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/87a2ceec/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d12e9a09/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -366,7 +384,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/87a2ceec/" class="post-title-link" itemprop="url">MQ32# RocketMQ客户端消费--ProcessQueue处理队列</a>
+            <a href="/posts/d12e9a09/" class="post-title-link" itemprop="url">Netty15# 池化内存Normal类型内存分配</a>
         </h2>
 
         <div class="post-meta">
@@ -376,14 +394,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:55:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-13 18:25:01" itemprop="dateCreated datePublished" datetime="2021-03-13T18:25:01+08:00">2021-03-13</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -391,7 +409,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -406,11 +424,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1.ProcessQueue提供哪些方法？</span><br><span class="line"></span><br><span class="line">2.这些方法的作用是什么？</span><br><span class="line"></span><br><span class="line">3.哪里调用了这些方法？</span><br></pre></td></tr></table></figure>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Netty所谓的池化就是先申请了一块大内存，后面需要分配的时候就来我这里分就完了。以堆外直接内存分配为例，Netty以Chunk为单位16M申请了一块连续内存，这么一大块内存是以平衡二叉树的形式组织起来的。分配的时候就从这颗树上找合适的节点。池化内存的分配是Netty的最为核心部分，这块的代码很多位运算，不太容易看懂，读的时候需要边调试边分析。</p>
+<h1 id="平衡二叉树"><a href="#平衡二叉树" class="headerlink" title="平衡二叉树"></a>平衡二叉树</h1><p>Netty使用平衡二叉树将申请到的Chunk块组织起来，如下图所示，并使用数组将整个树映射进去，见下文构造函数中memoryMap。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/Netty%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%8F%89%E6%A0%91.png"></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/87a2ceec/#more" rel="contents">
+              <a class="btn" href="/posts/d12e9a09/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -434,7 +453,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd191b8b/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a540a8f2/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -448,7 +467,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/dd191b8b/" class="post-title-link" itemprop="url">MQ31# RocketMQ客户端PUSH消费--负载均衡</a>
+            <a href="/posts/a540a8f2/" class="post-title-link" itemprop="url">SK6# 上海居转户随记</a>
         </h2>
 
         <div class="post-meta">
@@ -458,14 +477,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-12 23:55:01" itemprop="dateCreated datePublished" datetime="2021-03-12T23:55:01+08:00">2021-03-12</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -473,7 +492,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -488,12 +507,13 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.主题队列是如何分配的？</p>
-<p>2.什么时候会进行负载均衡？</p>
-<p>3.负载均衡后是否会导致消息重复消费？</p>
+          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>到了一周中最放松的时刻，回来就10点多了，洗洗涮涮就到了11点了。</p>
+<p>夜神人静了，喝了点碧螺春，老梁坐在沙发上抱着电脑跟大伙聊聊天。</p>
+<p>今天聊聊居转户，申请过程中也是各种查询挺费劲，记录下或许对一些朋友有点用。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/dd191b8b/#more" rel="contents">
+              <a class="btn" href="/posts/a540a8f2/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -517,7 +537,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/55c56ee4/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd40ab43/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -531,7 +551,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/55c56ee4/" class="post-title-link" itemprop="url">MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费</a>
+            <a href="/posts/dd40ab43/" class="post-title-link" itemprop="url">FA2# 集群流控使用场景和实现原理</a>
         </h2>
 
         <div class="post-meta">
@@ -541,14 +561,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -556,7 +576,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
                 </span>
             </span>
 
@@ -571,12 +591,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="消息拉取与处理"><a href="#消息拉取与处理" class="headerlink" title="消息拉取与处理"></a>消息拉取与处理</h1><p><strong>消息拉取</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140825.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理拉取消息请求。通过组织RequetHeader需要包含从哪里开始拉取（ConsumerGroup、Topic，Queue，queueOffset）等信息，向Broker发起请求，取回消息后对消息进行处理。当该Queue的消息数量超过1000，或者最小与最大偏移量之间的差距超过默认2000也会触发限流，即：延迟50毫秒放入请求队列。也可以通过挂起消费线程来延迟（1秒）消息拉取，从而达到消费限流作用。</span><br></pre></td></tr></table></figure>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。</p>
+<h1 id="集群流控使用场景"><a href="#集群流控使用场景" class="headerlink" title="集群流控使用场景"></a>集群流控使用场景</h1><h3 id="场景一-需要控制调用总量"><a href="#场景一-需要控制调用总量" class="headerlink" title="场景一  需要控制调用总量"></a>场景一  需要控制调用总量</h3><p>某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提供服务，第三方流量有限制，需要对总量进行管控。部署的节点可能扩缩容，这种单纯通过单机限流措施难以凑效。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png"></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/55c56ee4/#more" rel="contents">
+              <a class="btn" href="/posts/dd40ab43/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -600,7 +620,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/3b8a1c43/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8631788a/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -614,7 +634,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/3b8a1c43/" class="post-title-link" itemprop="url">MQ29# RocketMQ客户端PUSH消费概览</a>
+            <a href="/posts/8631788a/" class="post-title-link" itemprop="url">Netty14# 池化内存之线程缓存</a>
         </h2>
 
         <div class="post-meta">
@@ -624,14 +644,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:51:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:51:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -639,7 +659,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -654,10 +674,16 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>PUSH消费整体流程是怎么样的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在前面文章『Netty12# 池化内存框架流程』Netty会将不同的内存尺寸缓存起来，每个线程绑定了专属逻辑内存区域（PoolArena），减少资源竞争。每个线程绑定了缓存PoolThreadCache，内存分配时，先从当前线程绑定的PoolThreadCache缓存分配。下图为涉及到相关类的关系图：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6%20(3).png"></p>
+<p>工作过程：</p>
+<p>@1 通过引导类传入NioEventLoopGroup，线程工厂创建的线程均为FastThreadLocalThread</p>
+<p>@2 FastThreadLocalThread持有InternalThreadLocalMap（内部维护一个对象数组）</p>
+<p>@3 当通过PooledByteBufAllocator#newDirectBuffer分配内存时，通过调用PoolThreadLocalCache#get()完成对InternalThreadLocalMap的第一次填充，对象数组下标为线程索引号，其对应的值为PoolThreadCache。</p>
+<p>@4 PoolThreadCache是被当前线程缓存的对象</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/3b8a1c43/#more" rel="contents">
+              <a class="btn" href="/posts/8631788a/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -681,7 +707,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/72491306/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/48a2a5be/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -695,7 +721,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/72491306/" class="post-title-link" itemprop="url">MQ28# RocketMQ存储--主从同步</a>
+            <a href="/posts/48a2a5be/" class="post-title-link" itemprop="url">SK5# 丢掉幻想准备战斗</a>
         </h2>
 
         <div class="post-meta">
@@ -705,14 +731,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:49:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:49:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-04 23:55:01" itemprop="dateCreated datePublished" datetime="2021-03-04T23:55:01+08:00">2021-03-04</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -720,7 +746,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -735,11 +761,13 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.消息存储在Master上了，如何同步到Slave上了呢？</p>
-<p>2.同步复制和异步复制流程是怎么样的？</p>
+          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>明天请假办点事，夜神人静了，喝了点白开水，到了一周中最放松的时候，老梁确放松不起来。</p>
+<p>丢掉幻想，准备战斗！这句常见于官方辞令，老梁觉得用到个人身上也不违和，朗朗上口的，那就拿来用用。</p>
+<p>那就最近也发生的事情和想法聊一下。不一定对，各位随便看看。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/72491306/#more" rel="contents">
+              <a class="btn" href="/posts/48a2a5be/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -763,7 +791,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/b973d41f/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -777,7 +805,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/b973d41f/" class="post-title-link" itemprop="url">MQ27# RocketMQ存储--同步刷盘和异步刷盘</a>
+            <a href="/posts/0/" class="post-title-link" itemprop="url">未命名</a>
         </h2>
 
         <div class="post-meta">
@@ -787,24 +815,15 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:47:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:47:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-03-02 14:43:42" itemprop="dateCreated datePublished" datetime="2021-03-02T14:43:42+08:00">2021-03-02</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:14:26" itemprop="dateModified" datetime="2021-08-01T14:14:26+08:00">2021-08-01</time>
               </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
-                </span>
-            </span>
 
           
 
@@ -817,12 +836,23 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.同步刷盘是怎么工作的？</p>
-<p>2.异步刷盘是怎么工作的？</p>
-<p>3.上篇文章的疑问，写入堆外内存的消息如何落盘的？</p>
+          <hr>
+<p>title:Q1# 问题整理20210529<br>categories:Questions<br>tags:Questions<br>date:2021-05-29 11:55:01</p>
+<hr>
+<p>业务要发展，功能要增强，基础设施要完善，变更就无法避免，带来新功能的同时也带来了风险。整理下近期碰到的和被问的几个问题。</p>
+<h1 id="问题一"><a href="#问题一" class="headerlink" title="问题一"></a>问题一</h1><p>​        Zookeeper几乎每年都能听到有公司踩到坑，故事往往是这样：@1 多个业务线共用zk集群，某个新上的功能把zk当缓存用，大量创建zk路径，造成zk不堪重负瘫痪；@2 某个新上的功能往zk集群中写入过大消息，单条消息好几兆，造成zk集群性能下降，甚至带宽、磁盘被打满。</p>
+<p>​        知道可能的坑咱肯定不能再去踩了，重要中间件的独立zk集群彻底隔离，上面的问题基本可以避免。今天的故事却发生在watch的数量上。</p>
+<p><strong>现象</strong> </p>
+<p>​        从4月中旬左右发现zk的watch水位在翻倍增长，从200多万到400多万一直翻到800多万，一直到五一之后的12000万。watch水位的升高会影响与zk通信的延迟。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210529114757.png"></p>
+<p><strong>原因</strong> </p>
+<p>​    SDK中有使用一个公共主题用于客户端行为收集，该主题下会被注册临时节点，临时节点会被watch用于一个特定功能。在卡点升级过程中随着服务应用的接入，注册的节点越来越多。例如：3000个临时节点每个节点都会有3000个watch数量，就会有3000的平方个watch数量，就是900万个watch数量</p>
+<p><strong>解决</strong> </p>
+<p>​    止血方案： 删除公共主题下的临时节点，watch数量水位恢复正常</p>
+<p>​    根除方案：剔除SDK中对注册节点的watch，例如：curator中用NodeCacheListener替代TreeCacheListener，同时移除关联节点的wath功能，或者对公共主题进行过滤，不再注册节点</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/b973d41f/#more" rel="contents">
+              <a class="btn" href="/posts/0/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -846,7 +876,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/52ef32ad/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bf0be4d0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -860,7 +890,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/52ef32ad/" class="post-title-link" itemprop="url">MQ26# RocketMQ存储--消息追加</a>
+            <a href="/posts/bf0be4d0/" class="post-title-link" itemprop="url">Netty13# 池化内存分配器</a>
         </h2>
 
         <div class="post-meta">
@@ -870,14 +900,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:45:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:45:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-02-19 11:55:01" itemprop="dateCreated datePublished" datetime="2021-02-19T11:55:01+08:00">2021-02-19</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -885,7 +915,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -900,11 +930,91 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><p>1.消息追加到何处了呢？</p>
-<p>2.消息格式是怎么样的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>PooledByteBufAllocator作为池化内存分配的入口，提供了众多的配置参数和便捷方法。这篇主要撸下他们大体都啥含义、干啥用的。为后面池化内存其他组件做铺垫。</p>
+<h1 id="成员变量说明"><a href="#成员变量说明" class="headerlink" title="成员变量说明"></a>成员变量说明</h1><p>下面的成员变量基本都提供了默认值，可以通过参数去自定义，下面表格给出具体说明。</p>
+<table>
+<thead>
+<tr>
+<th>成员变量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DEFAULT_NUM_HEAP_ARENA</td>
+<td>PoolAreana（堆内存）个数，默认为核数的2倍，可以由参数-Dio.netty.allocator.numHeapArenas指定</td>
+</tr>
+<tr>
+<td>DEFAULT_NUM_DIRECT_ARENA</td>
+<td>PoolAreana（堆外内存）个数默认为核数的2倍，堆外内存，可以通过-Dio.netty.allocator.numDirectArenas指定</td>
+</tr>
+<tr>
+<td>DEFAULT_PAGE_SIZE</td>
+<td>默认pageSize=8K，可以通过-Dio.netty.allocator.pageSize，需大于4096且为2的倍数</td>
+</tr>
+<tr>
+<td>DEFAULT_MAX_ORDER</td>
+<td>二叉树最高层数，取值范围为0~14，默认为11，可以通过-Dio.netty.allocator.maxOrder参数指定</td>
+</tr>
+<tr>
+<td>DEFAULT_TINY_CACHE_SIZE</td>
+<td>默认tiny类型缓存池大小512，可以通过-Dio.netty.allocator.tinyCacheSize指定</td>
+</tr>
+<tr>
+<td>DEFAULT_SMALL_CACHE_SIZE</td>
+<td>默认small类型缓存池大小为256，可以通过-Dio.netty.allocator.smallCacheSize指定</td>
+</tr>
+<tr>
+<td>DEFAULT_NORMAL_CACHE_SIZE</td>
+<td>默认normal类型缓存池大小为64，可以通过-Dio.netty.allocator.normalCacheSize指定</td>
+</tr>
+<tr>
+<td>DEFAULT_MAX_CACHED_BUFFER_CAPACITY</td>
+<td>默认为32KB，用于限制normal缓存数组的长度，可以通过-Dio.netty.allocator.maxCachedBufferCapacity指定</td>
+</tr>
+<tr>
+<td>DEFAULT_CACHE_TRIM_INTERVAL</td>
+<td>默认8192，分配次数阈值，超过后释放内存池，可以通过-Dio.netty.allocator.cacheTrimInterval指定</td>
+</tr>
+<tr>
+<td>DEFAULT_CACHE_TRIM_INTERVAL_MILLIS</td>
+<td>默认0不开启，定时释放内存池，可以通过-Dio.netty.allocator.cacheTrimIntervalMillis指定</td>
+</tr>
+<tr>
+<td>DEFAULT_USE_CACHE_FOR_ALL_THREADS</td>
+<td>默认true，使用线程缓存，可以通过-Dio.netty.allocator.useCacheForAllThread制定</td>
+</tr>
+<tr>
+<td>DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT</td>
+<td>直接内存的校准对齐参数，分配内存时按位与（&amp;）校准。默认0不校准，可以通过-Dio.netty.allocator.directMemoryCacheAlignment指定</td>
+</tr>
+<tr>
+<td>DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK</td>
+<td>默认1023，指定PoolChunk缓存ByteBuffer对象的最大数量，可以通过-Dio.netty.allocator.maxCachedByteBuffersPerChunk指定</td>
+</tr>
+<tr>
+<td>MIN_PAGE_SIZE</td>
+<td>校验用的，PageSize不能小于4KB</td>
+</tr>
+<tr>
+<td>MAX_CHUNK_SIZE</td>
+<td>校验用的，Chunk的边界值，(((long) Integer.MAX_VALUE + 1) / 2)</td>
+</tr>
+<tr>
+<td>heapArenas</td>
+<td>Arena数组，元素为HeapArena</td>
+</tr>
+<tr>
+<td>directArenas</td>
+<td>Arena数组，元素为DirectArena</td>
+</tr>
+<tr>
+<td>PooledByteBufAllocatorMetric metric</td>
+<td>暴露统计指标，例如：用了多少堆内存、用了多少堆外直接内存等</td>
+</tr>
+</tbody></table>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/52ef32ad/#more" rel="contents">
+              <a class="btn" href="/posts/bf0be4d0/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -928,7 +1038,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/708c22d7/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/80419269/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -942,7 +1052,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/708c22d7/" class="post-title-link" itemprop="url">MQ25# RocketMQ存储--映射文件预热</a>
+            <a href="/posts/80419269/" class="post-title-link" itemprop="url">Netty12# 池化内存框架流程</a>
         </h2>
 
         <div class="post-meta">
@@ -952,14 +1062,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:42:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:42:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-02-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-02-16T11:55:01+08:00">2021-02-16</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -967,7 +1077,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -982,13 +1092,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>1.为什么创建文件（commitLog）时要预热？</p>
-<p>2.为什么要写入1G大小的假值（0）呢？</p>
-<p>3.为什么要锁定内存？</p>
-<p>4.预热流程是怎么样的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文简要梳理为什么使用池化内存？Netty使用池化内存从哪些方面提升了效率？梳理了池化内存的核心组件大体含义以及内存分配流程，勾勒池化内存的整体框架。后面文章会详细拆解每个点是如何实现的。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/708c22d7/#more" rel="contents">
+              <a class="btn" href="/posts/80419269/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1011,7 +1118,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1077,20 +1184,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-count">102</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

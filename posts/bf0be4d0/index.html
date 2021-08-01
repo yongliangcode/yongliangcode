@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="前言PooledByteBufAllocator作为池化内存分配的入口，提供了众多的配置参数和便捷方法。这篇主要撸下他们大体都啥含义、干啥用的。为后面池化内存其他组件做铺垫。 成员变量说明下面的成员变量基本都提供了默认值，可以通过参数去自定义，下面表格给出具体说明。    成员变量 说明    DEFAULT_NUM_HEAP_ARENA PoolAreana（堆内存）个数，默认为核数的2倍，可以">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty13# 池化内存分配器">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/bf0be4d0/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="前言PooledByteBufAllocator作为池化内存分配的入口，提供了众多的配置参数和便捷方法。这篇主要撸下他们大体都啥含义、干啥用的。为后面池化内存其他组件做铺垫。 成员变量说明下面的成员变量基本都提供了默认值，可以通过参数去自定义，下面表格给出具体说明。    成员变量 说明    DEFAULT_NUM_HEAP_ARENA PoolAreana（堆内存）个数，默认为核数的2倍，可以">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-02-19T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.837Z">
+<meta property="article:tag" content="Netty">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/bf0be4d0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Netty13# 池化内存分配器 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bf0be4d0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Netty13# 池化内存分配器
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-02-19 11:55:01" itemprop="dateCreated datePublished" datetime="2021-02-19T11:55:01+08:00">2021-02-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>PooledByteBufAllocator作为池化内存分配的入口，提供了众多的配置参数和便捷方法。这篇主要撸下他们大体都啥含义、干啥用的。为后面池化内存其他组件做铺垫。</p>
+<h1 id="成员变量说明"><a href="#成员变量说明" class="headerlink" title="成员变量说明"></a>成员变量说明</h1><p>下面的成员变量基本都提供了默认值，可以通过参数去自定义，下面表格给出具体说明。</p>
+<table>
+<thead>
+<tr>
+<th>成员变量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DEFAULT_NUM_HEAP_ARENA</td>
+<td>PoolAreana（堆内存）个数，默认为核数的2倍，可以由参数-Dio.netty.allocator.numHeapArenas指定</td>
+</tr>
+<tr>
+<td>DEFAULT_NUM_DIRECT_ARENA</td>
+<td>PoolAreana（堆外内存）个数默认为核数的2倍，堆外内存，可以通过-Dio.netty.allocator.numDirectArenas指定</td>
+</tr>
+<tr>
+<td>DEFAULT_PAGE_SIZE</td>
+<td>默认pageSize=8K，可以通过-Dio.netty.allocator.pageSize，需大于4096且为2的倍数</td>
+</tr>
+<tr>
+<td>DEFAULT_MAX_ORDER</td>
+<td>二叉树最高层数，取值范围为0~14，默认为11，可以通过-Dio.netty.allocator.maxOrder参数指定</td>
+</tr>
+<tr>
+<td>DEFAULT_TINY_CACHE_SIZE</td>
+<td>默认tiny类型缓存池大小512，可以通过-Dio.netty.allocator.tinyCacheSize指定</td>
+</tr>
+<tr>
+<td>DEFAULT_SMALL_CACHE_SIZE</td>
+<td>默认small类型缓存池大小为256，可以通过-Dio.netty.allocator.smallCacheSize指定</td>
+</tr>
+<tr>
+<td>DEFAULT_NORMAL_CACHE_SIZE</td>
+<td>默认normal类型缓存池大小为64，可以通过-Dio.netty.allocator.normalCacheSize指定</td>
+</tr>
+<tr>
+<td>DEFAULT_MAX_CACHED_BUFFER_CAPACITY</td>
+<td>默认为32KB，用于限制normal缓存数组的长度，可以通过-Dio.netty.allocator.maxCachedBufferCapacity指定</td>
+</tr>
+<tr>
+<td>DEFAULT_CACHE_TRIM_INTERVAL</td>
+<td>默认8192，分配次数阈值，超过后释放内存池，可以通过-Dio.netty.allocator.cacheTrimInterval指定</td>
+</tr>
+<tr>
+<td>DEFAULT_CACHE_TRIM_INTERVAL_MILLIS</td>
+<td>默认0不开启，定时释放内存池，可以通过-Dio.netty.allocator.cacheTrimIntervalMillis指定</td>
+</tr>
+<tr>
+<td>DEFAULT_USE_CACHE_FOR_ALL_THREADS</td>
+<td>默认true，使用线程缓存，可以通过-Dio.netty.allocator.useCacheForAllThread制定</td>
+</tr>
+<tr>
+<td>DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT</td>
+<td>直接内存的校准对齐参数，分配内存时按位与（&amp;）校准。默认0不校准，可以通过-Dio.netty.allocator.directMemoryCacheAlignment指定</td>
+</tr>
+<tr>
+<td>DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK</td>
+<td>默认1023，指定PoolChunk缓存ByteBuffer对象的最大数量，可以通过-Dio.netty.allocator.maxCachedByteBuffersPerChunk指定</td>
+</tr>
+<tr>
+<td>MIN_PAGE_SIZE</td>
+<td>校验用的，PageSize不能小于4KB</td>
+</tr>
+<tr>
+<td>MAX_CHUNK_SIZE</td>
+<td>校验用的，Chunk的边界值，(((long) Integer.MAX_VALUE + 1) / 2)</td>
+</tr>
+<tr>
+<td>heapArenas</td>
+<td>Arena数组，元素为HeapArena</td>
+</tr>
+<tr>
+<td>directArenas</td>
+<td>Arena数组，元素为DirectArena</td>
+</tr>
+<tr>
+<td>PooledByteBufAllocatorMetric metric</td>
+<td>暴露统计指标，例如：用了多少堆内存、用了多少堆外直接内存等</td>
+</tr>
+</tbody></table>
+<a id="more"></a>
+
+
+
+<h1 id="静态块赋值"><a href="#静态块赋值" class="headerlink" title="静态块赋值"></a>静态块赋值</h1><p><strong>DEFAULT_PAGE_SIZE</strong> </p>
+<p>下面是通过static{}静态块赋值PageSize，默认为8KB，可以通过-Dio.netty.allocator.pageSize自定义。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> &#123;</span><br><span class="line">        <span class="keyword">int</span> defaultPageSize = SystemPropertyUtil.getInt(<span class="string">&quot;io.netty.allocator.pageSize&quot;</span>, <span class="number">8192</span>);</span><br><span class="line">        Throwable pageSizeFallbackCause = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            validateAndCalculatePageShifts(defaultPageSize);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            pageSizeFallbackCause = t;</span><br><span class="line">            defaultPageSize = <span class="number">8192</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        DEFAULT_PAGE_SIZE = defaultPageSize;</span><br></pre></td></tr></table></figure>
+
+<p>PageSize校验过程，不能小于MIN_PAGE_SIZE（4KB），需要2的倍数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">validateAndCalculatePageShifts</span><span class="params">(<span class="keyword">int</span> pageSize)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (pageSize &lt; MIN_PAGE_SIZE) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;pageSize: &quot;</span> + pageSize + <span class="string">&quot; (expected: &quot;</span> + MIN_PAGE_SIZE + <span class="string">&quot;)&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> ((pageSize &amp; pageSize - <span class="number">1</span>) != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;pageSize: &quot;</span> + pageSize + <span class="string">&quot; (expected: power of 2)&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Logarithm base 2. At this point we know that pageSize is a power of two.</span></span><br><span class="line">        <span class="keyword">return</span> Integer.SIZE - <span class="number">1</span> - Integer.numberOfLeadingZeros(pageSize);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>DEFAULT_MAX_ORDER</strong> </p>
+<p>maxOrder默认大小为11，可以通过-Dio.netty.allocator.maxOrder自定义。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">pageSizeint defaultMaxOrder = SystemPropertyUtil.getInt(<span class="string">&quot;io.netty.allocator.maxOrder&quot;</span>, <span class="number">11</span>);</span><br><span class="line">Throwable maxOrderFallbackCause = <span class="keyword">null</span>;</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">  validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);</span><br><span class="line">&#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">  maxOrderFallbackCause = t;</span><br><span class="line">  defaultMaxOrder = <span class="number">11</span>;</span><br><span class="line">&#125;</span><br><span class="line">DEFAULT_MAX_ORDER = defaultMaxOrder;</span><br></pre></td></tr></table></figure>
+
+<p>maxOrder校验过程，最大值不能超过14，同时计算了ChunkSize &lt;&lt;=1 ，即：8192&lt;&lt;=1 为 16777216（16M），也就是默认ChunkSize大小为16M。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">validateAndCalculateChunkSize</span><span class="params">(<span class="keyword">int</span> pageSize, <span class="keyword">int</span> maxOrder)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (maxOrder &gt; <span class="number">14</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;maxOrder: &quot;</span> + maxOrder + <span class="string">&quot; (expected: 0-14)&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">int</span> chunkSize = pageSize;</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = maxOrder; i &gt; <span class="number">0</span>; i --) &#123;</span><br><span class="line">    <span class="keyword">if</span> (chunkSize &gt; MAX_CHUNK_SIZE / <span class="number">2</span>) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(</span><br><span class="line">        <span class="string">&quot;pageSize (%d) &lt;&lt; maxOrder (%d) must not exceed %d&quot;</span>, pageSize, maxOrder, MAX_CHUNK_SIZE));</span><br><span class="line">    &#125;</span><br><span class="line">    chunkSize &lt;&lt;= <span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> chunkSize;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>DEFAULT_NUM_HEAP_ARENA和DEFAULT_NUM_DIRECT_ARENA</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> Runtime runtime = Runtime.getRuntime();</span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span> defaultMinNumArena = NettyRuntime.availableProcessors() * <span class="number">2</span>;</span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span> defaultChunkSize = DEFAULT_PAGE_SIZE &lt;&lt; DEFAULT_MAX_ORDER;</span><br><span class="line">DEFAULT_NUM_HEAP_ARENA = Math.max(<span class="number">0</span>,</span><br><span class="line">                SystemPropertyUtil.getInt(</span><br><span class="line">                        <span class="string">&quot;io.netty.allocator.numHeapArenas&quot;</span>,</span><br><span class="line">                        (<span class="keyword">int</span>) Math.min(</span><br><span class="line">                                defaultMinNumArena,</span><br><span class="line">                                runtime.maxMemory() / defaultChunkSize / <span class="number">2</span> / <span class="number">3</span>)));</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> DEFAULT_NUM_DIRECT_ARENA = Math.max(<span class="number">0</span>,</span><br><span class="line">                SystemPropertyUtil.getInt(</span><br><span class="line">                        <span class="string">&quot;io.netty.allocator.numDirectArenas&quot;</span>,</span><br><span class="line">                        (<span class="keyword">int</span>) Math.min(</span><br><span class="line">                                defaultMinNumArena,</span><br><span class="line">                                PlatformDependent.maxDirectMemory() / defaultChunkSize / <span class="number">2</span> / <span class="number">3</span>)));</span><br></pre></td></tr></table></figure>
+
+<p><strong>解读：</strong> DEFAULT_NUM_HEAP_ARENA与DEFAULT_NUM_DIRECT_ARENA赋值结构相同，默认值也相同。DEFAULT_NUM_HEAP_ARENA通过-Dio.netty.allocator.numHeapArenas自定义；DEFAULT_NUM_DIRECT_ARENA通过-Dio.netty.allocator.numDirectArenas自定义。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>defaultMinNumArena</td>
+<td>默认为CPU核数的2倍</td>
+</tr>
+<tr>
+<td>defaultChunkSize</td>
+<td>DEFAULT_PAGE_SIZE &lt;&lt; DEFAULT_MAX_ORDER 也就是 8192 &lt;&lt; 11 = 16777216（16M）</td>
+</tr>
+<tr>
+<td>runtime.maxMemory()</td>
+<td>Jvm从操作系统获取的最大内存由参数-Xmx指定</td>
+</tr>
+<tr>
+<td>runtime.maxMemory() / defaultChunkSize / 2 / 3</td>
+<td>defaultChunkSize=16M，可以简化为 runtime.maxMemory()/96M。也就是Jvm最大内存/96M</td>
+</tr>
+</tbody></table>
+<p>所以默认DEFAULT_NUM_HEAP_ARENA=DEFAULT_NUM_DIRECT_ARENA，CPU核数2倍与runtime.maxMemory()/96M取最小值，在高配的环境下，通常为核数的两倍。</p>
+<p><strong>其他</strong> </p>
+<p>下面这几个，都是可以通过参数指定，没啥特别逻辑，具体含义见上面成员变量。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">DEFAULT_TINY_CACHE_SIZE = SystemPropertyUtil.getInt(<span class="string">&quot;io.netty.allocator.tinyCacheSize&quot;</span>, <span class="number">512</span>);</span><br><span class="line">DEFAULT_SMALL_CACHE_SIZE = SystemPropertyUtil.getInt(<span class="string">&quot;io.netty.allocator.smallCacheSize&quot;</span>, <span class="number">256</span>);</span><br><span class="line">DEFAULT_NORMAL_CACHE_SIZE = SystemPropertyUtil.getInt(<span class="string">&quot;io.netty.allocator.normalCacheSize&quot;</span>, <span class="number">64</span>);</span><br><span class="line">DEFAULT_MAX_CACHED_BUFFER_CAPACITY = SystemPropertyUtil.getInt(</span><br><span class="line">                <span class="string">&quot;io.netty.allocator.maxCachedBufferCapacity&quot;</span>, <span class="number">32</span> * <span class="number">1024</span>);</span><br><span class="line">DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(</span><br><span class="line">                <span class="string">&quot;io.netty.allocator.cacheTrimInterval&quot;</span>, <span class="number">8192</span>);</span><br><span class="line">DEFAULT_CACHE_TRIM_INTERVAL_MILLIS = SystemPropertyUtil.getLong(</span><br><span class="line">                        <span class="string">&quot;io.netty.allocator.cacheTrimIntervalMillis&quot;</span>, <span class="number">0</span>);</span><br><span class="line">DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(</span><br><span class="line">                <span class="string">&quot;io.netty.allocator.useCacheForAllThreads&quot;</span>, <span class="keyword">true</span>);</span><br><span class="line">DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = SystemPropertyUtil.getInt(</span><br><span class="line">                <span class="string">&quot;io.netty.allocator.directMemoryCacheAlignment&quot;</span>, <span class="number">0</span>);</span><br><span class="line">DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK = SystemPropertyUtil.getInt(</span><br><span class="line">                <span class="string">&quot;io.netty.allocator.maxCachedByteBuffersPerChunk&quot;</span>, <span class="number">1023</span>);</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="构造函数"><a href="#构造函数" class="headerlink" title="构造函数"></a>构造函数</h1><p>下面对构造函数的赋值和校验进行走查。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">PooledByteBufAllocator</span><span class="params">(<span class="keyword">boolean</span> preferDirect, <span class="keyword">int</span> nHeapArena, <span class="keyword">int</span> nDirectArena, <span class="keyword">int</span> pageSize, <span class="keyword">int</span> maxOrder,</span></span></span><br><span class="line"><span class="function"><span class="params">                                  <span class="keyword">int</span> tinyCacheSize, <span class="keyword">int</span> smallCacheSize, <span class="keyword">int</span> normalCacheSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                                  <span class="keyword">boolean</span> useCacheForAllThreads, <span class="keyword">int</span> directMemoryCacheAlignment)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 指定是否使用直接内存</span></span><br><span class="line">        <span class="keyword">super</span>(preferDirect);</span><br><span class="line">        <span class="comment">// 创建PoolThreadLocalCache，useCacheForAllThreads是否允许使用对象池</span></span><br><span class="line">        threadCache = <span class="keyword">new</span> PoolThreadLocalCache(useCacheForAllThreads);</span><br><span class="line">        <span class="comment">// tiny类型缓存大小</span></span><br><span class="line">        <span class="keyword">this</span>.tinyCacheSize = tinyCacheSize;</span><br><span class="line">        <span class="comment">// small类型缓存大小</span></span><br><span class="line">        <span class="keyword">this</span>.smallCacheSize = smallCacheSize;</span><br><span class="line">        <span class="comment">// normal类型缓存大小</span></span><br><span class="line">        <span class="keyword">this</span>.normalCacheSize = normalCacheSize;</span><br><span class="line">        <span class="comment">// chunk大小默认16M</span></span><br><span class="line">        chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);</span><br><span class="line">				<span class="comment">// 需正数</span></span><br><span class="line">        checkPositiveOrZero(nHeapArena, <span class="string">&quot;nHeapArena&quot;</span>);</span><br><span class="line">        checkPositiveOrZero(nDirectArena, <span class="string">&quot;nDirectArena&quot;</span>);</span><br><span class="line"></span><br><span class="line">        checkPositiveOrZero(directMemoryCacheAlignment, <span class="string">&quot;directMemoryCacheAlignment&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (directMemoryCacheAlignment &gt; <span class="number">0</span> &amp;&amp; !isDirectMemoryCacheAlignmentSupported()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;directMemoryCacheAlignment is not supported&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> ((directMemoryCacheAlignment &amp; -directMemoryCacheAlignment) != directMemoryCacheAlignment) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;directMemoryCacheAlignment: &quot;</span></span><br><span class="line">                    + directMemoryCacheAlignment + <span class="string">&quot; (expected: power of two)&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 页偏移默认为13，pageShift = Integer.SIZE - 1 - Integer.numberOfLeadingZeros(8192) = 32 - 1 - 18 = 13</span></span><br><span class="line">        <span class="keyword">int</span> pageShifts = validateAndCalculatePageShifts(pageSize);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (nHeapArena &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// 堆内存，创建PoolArena[]数组</span></span><br><span class="line">            heapArenas = newArenaArray(nHeapArena);</span><br><span class="line">            List&lt;PoolArenaMetric&gt; metrics = <span class="keyword">new</span> ArrayList&lt;PoolArenaMetric&gt;(heapArenas.length);</span><br><span class="line">            <span class="comment">// 给数组元素赋值HeapArena</span></span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; heapArenas.length; i ++) &#123;</span><br><span class="line">                PoolArena.HeapArena arena = <span class="keyword">new</span> PoolArena.HeapArena(<span class="keyword">this</span>,</span><br><span class="line">                        pageSize, maxOrder, pageShifts, chunkSize,</span><br><span class="line">                        directMemoryCacheAlignment);</span><br><span class="line">                heapArenas[i] = arena;</span><br><span class="line">                metrics.add(arena);</span><br><span class="line">            &#125;</span><br><span class="line">            heapArenaMetrics = Collections.unmodifiableList(metrics);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            heapArenas = <span class="keyword">null</span>;</span><br><span class="line">            heapArenaMetrics = Collections.emptyList();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (nDirectArena &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// 堆外直接内存，创建PoolArena[]数组</span></span><br><span class="line">            directArenas = newArenaArray(nDirectArena);</span><br><span class="line">            List&lt;PoolArenaMetric&gt; metrics = <span class="keyword">new</span> ArrayList&lt;PoolArenaMetric&gt;(directArenas.length);</span><br><span class="line">            <span class="comment">// 直接内存数组赋值DirectArena</span></span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; directArenas.length; i ++) &#123;</span><br><span class="line">                PoolArena.DirectArena arena = <span class="keyword">new</span> PoolArena.DirectArena(</span><br><span class="line">                        <span class="keyword">this</span>, pageSize, maxOrder, pageShifts, chunkSize, directMemoryCacheAlignment);</span><br><span class="line">                directArenas[i] = arena;</span><br><span class="line">                metrics.add(arena);</span><br><span class="line">            &#125;</span><br><span class="line">            directArenaMetrics = Collections.unmodifiableList(metrics);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            directArenas = <span class="keyword">null</span>;</span><br><span class="line">            directArenaMetrics = Collections.emptyList();</span><br><span class="line">        &#125;</span><br><span class="line">        metric = <span class="keyword">new</span> PooledByteBufAllocatorMetric(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="重要方法走查"><a href="#重要方法走查" class="headerlink" title="重要方法走查"></a>重要方法走查</h1><p>比较重要的方法主要是newHeapBuffer&amp;newDirectBuffer，这两个的流程和代码结构一致，大体流程见上一篇文末有梳理。</p>
+<p>另外，metric这个方法可以观察到内存相关情况。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> PooledByteBufAllocatorMetric <span class="title">metric</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> metric;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>usedHeapMemory</strong> ，查看Netty内存池分配堆空间大小。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">usedHeapMemory</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> usedMemory(heapArenas);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>usedDirectMemory</strong>, 查看Netty内存池分配堆外直接空间大小。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">usedDirectMemory</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> usedMemory(directArenas);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过usedMemory累加PoolArena的内存分配。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">long</span> <span class="title">usedMemory</span><span class="params">(PoolArena&lt;?&gt;[] arenas)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (arenas == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">long</span> used = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">for</span> (PoolArena&lt;?&gt; arena : arenas) &#123;</span><br><span class="line">    used += arena.numActiveBytes();</span><br><span class="line">    <span class="keyword">if</span> (used &lt; <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> Long.MAX_VALUE;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> used;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Netty/" rel="tag"># Netty</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/80419269/" rel="prev" title="Netty12# 池化内存框架流程">
+      <i class="fa fa-chevron-left"></i> Netty12# 池化内存框架流程
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/0/" rel="next" title="">
+       <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%88%90%E5%91%98%E5%8F%98%E9%87%8F%E8%AF%B4%E6%98%8E"><span class="nav-number">2.</span> <span class="nav-text">成员变量说明</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%9D%99%E6%80%81%E5%9D%97%E8%B5%8B%E5%80%BC"><span class="nav-number">3.</span> <span class="nav-text">静态块赋值</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0"><span class="nav-number">4.</span> <span class="nav-text">构造函数</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%87%8D%E8%A6%81%E6%96%B9%E6%B3%95%E8%B5%B0%E6%9F%A5"><span class="nav-number">5.</span> <span class="nav-text">重要方法走查</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

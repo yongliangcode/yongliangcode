@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言在《Nacos4# 服务端响应连接和注册源码分析（一）》在服务注册后发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent。这三个事件后来都干了点啥还没撸。 Nacos的CP协议使用Distro，中间穿插了几">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos9# 服务端响应连接和注册源码分析（二）">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/ec5551b4/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言在《Nacos4# 服务端响应连接和注册源码分析（一）》在服务注册后发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent。这三个事件后来都干了点啥还没撸。 Nacos的CP协议使用Distro，中间穿插了几">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-03T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.880Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/ec5551b4/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos9# 服务端响应连接和注册源码分析（二） | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ec5551b4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos9# 服务端响应连接和注册源码分析（二）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在《Nacos4# 服务端响应连接和注册源码分析（一）》在服务注册后发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent。这三个事件后来都干了点啥还没撸。</p>
+<p>Nacos的CP协议使用Distro，中间穿插了几篇关于该协议的主要逻辑，本文接着撸服务端响应。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="ClientRegisterServiceEvent事件"><a href="#ClientRegisterServiceEvent事件" class="headerlink" title="ClientRegisterServiceEvent事件"></a>ClientRegisterServiceEvent事件</h3><ul>
+<li><p>当注册请求到服务端时，服务端会给订阅该服务的Clients发送推送请求，通知实例变了</p>
+</li>
+<li><p>当注册请求到服务端时，服务端发布了客户端注册事件ClientRegisterServiceEvent</p>
+</li>
+<li><p>ClientRegisterServiceEvent事件被ClientServiceIndexesManager订阅后发布服务变更事件ServiceChangedEvent</p>
+</li>
+<li><p>ServiceChangedEvent被NamingSubscriberServiceV2Impl订阅，创建PushDelayTask被PushExecuteTask执行，负责向订阅该服务的订阅者发起推送serviceInfo请求</p>
+</li>
+<li><p>推送的请求被NamingPushRequestHandler处理并发布InstancesChangeEvent，最终回调到我们的代码逻辑AbstractEventListener</p>
+</li>
+</ul>
+<h3 id="ClientChangedEvent-事件"><a href="#ClientChangedEvent-事件" class="headerlink" title="ClientChangedEvent 事件"></a>ClientChangedEvent 事件</h3><ul>
+<li><p>当注册请求到服务端时，该节点会向集群中其他节点增量同步新增的Client信息</p>
+</li>
+<li><p>当注册请求到服务端时，发布ClientChangedEvent事件</p>
+</li>
+<li><p>该事件被DistroClientDataProcessor订阅发起与其他节点的增量同步</p>
+</li>
+</ul>
+<h3 id="InstanceMetadataEvent事件"><a href="#InstanceMetadataEvent事件" class="headerlink" title="InstanceMetadataEvent事件"></a>InstanceMetadataEvent事件</h3><ul>
+<li>当注册请求到服务端时，发布ClientChangedEvent事件，属性expired为false</li>
+<li>NamingMetadataManager订阅了该事件主要判断元数据是否过期</li>
+</ul>
+<a id="more"></a>
+
+<h1 id="ClientRegisterServiceEvent事件-1"><a href="#ClientRegisterServiceEvent事件-1" class="headerlink" title="ClientRegisterServiceEvent事件"></a>ClientRegisterServiceEvent事件</h1><p>代码翻到ClientServiceIndexesManager#subscribeTypes()，这里订阅ClientRegisterServiceEvent时间</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Class&lt;? extends Event&gt;&gt; subscribeTypes() &#123;</span><br><span class="line">    List&lt;Class&lt;? extends Event&gt;&gt; result = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">    result.add(ClientOperationEvent.ClientRegisterServiceEvent.class);</span><br><span class="line">    result.add(ClientOperationEvent.ClientDeregisterServiceEvent.class);</span><br><span class="line">    result.add(ClientOperationEvent.ClientSubscribeServiceEvent.class);</span><br><span class="line">    result.add(ClientOperationEvent.ClientUnsubscribeServiceEvent.class);</span><br><span class="line">    result.add(ClientEvent.ClientDisconnectEvent.class);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当接收到事件会调用到onEvent()方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientEvent.ClientDisconnectEvent) &#123;</span><br><span class="line">        handleClientDisconnect((ClientEvent.ClientDisconnectEvent) event);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientOperationEvent) &#123;</span><br><span class="line">        handleClientOperation((ClientOperationEvent) event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleClientOperation</span><span class="params">(ClientOperationEvent event)</span> </span>&#123;</span><br><span class="line">  Service service = event.getService();</span><br><span class="line">  String clientId = event.getClientId();</span><br><span class="line">  <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientOperationEvent.ClientRegisterServiceEvent) &#123;</span><br><span class="line">    addPublisherIndexes(service, clientId); </span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientOperationEvent.ClientDeregisterServiceEvent) &#123;</span><br><span class="line">    removePublisherIndexes(service, clientId);</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientOperationEvent.ClientSubscribeServiceEvent) &#123;</span><br><span class="line">    addSubscriberIndexes(service, clientId);</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientOperationEvent.ClientUnsubscribeServiceEvent) &#123;</span><br><span class="line">    removeSubscriberIndexes(service, clientId);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"> <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addPublisherIndexes</span><span class="params">(Service service, String clientId)</span> </span>&#123;</span><br><span class="line">   publisherIndexes.computeIfAbsent(service, (key) -&gt; <span class="keyword">new</span> ConcurrentHashSet&lt;&gt;());</span><br><span class="line">   <span class="comment">// 注解@1</span></span><br><span class="line">   publisherIndexes.get(service).add(clientId);</span><br><span class="line">   <span class="comment">// 注解@2</span></span><br><span class="line">   NotifyCenter.publishEvent(<span class="keyword">new</span> ServiceEvent.ServiceChangedEvent(service, <span class="keyword">true</span>));</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> 一个服务通常有多个ClientId，clientId缓存在ConcurrentHashSet，通过ConcurrentHashMap关联。</p>
+<p><strong>注解@2</strong> 又发布了一个ServiceChangedEvent事件</p>
+<p>谁订阅了服务变更事件ServiceChangedEvent？接着跟</p>
+<p>代码翻到NamingSubscriberServiceV2Impl#subscribeTypes()，该类订阅了ServiceChangedEvent事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Class&lt;? extends Event&gt;&gt; subscribeTypes() &#123;</span><br><span class="line">    List&lt;Class&lt;? extends Event&gt;&gt; result = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">    result.add(ServiceEvent.ServiceChangedEvent.class);</span><br><span class="line">    result.add(ServiceEvent.ServiceSubscribedEvent.class);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>同样收到ServiceChangedEvent事件后回调到onEvent()方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!upgradeJudgement.isUseGrpcFeatures()) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ServiceEvent.ServiceChangedEvent) &#123;</span><br><span class="line">        <span class="comment">// If service changed, push to all subscribers.</span></span><br><span class="line">        ServiceEvent.ServiceChangedEvent serviceChangedEvent = (ServiceEvent.ServiceChangedEvent) event;</span><br><span class="line">        Service service = serviceChangedEvent.getService();</span><br><span class="line">      	<span class="comment">// 注解@3</span></span><br><span class="line">        delayTaskEngine.addTask(service, <span class="keyword">new</span> PushDelayTask(service, <span class="number">500L</span>));</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ServiceEvent.ServiceSubscribedEvent) &#123;</span><br><span class="line">        <span class="comment">// If service is subscribed by one client, only push this client.</span></span><br><span class="line">        ServiceEvent.ServiceSubscribedEvent subscribedEvent = (ServiceEvent.ServiceSubscribedEvent) event;</span><br><span class="line">        Service service = subscribedEvent.getService();</span><br><span class="line">        delayTaskEngine.addTask(service, <span class="keyword">new</span> PushDelayTask(service, <span class="number">500L</span>, subscribedEvent.getClientId()));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@3</strong>  向delayTaskEngine引擎添加PushDelayTask，接着看该引擎的工作过程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">NacosDelayTaskExecuteEngine</span><span class="params">(String name, <span class="keyword">int</span> initCapacity, Logger logger, <span class="keyword">long</span> processInterval)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>(logger);</span><br><span class="line">    tasks = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(initCapacity);</span><br><span class="line">    processingExecutor = ExecutorFactory.newSingleScheduledExecutorService(<span class="keyword">new</span> NameThreadFactory(name));</span><br><span class="line">  	<span class="comment">// 注解@4</span></span><br><span class="line">    processingExecutor</span><br><span class="line">            .scheduleWithFixedDelay(<span class="keyword">new</span> ProcessRunnable(), processInterval, processInterval, TimeUnit.MILLISECONDS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@4</strong> NacosDelayTaskExecuteEngine构造函数时启动了一个定时任务来运行，默认间隔为100ms。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">PushDelayTaskProcessor</span> <span class="keyword">implements</span> <span class="title">NacosTaskProcessor</span> </span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> PushDelayTaskExecuteEngine executeEngine;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">PushDelayTaskProcessor</span><span class="params">(PushDelayTaskExecuteEngine executeEngine)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.executeEngine = executeEngine;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">        PushDelayTask pushDelayTask = (PushDelayTask) task;</span><br><span class="line">        Service service = pushDelayTask.getService();</span><br><span class="line">      	<span class="comment">// 注解@5</span></span><br><span class="line">        NamingExecuteTaskDispatcher.getInstance()</span><br><span class="line">                .dispatchAndExecuteTask(service, <span class="keyword">new</span> PushExecuteTask(service, executeEngine, pushDelayTask));</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5</strong> 具体到PushDelayTask是由PushExecuteTask运行，下面看其run方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">    		<span class="comment">// 注解@6</span></span><br><span class="line">        PushDataWrapper wrapper = generatePushData();</span><br><span class="line">        <span class="comment">// 注解@7</span></span><br><span class="line">        <span class="keyword">for</span> (String each : getTargetClientIds()) &#123;</span><br><span class="line">            Client client = delayTaskEngine.getClientManager().getClient(each);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == client) &#123;</span><br><span class="line">                <span class="comment">// means this client has disconnect</span></span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 注解@8</span></span><br><span class="line">            Subscriber subscriber = delayTaskEngine.getClientManager().getClient(each).getSubscriber(service);</span><br><span class="line">            <span class="comment">// 注解@9</span></span><br><span class="line">            delayTaskEngine.getPushExecutor().doPushWithCallback(each, subscriber, wrapper,</span><br><span class="line">                    <span class="keyword">new</span> NamingPushCallback(each, subscriber, wrapper.getOriginalData()));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        Loggers.PUSH.error(<span class="string">&quot;Push task for service&quot;</span> + service.getGroupedServiceName() + <span class="string">&quot; execute failed &quot;</span>, e);</span><br><span class="line">        delayTaskEngine.addTask(service, <span class="keyword">new</span> PushDelayTask(service, <span class="number">1000L</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@6</strong> 组织推送数据，主要为service信息以及注册host等。</p>
+<p><strong>注解@7</strong> 获取需要通知的客户端集合ClientIds</p>
+<p><strong>注解@8</strong> 获取服务的订阅者Subscriber</p>
+<p><strong>注解@9</strong> 根据clientId从connections集合中获取连接，将变更推送给客户端</p>
+<p><strong>客户端如何接受的呢？</strong> </p>
+<p>NamingGrpcClientProxy#start()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">(ServerListFactory serverListFactory, ServiceInfoHolder serviceInfoHolder)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    rpcClient.serverListFactory(serverListFactory);</span><br><span class="line">    <span class="comment">// gRPC Client启动</span></span><br><span class="line">    rpcClient.start();</span><br><span class="line">    <span class="comment">// 注解@10</span></span><br><span class="line">    rpcClient.registerServerRequestHandler(<span class="keyword">new</span> NamingPushRequestHandler(serviceInfoHolder));</span><br><span class="line">    <span class="comment">// 注册连接事件Listener，当连接建立和断开时处理事件</span></span><br><span class="line">    rpcClient.registerConnectionListener(namingGrpcConnectionEventListener);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@10</strong> 在客户端构建gRPC时，注册registerServerRequestHandler用于处理从Nacos Push到Client的请求，添加到了serverRequestHandlers集合。</p>
+<p>GrpcClient#connectToServer()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Connection <span class="title">connectToServer</span><span class="params">(ServerInfo serverInfo)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">       </span><br><span class="line">        RequestGrpc.RequestFutureStub newChannelStubTemp = createNewChannelStub(serverInfo.getServerIp(),</span><br><span class="line">                serverInfo.getServerPort() + rpcPortOffset());</span><br><span class="line">        <span class="keyword">if</span> (newChannelStubTemp != <span class="keyword">null</span>) &#123;</span><br><span class="line">            Response response = serverCheck(newChannelStubTemp);</span><br><span class="line">            BiRequestStreamGrpc.BiRequestStreamStub biRequestStreamStub = BiRequestStreamGrpc</span><br><span class="line">                    .newStub(newChannelStubTemp.getChannel());</span><br><span class="line">            GrpcConnection grpcConn = <span class="keyword">new</span> GrpcConnection(serverInfo, grpcExecutor);</span><br><span class="line">            grpcConn.setConnectionId(((ServerCheckResponse) response).getConnectionId());</span><br><span class="line">            <span class="comment">//create stream request and bind connection event to this connection.</span></span><br><span class="line">            <span class="comment">// 注解@11</span></span><br><span class="line">            StreamObserver&lt;Payload&gt; payloadStreamObserver = bindRequestStream(biRequestStreamStub, grpcConn);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">            <span class="keyword">return</span> grpcConn;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">       <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@11</strong> 在连接server时绑定相关事件</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> StreamObserver&lt;Payload&gt; <span class="title">bindRequestStream</span><span class="params">(<span class="keyword">final</span> BiRequestStreamGrpc.BiRequestStreamStub streamStub,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">final</span> GrpcConnection grpcConn)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> streamStub.requestBiStream(<span class="keyword">new</span> StreamObserver&lt;Payload&gt;() &#123;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNext</span><span class="params">(Payload payload)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">            LoggerUtils.printIfDebugEnabled(LOGGER, <span class="string">&quot;[&#123;&#125;]Stream server request receive, original info: &#123;&#125;&quot;</span>,</span><br><span class="line">                    grpcConn.getConnectionId(), payload.toString());</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Object parseBody = GrpcUtils.parse(payload);</span><br><span class="line">                <span class="keyword">final</span> Request request = (Request) parseBody;</span><br><span class="line">                <span class="keyword">if</span> (request != <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        <span class="comment">// 注解@12</span></span><br><span class="line">                        Response response = handleServerRequest(request);</span><br><span class="line">                        <span class="keyword">if</span> (response != <span class="keyword">null</span>) &#123;</span><br><span class="line">                            response.setRequestId(request.getRequestId());</span><br><span class="line">                            sendResponse(response);</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                          	</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                        </span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">							</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@12</strong>  接受server push处理，本事件具体回调到NamingPushRequestHandler#requestReply</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Response <span class="title">requestReply</span><span class="params">(Request request)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (request <span class="keyword">instanceof</span> NotifySubscriberRequest) &#123;</span><br><span class="line">        NotifySubscriberRequest notifyResponse = (NotifySubscriberRequest) request;</span><br><span class="line">        serviceInfoHolder.processServiceInfo(notifyResponse.getServiceInfo());</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> NotifySubscriberResponse();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>下面这部分代码在以前的文章已经分析过了，当serviceInfo变更时发布InstancesChangeEvent，InstancesChangeNotifier订阅了该事件，进而回调到我们示例代码的AbstractEventListener实现中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ServiceInfo <span class="title">processServiceInfo</span><span class="params">(ServiceInfo serviceInfo)</span> </span>&#123;</span><br><span class="line">    String serviceKey = serviceInfo.getKey();</span><br><span class="line">    <span class="keyword">if</span> (serviceKey == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ServiceInfo oldService = serviceInfoMap.get(serviceInfo.getKey());</span><br><span class="line">    <span class="keyword">if</span> (isEmptyOrErrorPush(serviceInfo)) &#123;</span><br><span class="line">        <span class="comment">//empty or error push, just ignore</span></span><br><span class="line">        <span class="keyword">return</span> oldService;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 缓存服务信息</span></span><br><span class="line">    serviceInfoMap.put(serviceInfo.getKey(), serviceInfo);</span><br><span class="line">    <span class="comment">// 判断注册的实例信息是否已变更</span></span><br><span class="line">    <span class="keyword">boolean</span> changed = isChangedServiceInfo(oldService, serviceInfo);</span><br><span class="line">    <span class="keyword">if</span> (StringUtils.isBlank(serviceInfo.getJsonFromServer())) &#123;</span><br><span class="line">        serviceInfo.setJsonFromServer(JacksonUtils.toJson(serviceInfo));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 通过prometheus-simpleclient监控服务缓存Map的大小</span></span><br><span class="line">    MetricsMonitor.getServiceInfoMapSizeMonitor().set(serviceInfoMap.size());</span><br><span class="line">    <span class="comment">// 服务实例已变更</span></span><br><span class="line">    <span class="keyword">if</span> (changed) &#123;</span><br><span class="line">        NAMING_LOGGER.info(<span class="string">&quot;current ips:(&quot;</span> + serviceInfo.ipCount() + <span class="string">&quot;) service: &quot;</span> + serviceInfo.getKey() + <span class="string">&quot; -&gt; &quot;</span></span><br><span class="line">                + JacksonUtils.toJson(serviceInfo.getHosts()));</span><br><span class="line">        <span class="comment">// 添加实例变更事件，会被推动到订阅者执行</span></span><br><span class="line">        NotifyCenter.publishEvent(<span class="keyword">new</span> InstancesChangeEvent(serviceInfo.getName(), serviceInfo.getGroupName(),</span><br><span class="line">                serviceInfo.getClusters(), serviceInfo.getHosts()));</span><br><span class="line">        <span class="comment">// 记录Service本地文件</span></span><br><span class="line">        DiskCache.write(serviceInfo, cacheDir);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> serviceInfo;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> 当注册请求到服务端时，服务端发布了客户端注册事件（ClientRegisterServiceEvent）；ClientRegisterServiceEvent事件被ClientServiceIndexesManager订阅后发布服务变更事件（ServiceChangedEvent）；ServiceChangedEvent被NamingSubscriberServiceV2Impl订阅并创建PushDelayTask并被PushExecuteTask执行，负责向订阅该服务的订阅者发起推送serviceInfo请求；推送的请求被NamingPushRequestHandler处理并发布InstancesChangeEvent，最终回调到我们的代码逻辑AbstractEventListener。</p>
+<h1 id="ClientChangedEvent-事件-1"><a href="#ClientChangedEvent-事件-1" class="headerlink" title="ClientChangedEvent 事件"></a>ClientChangedEvent 事件</h1><p>还是看ClientChangedEvent事件的订阅者，代码翻到DistroClientDataProcessor#subscribeTypes()。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Class&lt;? extends Event&gt;&gt; subscribeTypes() &#123;</span><br><span class="line">    List&lt;Class&lt;? extends Event&gt;&gt; result = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">    result.add(ClientEvent.ClientChangedEvent.class);</span><br><span class="line">    result.add(ClientEvent.ClientDisconnectEvent.class);</span><br><span class="line">    result.add(ClientEvent.ClientVerifyFailedEvent.class);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当收到该事件时会执行到onEvent方法()也就是增量同步，增量同步逻辑在《Nacos7# Distro协议增量同步》已梳理。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public void onEvent(Event event) &#123;</span><br><span class="line">    if (EnvUtil.getStandaloneMode()) &#123;</span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line">    if (!upgradeJudgement.isUseGrpcFeatures()) &#123;</span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line">    if (event instanceof ClientEvent.ClientVerifyFailedEvent) &#123;</span><br><span class="line">        syncToVerifyFailedServer((ClientEvent.ClientVerifyFailedEvent) event);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        &#x2F;&#x2F; 同步给其他节点信息</span><br><span class="line">        syncToAllServer((ClientEvent) event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong>  当注册请求到服务端时，发布ClientChangedEvent事件；该事件被DistroClientDataProcessor订阅发起与其他节点的增量同步。</p>
+<h1 id="InstanceMetadataEvent事件-1"><a href="#InstanceMetadataEvent事件-1" class="headerlink" title="InstanceMetadataEvent事件"></a>InstanceMetadataEvent事件</h1><p>翻到NamingMetadataManager#subscribeTypes()，订阅了该事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Class&lt;? extends Event&gt;&gt; subscribeTypes() &#123;</span><br><span class="line">    List&lt;Class&lt;? extends Event&gt;&gt; result = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">    <span class="comment">// 订阅实例变更事件</span></span><br><span class="line">    result.add(MetadataEvent.InstanceMetadataEvent.class);</span><br><span class="line">    result.add(MetadataEvent.ServiceMetadataEvent.class);</span><br><span class="line">    result.add(ClientEvent.ClientDisconnectEvent.class);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>还是onEvent()处理事件</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 处理实例元数据变更事件</span></span><br><span class="line">    <span class="keyword">if</span> (event <span class="keyword">instanceof</span> MetadataEvent.InstanceMetadataEvent) &#123;</span><br><span class="line">        handleInstanceMetadataEvent((MetadataEvent.InstanceMetadataEvent) event);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> MetadataEvent.ServiceMetadataEvent) &#123;</span><br><span class="line">        handleServiceMetadataEvent((MetadataEvent.ServiceMetadataEvent) event);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        handleClientDisconnectEvent((ClientEvent.ClientDisconnectEvent) event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleInstanceMetadataEvent</span><span class="params">(MetadataEvent.InstanceMetadataEvent event)</span> </span>&#123;</span><br><span class="line">        Service service = event.getService();</span><br><span class="line">        <span class="comment">// 格式 ip:port:cluster</span></span><br><span class="line">        String metadataId = event.getMetadataId();</span><br><span class="line">        <span class="keyword">if</span> (containInstanceMetadata(service, metadataId)) &#123;</span><br><span class="line">            updateExpiredInfo(event.isExpired(),</span><br><span class="line">                    ExpiredMetadataInfo.newExpiredInstanceMetadata(event.getService(), event.getMetadataId()));</span><br><span class="line">        &#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">updateExpiredInfo</span><span class="params">(<span class="keyword">boolean</span> expired, ExpiredMetadataInfo expiredMetadataInfo)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (expired) &#123;</span><br><span class="line">            expiredMetadataInfos.add(expiredMetadataInfo);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;  <span class="comment">// false</span></span><br><span class="line">            expiredMetadataInfos.remove(expiredMetadataInfo);</span><br><span class="line">        &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong> 当注册请求到服务端时，发布ClientChangedEvent事件，expired为false；NamingMetadataManager订阅了该事件主要判断元数据是否过期。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/765f2ae1/" rel="prev" title="Nacos8# 集群中节点之间健康检查">
+      <i class="fa fa-chevron-left"></i> Nacos8# 集群中节点之间健康检查
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/4951a8cc/" rel="next" title="SK9# 公司的军规">
+      SK9# 公司的军规 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientRegisterServiceEvent%E4%BA%8B%E4%BB%B6"><span class="nav-number">2.0.1.</span> <span class="nav-text">ClientRegisterServiceEvent事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientChangedEvent-%E4%BA%8B%E4%BB%B6"><span class="nav-number">2.0.2.</span> <span class="nav-text">ClientChangedEvent 事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#InstanceMetadataEvent%E4%BA%8B%E4%BB%B6"><span class="nav-number">2.0.3.</span> <span class="nav-text">InstanceMetadataEvent事件</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ClientRegisterServiceEvent%E4%BA%8B%E4%BB%B6-1"><span class="nav-number">3.</span> <span class="nav-text">ClientRegisterServiceEvent事件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ClientChangedEvent-%E4%BA%8B%E4%BB%B6-1"><span class="nav-number">4.</span> <span class="nav-text">ClientChangedEvent 事件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#InstanceMetadataEvent%E4%BA%8B%E4%BB%B6-1"><span class="nav-number">5.</span> <span class="nav-text">InstanceMetadataEvent事件</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

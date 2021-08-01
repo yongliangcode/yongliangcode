@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言上篇文章分析了Nacos服务端启动的逻辑，本文分析启动时加载了哪些Handler，以及处理连接请求和注册请求的逻辑。 内容提要加载RequestHandler 容器启动时加载了13个RequestHandler由他们实际处理各种请求逻辑后面章节再细撸 当然也加载了InstanceRequest-&gt;InstanceRequestHandler  服务端响应客户端连接 处理客户端的连接请求由">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos4# 服务端响应连接和注册源码分析（一）">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/d65dffb2/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言上篇文章分析了Nacos服务端启动的逻辑，本文分析启动时加载了哪些Handler，以及处理连接请求和注册请求的逻辑。 内容提要加载RequestHandler 容器启动时加载了13个RequestHandler由他们实际处理各种请求逻辑后面章节再细撸 当然也加载了InstanceRequest-&gt;InstanceRequestHandler  服务端响应客户端连接 处理客户端的连接请求由">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210607141823.png">
+<meta property="article:published_time" content="2021-06-13T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.876Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210607141823.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/d65dffb2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos4# 服务端响应连接和注册源码分析（一） | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d65dffb2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos4# 服务端响应连接和注册源码分析（一）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-06-13 11:55:01" itemprop="dateCreated datePublished" datetime="2021-06-13T11:55:01+08:00">2021-06-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>上篇文章分析了Nacos服务端启动的逻辑，本文分析启动时加载了哪些Handler，以及处理连接请求和注册请求的逻辑。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="加载RequestHandler"><a href="#加载RequestHandler" class="headerlink" title="加载RequestHandler"></a>加载RequestHandler</h3><ul>
+<li>容器启动时加载了13个RequestHandler由他们实际处理各种请求逻辑后面章节再细撸</li>
+<li>当然也加载了InstanceRequest-&gt;InstanceRequestHandler</li>
+</ul>
+<h3 id="服务端响应客户端连接"><a href="#服务端响应客户端连接" class="headerlink" title="服务端响应客户端连接"></a>服务端响应客户端连接</h3><ul>
+<li>处理客户端的连接请求由GrpcBiStreamRequestAcceptor#requestBiStream负责</li>
+<li>构建和缓存了GrpcConnection对象和Client对象</li>
+</ul>
+<h3 id="服务端处理注册请求"><a href="#服务端处理注册请求" class="headerlink" title="服务端处理注册请求"></a>服务端处理注册请求</h3><ul>
+<li> 处理注册请求的逻辑由InstanceRequestHandler执行</li>
+<li> 建立起了client与service、instance的关系</li>
+<li>发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="加载RequestHandler-1"><a href="#加载RequestHandler-1" class="headerlink" title="加载RequestHandler"></a>加载RequestHandler</h1><p>com.alibaba.nacos.core.remote#RequestHandlerRegistry实现了ApplicationListener，在spring启动后回调onApplicationEvent。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onApplicationEvent</span><span class="params">(ContextRefreshedEvent event)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 注解@1</span></span><br><span class="line">  Map&lt;String, RequestHandler&gt; beansOfType = event.getApplicationContext().getBeansOfType(RequestHandler.class);</span><br><span class="line">  Collection&lt;RequestHandler&gt; values = beansOfType.values();</span><br><span class="line">  <span class="keyword">for</span> (RequestHandler requestHandler : values) &#123;</span><br><span class="line"></span><br><span class="line">    Class&lt;?&gt; clazz = requestHandler.getClass();</span><br><span class="line">    <span class="keyword">boolean</span> skip = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">while</span> (!clazz.getSuperclass().equals(RequestHandler.class)) &#123;</span><br><span class="line">      <span class="keyword">if</span> (clazz.getSuperclass().equals(Object.class)) &#123;</span><br><span class="line">        skip = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      clazz = clazz.getSuperclass();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (skip) &#123; <span class="comment">// 注解@2 </span></span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">// 注解@3</span></span><br><span class="line">      Method method = clazz.getMethod(<span class="string">&quot;handle&quot;</span>, Request.class, RequestMeta.class);</span><br><span class="line">      <span class="keyword">if</span> (method.isAnnotationPresent(TpsControl.class) &amp;&amp; TpsControlConfig.isTpsControlEnabled()) &#123;</span><br><span class="line">        TpsControl tpsControl = method.getAnnotation(TpsControl.class);</span><br><span class="line">        String pointName = tpsControl.pointName();</span><br><span class="line">        TpsMonitorPoint tpsMonitorPoint = <span class="keyword">new</span> TpsMonitorPoint(pointName);</span><br><span class="line">        tpsMonitorManager.registerTpsControlPoint(tpsMonitorPoint);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">      <span class="comment">//ignore.</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 注解@4</span></span><br><span class="line">    Class tClass = (Class) ((ParameterizedType) clazz.getGenericSuperclass()).getActualTypeArguments()[<span class="number">0</span>];</span><br><span class="line">    registryHandlers.putIfAbsent(tClass.getSimpleName(), requestHandler);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1：</strong> 获取RequestHandler的众多实现类</p>
+<p><strong>注解@2：</strong> 跳过超类RequestHandler</p>
+<p><strong>注解@3：</strong> 获取需要带有「TpsControl」注解的方法，表示需要对流量Tps控制</p>
+<p><strong>注解@4：</strong> 将Handler装载到缓存 例如：InstanceRequest-&gt;InstanceRequestHandler</p>
+<p><strong>小结：</strong> 在spring启动时转载了众多的RequestHandler，这些Handler是真正的逻辑所在。下面列表时加载的13个RequestHandler</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ConfigBatchListenRequest</td>
+<td>ConfigChangeBatchListenRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ConfigChangeClusterSyncRequest</td>
+<td>ConfigChangeClusterSyncRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ConfigPublishRequest</td>
+<td>ConfigPublishRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ConfigQueryRequest</td>
+<td>ConfigQueryRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ConfigRemoveRequest</td>
+<td>ConfigRemoveRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>HealthCheckRequest</td>
+<td>HealthCheckRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ServerLoaderInfoRequest</td>
+<td>ServerLoaderInfoRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ServerReloadRequest</td>
+<td>ServerReloaderRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>DistroDataRequest</td>
+<td>DistroDataRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>InstanceRequest</td>
+<td>InstanceRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ServiceListRequest</td>
+<td>ServiceListRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>ConfigPublishRequest</td>
+<td>ConfigPublishRequestHandler</td>
+<td></td>
+</tr>
+<tr>
+<td>SubscribeServiceRequest</td>
+<td>SubscribeServiceRequestHandler</td>
+<td></td>
+</tr>
+</tbody></table>
+<h1 id="服务端响应客户端连接-1"><a href="#服务端响应客户端连接-1" class="headerlink" title="服务端响应客户端连接"></a>服务端响应客户端连接</h1><h3 id="client连接server"><a href="#client连接server" class="headerlink" title="client连接server"></a>client连接server</h3><p>在前面《Nacos2# 服务注册与发现客户端示例与源码解析（二）》中client会与server建立连接具体方法为connectToServer()。</p>
+<p>在分下《Nacos3# 服务注册与发现服务端启动源码解析》时protobuf文件装载了两类grpc请求类型，其中一类为双向流调用方式BiRequestStream#biRequestStream。</p>
+<p>客户端发起connectToServer()时正式双向流调用类型：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function"><span class="keyword">public</span> Connection <span class="title">connectToServer</span><span class="params">(ServerInfo serverInfo)</span> </span>&#123;</span><br><span class="line"> 		<span class="comment">// ... </span></span><br><span class="line">    BiRequestStreamGrpc.BiRequestStreamStub biRequestStreamStub = BiRequestStreamGrpc</span><br><span class="line">                        .newStub(newChannelStubTemp.getChannel());</span><br><span class="line">    </span><br><span class="line"> &#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> StreamObserver&lt;Payload&gt; <span class="title">bindRequestStream</span><span class="params">(<span class="keyword">final</span> BiRequestStreamGrpc.BiRequestStreamStub streamStub,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> GrpcConnection grpcConn)</span> </span>&#123;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> streamStub.requestBiStream(<span class="keyword">new</span> StreamObserver&lt;Payload&gt;() &#123;</span><br><span class="line">          </span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那在nacos server端如何响应的呢？</p>
+<h3 id="Nacos-server响应连接"><a href="#Nacos-server响应连接" class="headerlink" title="Nacos server响应连接"></a>Nacos server响应连接</h3><p>在分析《Nacos3# 服务注册与发现服务端启动源码解析》服务端grpc启动构建暴露的服务定义信息时添加了requestBiStream</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addServices</span><span class="params">(MutableHandlerRegistry handlerRegistry, ServerInterceptor... serverInterceptor)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">		<span class="comment">// 服务接口处理类</span></span><br><span class="line">  <span class="keyword">final</span> ServerCallHandler&lt;Payload, Payload&gt; biStreamHandler = ServerCalls.asyncBidiStreamingCall(</span><br><span class="line">    (responseObserver) -&gt; grpcBiStreamRequestAcceptor.requestBiStream(responseObserver));</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">   <span class="keyword">final</span> ServerServiceDefinition serviceDefOfBiStream = ServerServiceDefinition</span><br><span class="line">               .builder(REQUEST_BI_STREAM_SERVICE_NAME).addMethod(biStreamMethod, biStreamHandler).build();    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来看其处理连接请求逻辑。坐标GrpcBiStreamRequestAcceptor#requestBiStream</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> StreamObserver&lt;Payload&gt; <span class="title">requestBiStream</span><span class="params">(StreamObserver&lt;Payload&gt; responseObserver)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  StreamObserver&lt;Payload&gt; streamObserver = <span class="keyword">new</span> StreamObserver&lt;Payload&gt;() &#123;</span><br><span class="line">		<span class="comment">// 连接标识 eg. connectionId=1623495108814_127.0.0.1_54314</span></span><br><span class="line">    <span class="keyword">final</span> String connectionId = CONTEXT_KEY_CONN_ID.get();</span><br><span class="line">		<span class="comment">// eg. localPort=9848</span></span><br><span class="line">    <span class="keyword">final</span> Integer localPort = CONTEXT_KEY_CONN_LOCAL_PORT.get();</span><br><span class="line">		<span class="comment">// eg. remotePort=54314</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> remotePort = CONTEXT_KEY_CONN_REMOTE_PORT.get();</span><br><span class="line">		<span class="comment">// eg. remoteIp=127.0.0.1</span></span><br><span class="line">    String remoteIp = CONTEXT_KEY_CONN_REMOTE_IP.get();</span><br><span class="line">		<span class="comment">// eg. clientIp=192.168.0.110</span></span><br><span class="line">    String clientIp = <span class="string">&quot;&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNext</span><span class="params">(Payload payload)</span> </span>&#123;</span><br><span class="line">			<span class="comment">// 解析客户端IP</span></span><br><span class="line">      clientIp = payload.getMetadata().getClientIp();</span><br><span class="line">      traceDetailIfNecessary(payload);</span><br><span class="line"></span><br><span class="line">      Object parseObj = <span class="keyword">null</span>;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        parseObj = GrpcUtils.parse(payload); <span class="comment">// 将二进制转换为对象</span></span><br><span class="line">      &#125; <span class="keyword">catch</span> (Throwable throwable) &#123;</span><br><span class="line">        </span><br><span class="line">      &#125;</span><br><span class="line">    </span><br><span class="line">      <span class="keyword">if</span> (parseObj <span class="keyword">instanceof</span> ConnectionSetupRequest) &#123;</span><br><span class="line">        ConnectionSetupRequest setUpRequest = (ConnectionSetupRequest) parseObj;</span><br><span class="line">        Map&lt;String, String&gt; labels = setUpRequest.getLabels();</span><br><span class="line">        String appName = <span class="string">&quot;-&quot;</span>;</span><br><span class="line">        <span class="keyword">if</span> (labels != <span class="keyword">null</span> &amp;&amp; labels.containsKey(Constants.APPNAME)) &#123;</span><br><span class="line">          appName = labels.get(Constants.APPNAME);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">       ConnectionMeta metaInfo = <span class="keyword">new</span> ConnectionMeta(connectionId, payload.getMetadata().getClientIp(),</span><br><span class="line">           remoteIp, remotePort, localPort,ConnectionType.GRPC.getType(),setUpRequest.getClientVersion(), appName, setUpRequest.getLabels());</span><br><span class="line">        metaInfo.setTenant(setUpRequest.getTenant());</span><br><span class="line">        <span class="comment">// 注解@5</span></span><br><span class="line">        Connection connection = <span class="keyword">new</span> GrpcConnection(metaInfo, responseObserver, CONTEXT_KEY_CHANNEL.get());</span><br><span class="line">        connection.setAbilities(setUpRequest.getAbilities());</span><br><span class="line">        <span class="keyword">boolean</span> rejectSdkOnStarting = metaInfo.isSdkSource() &amp;&amp; !ApplicationUtils.isStarted();</span><br><span class="line">				<span class="comment">// 注解@6</span></span><br><span class="line">        <span class="keyword">if</span> (rejectSdkOnStarting || !connectionManager.register(connectionId, connection)) &#123;</span><br><span class="line">          <span class="keyword">try</span> &#123;</span><br><span class="line">           </span><br><span class="line">            connection.request(<span class="keyword">new</span> ConnectResetRequest(), <span class="number">3000L</span>);</span><br><span class="line">            connection.close();</span><br><span class="line">          &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="comment">//Do nothing.</span></span><br><span class="line">            <span class="keyword">if</span> (connectionManager.traced(clientIp)) &#123;</span><br><span class="line">             </span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (parseObj != <span class="keyword">null</span> &amp;&amp; parseObj <span class="keyword">instanceof</span> Response) &#123;</span><br><span class="line">        Response response = (Response) parseObj;</span><br><span class="line">        <span class="keyword">if</span> (connectionManager.traced(clientIp)) &#123;</span><br><span class="line">         </span><br><span class="line">        &#125;</span><br><span class="line">        RpcAckCallbackSynchronizer.ackNotify(connectionId, response);</span><br><span class="line">        connectionManager.refreshActiveTime(connectionId);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      </span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> streamObserver;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5</strong> 构建连接对象</p>
+<p><strong>注解@6</strong>  注册连接信息，一个是缓存连接信息到Map connections中；另一个是触发client连接通知</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">boolean</span> <span class="title">register</span><span class="params">(String connectionId, Connection connection)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (connection.isConnected()) &#123;</span><br><span class="line">    </span><br><span class="line">    connections.put(connectionId, connection);</span><br><span class="line">    connectionForClientIp.get(connection.getMetaInfo().clientIp).getAndIncrement();</span><br><span class="line"></span><br><span class="line">    clientConnectionEventListenerRegistry.notifyClientConnected(connection);</span><br><span class="line">   </span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>client连接通知处理逻辑：坐标ConnectionBasedClientManager#clientConnected。主要构建Client对象并缓存，clientId=connectId</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clientConnected</span><span class="params">(Connection connect)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!RemoteConstants.LABEL_MODULE_NAMING.equals(connect.getMetaInfo().getLabel(RemoteConstants.LABEL_MODULE)))	&#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  String type = connect.getMetaInfo().getConnectType();</span><br><span class="line">  ClientFactory clientFactory = ClientFactoryHolder.getInstance().findClientFactory(type);</span><br><span class="line">  <span class="comment">// 构建Client对象</span></span><br><span class="line">  clientConnected(clientFactory.newClient(connect.getMetaInfo().getConnectionId()));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">clientConnected</span><span class="params">(Client client)</span> </span>&#123;</span><br><span class="line">    Loggers.SRV_LOG.info(<span class="string">&quot;Client connection &#123;&#125; connect&quot;</span>, client.getClientId());</span><br><span class="line">    <span class="keyword">if</span> (!clients.containsKey(client.getClientId())) &#123;</span><br><span class="line">      <span class="comment">// 缓存Client信息</span></span><br><span class="line">      clients.putIfAbsent(client.getClientId(), (ConnectionBasedClient) client);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong> Nacos Server响应客户端连接主要干了两件事：@1 构建和缓存GrpcConnection对象，包含ConnectionMeta、channel和StreamObserver；@2 构建和缓存Client对象包含；clientId即connectionId。</p>
+<p><strong>ConnectionMeta属性</strong></p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>connectType</td>
+<td>ConnectionType，例如：GRPC</td>
+</tr>
+<tr>
+<td>clientIp</td>
+<td>客户端IP，例如：clientIp=192.168.0.110</td>
+</tr>
+<tr>
+<td>remoteIp</td>
+<td>远程节点IP，例如：remoteIp=127.0.0.1</td>
+</tr>
+<tr>
+<td>remotePort</td>
+<td>远程节点端口，例如：remotePort=54314</td>
+</tr>
+<tr>
+<td>localPort</td>
+<td>本地节点端口，例如：localPort=9848</td>
+</tr>
+<tr>
+<td>version</td>
+<td>client 版本</td>
+</tr>
+<tr>
+<td>connectionId</td>
+<td>连接标识</td>
+</tr>
+<tr>
+<td>createTime</td>
+<td>连接创建时间</td>
+</tr>
+<tr>
+<td>lastActiveTime</td>
+<td>最新保活时间</td>
+</tr>
+<tr>
+<td>appName</td>
+<td>app名称默认为“-”</td>
+</tr>
+<tr>
+<td>tenant</td>
+<td>租户</td>
+</tr>
+</tbody></table>
+<p><strong>ConnectionBasedClient属性</strong></p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>connectionId</td>
+<td>连接标识</td>
+</tr>
+<tr>
+<td>isNative</td>
+<td>true表示client直接连接到该server；false表示该连接是被从其他server同步而来</td>
+</tr>
+<tr>
+<td>lastRenewTime</td>
+<td>当isNative为false时，上次从源server校验的时间戳</td>
+</tr>
+<tr>
+<td>lastUpdatedTime</td>
+<td>最新保鲜时间</td>
+</tr>
+</tbody></table>
+<h1 id="服务端处理注册请求-1"><a href="#服务端处理注册请求-1" class="headerlink" title="服务端处理注册请求"></a>服务端处理注册请求</h1><p>在上面文章《服务注册与发现服务端启动源码解析》有提到由RequestAcceptor.request会处理</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 服务接口处理类</span></span><br><span class="line"><span class="keyword">final</span> ServerCallHandler&lt;Payload, Payload&gt; payloadHandler = ServerCalls</span><br><span class="line">  .asyncUnaryCall((request, responseObserver) -&gt; &#123;</span><br><span class="line">    grpcCommonRequestAcceptor.request(request, responseObserver);</span><br><span class="line">  &#125;);</span><br></pre></td></tr></table></figure>
+
+<p>下面看下request处理逻辑，忽略一些校验</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">request</span><span class="params">(Payload grpcRequest, StreamObserver&lt;Payload&gt; responseObserver)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 查看是否在监控列表</span></span><br><span class="line">  traceIfNecessary(grpcRequest, <span class="keyword">true</span>);</span><br><span class="line">  String type = grpcRequest.getMetadata().getType();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// server启动校验、server校验</span></span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  <span class="comment">// 注解@7</span></span><br><span class="line">  RequestHandler requestHandler = requestHandlerRegistry.getByRequestType(type);</span><br><span class="line">  <span class="comment">// 没有Handler校验</span></span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  </span><br><span class="line">  String connectionId = CONTEXT_KEY_CONN_ID.get();</span><br><span class="line">  <span class="keyword">boolean</span> requestValid = connectionManager.checkValid(connectionId);</span><br><span class="line">  <span class="comment">// 校验connId是否有效无效返回</span></span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  Object parseObj = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    parseObj = GrpcUtils.parse(grpcRequest); <span class="comment">// 注解@8</span></span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 非null校验</span></span><br><span class="line">  <span class="keyword">if</span> (parseObj == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 非request校验</span></span><br><span class="line">  <span class="keyword">if</span> (!(parseObj <span class="keyword">instanceof</span> Request)) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  Request request = (Request) parseObj;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    Connection connection = connectionManager.getConnection(CONTEXT_KEY_CONN_ID.get());</span><br><span class="line">    RequestMeta requestMeta = <span class="keyword">new</span> RequestMeta();</span><br><span class="line">    <span class="comment">// 注解@9</span></span><br><span class="line">    requestMeta.setClientIp(connection.getMetaInfo().getClientIp());</span><br><span class="line">    requestMeta.setConnectionId(CONTEXT_KEY_CONN_ID.get());</span><br><span class="line">    requestMeta.setClientVersion(connection.getMetaInfo().getVersion());</span><br><span class="line">    requestMeta.setLabels(connection.getMetaInfo().getLabels());</span><br><span class="line">    <span class="comment">// 注解@10</span></span><br><span class="line">    connectionManager.refreshActiveTime(requestMeta.getConnectionId());</span><br><span class="line">    <span class="comment">// 注解@11</span></span><br><span class="line">    Response response = requestHandler.handleRequest(request, requestMeta);</span><br><span class="line">    Payload payloadResponse = GrpcUtils.convert(response);</span><br><span class="line">    traceIfNecessary(payloadResponse, <span class="keyword">false</span>);</span><br><span class="line">    responseObserver.onNext(payloadResponse);</span><br><span class="line">    responseObserver.onCompleted();</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7</strong>  根据请求类型获取处理的RequestHandler，处理注册的为InstanceRequest-&gt;InstanceRequestHandler</p>
+<p><strong>注解@8</strong> 解析成Request对象</p>
+<p><strong>注解@9</strong> 装载clientIP、connId、version、其他map信息</p>
+<p><strong>注解@10</strong> 刷新连接保鲜时间</p>
+<p><strong>注解@11</strong> 执行RequestHandler逻辑，具体为registerInstance</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="meta">@Secured(action = ActionTypes.WRITE, parser = NamingResourceParser.class)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> InstanceResponse <span class="title">handle</span><span class="params">(InstanceRequest request, RequestMeta meta)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">  <span class="comment">// 构建注册service</span></span><br><span class="line">  Service service = Service</span><br><span class="line">    .newService(request.getNamespace(), request.getGroupName(), request.getServiceName(), <span class="keyword">true</span>);</span><br><span class="line">  <span class="keyword">switch</span> (request.getType()) &#123;</span><br><span class="line">      <span class="comment">// 处理注册请求</span></span><br><span class="line">    <span class="keyword">case</span> NamingRemoteConstants.REGISTER_INSTANCE:</span><br><span class="line">      <span class="keyword">return</span> registerInstance(service, request, meta);</span><br><span class="line">      <span class="comment">// 处理注销请求</span></span><br><span class="line">    <span class="keyword">case</span> NamingRemoteConstants.DE_REGISTER_INSTANCE:</span><br><span class="line">      <span class="keyword">return</span> deregisterInstance(service, request, meta);</span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.INVALID_PARAM,</span><br><span class="line">                               String.format(<span class="string">&quot;Unsupported request type %s&quot;</span>, request.getType()));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210607141823.png"></p>
+<p>接着分析注册干了点啥？坐标：EphemeralClientOperationServiceImpl#registerInstance</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerInstance</span><span class="params">(Service service, Instance instance, String clientId)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 注解@12</span></span><br><span class="line">  Service singleton = ServiceManager.getInstance().getSingleton(service);</span><br><span class="line">  <span class="comment">// 注解@13</span></span><br><span class="line">  Client client = clientManager.getClient(clientId);</span><br><span class="line">  InstancePublishInfo instanceInfo = getPublishInfo(instance);</span><br><span class="line">  <span class="comment">// 注解@14</span></span><br><span class="line">  client.addServiceInstance(singleton, instanceInfo);</span><br><span class="line">  client.setLastUpdatedTime();</span><br><span class="line">  <span class="comment">// 注解@15</span></span><br><span class="line">  NotifyCenter.publishEvent(<span class="keyword">new</span> ClientOperationEvent.ClientRegisterServiceEvent(singleton, clientId));</span><br><span class="line">  <span class="comment">// 注解@16</span></span><br><span class="line">  NotifyCenter</span><br><span class="line">    .publishEvent(<span class="keyword">new</span> MetadataEvent.InstanceMetadataEvent(singleton, instanceInfo.getMetadataId(), <span class="keyword">false</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@12</strong> singletonRepository缓存Singleton（service），namespaceSingletonMaps建立namespace和Singleton关系</p>
+<p><strong>注解@13</strong> 从缓存中获取client信息，也就是上一小节建立连接被缓存的client</p>
+<p><strong>注解@14</strong> 建立client与service、instance关系并发布事件ClientEvent.ClientChangedEvent</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">addServiceInstance</span><span class="params">(Service service, InstancePublishInfo instancePublishInfo)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (<span class="keyword">null</span> == publishers.put(service, instancePublishInfo)) &#123;</span><br><span class="line">    MetricsMonitor.incrementInstanceCount();</span><br><span class="line">  &#125;</span><br><span class="line">  NotifyCenter.publishEvent(<span class="keyword">new</span> ClientEvent.ClientChangedEvent(<span class="keyword">this</span>));</span><br><span class="line">  Loggers.SRV_LOG.info(<span class="string">&quot;Client change for service &#123;&#125;, &#123;&#125;&quot;</span>, service, getClientId());</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@15</strong> 发布ClientOperationEvent.ClientRegisterServiceEvent事件</p>
+<p><strong>注解@16</strong> 发布MetadataEvent.InstanceMetadataEvent事件</p>
+<p><strong>小结：</strong> 处理注册请求的逻辑由InstanceRequestHandler执行，建立起了client与service、instance的关系。并通过NotifyCenter发布了三个事件：@1 ClientEvent.ClientChangedEvent；@2 ClientOperationEvent.ClientRegisterServiceEvent事件；@3 MetadataEvent.InstanceMetadataEvent事件。</p>
+<p>那谁订阅了这些事件呢？他们又做了啥？下回接着撸。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/57538bcc/" rel="prev" title="Nacos3# 服务注册与发现服务端启动源码解析">
+      <i class="fa fa-chevron-left"></i> Nacos3# 服务注册与发现服务端启动源码解析
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/ea86b72f/" rel="next" title="Nacos5# Distro协议寻址模式">
+      Nacos5# Distro协议寻址模式 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E8%BD%BDRequestHandler"><span class="nav-number">2.0.1.</span> <span class="nav-text">加载RequestHandler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%93%8D%E5%BA%94%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%BF%9E%E6%8E%A5"><span class="nav-number">2.0.2.</span> <span class="nav-text">服务端响应客户端连接</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B3%A8%E5%86%8C%E8%AF%B7%E6%B1%82"><span class="nav-number">2.0.3.</span> <span class="nav-text">服务端处理注册请求</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8A%A0%E8%BD%BDRequestHandler-1"><span class="nav-number">3.</span> <span class="nav-text">加载RequestHandler</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%93%8D%E5%BA%94%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%BF%9E%E6%8E%A5-1"><span class="nav-number">4.</span> <span class="nav-text">服务端响应客户端连接</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#client%E8%BF%9E%E6%8E%A5server"><span class="nav-number">4.0.1.</span> <span class="nav-text">client连接server</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Nacos-server%E5%93%8D%E5%BA%94%E8%BF%9E%E6%8E%A5"><span class="nav-number">4.0.2.</span> <span class="nav-text">Nacos server响应连接</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B3%A8%E5%86%8C%E8%AF%B7%E6%B1%82-1"><span class="nav-number">5.</span> <span class="nav-text">服务端处理注册请求</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

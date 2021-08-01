@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="目录12345系统相关指标GC相关指标JVM相关指标Topic相关指标Broker相关指标    系统相关指标系统信息收 java.lang:type&#x3D;OperatingSystem 1&amp;#123;&quot;freePhysicalMemorySize&quot;:&quot;806023168&quot;,&quot;maxFileDescriptorCount&quot;:&quot;409">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka5# 常用JMX监控指标整理">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/9bbf6c38/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="目录12345系统相关指标GC相关指标JVM相关指标Topic相关指标Broker相关指标    系统相关指标系统信息收 java.lang:type&#x3D;OperatingSystem 1&amp;#123;&quot;freePhysicalMemorySize&quot;:&quot;806023168&quot;,&quot;maxFileDescriptorCount&quot;:&quot;409">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-05-19T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.819Z">
+<meta property="article:tag" content="Kafka">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/9bbf6c38/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Kafka5# 常用JMX监控指标整理 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9bbf6c38/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Kafka5# 常用JMX监控指标整理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-05-19 11:55:01" itemprop="dateCreated datePublished" datetime="2019-05-19T11:55:01+08:00">2019-05-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index"><span itemprop="name">Kafka</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">系统相关指标</span><br><span class="line">GC相关指标</span><br><span class="line">JVM相关指标</span><br><span class="line">Topic相关指标</span><br><span class="line">Broker相关指标</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="系统相关指标"><a href="#系统相关指标" class="headerlink" title="系统相关指标"></a>系统相关指标</h1><p><strong>系统信息收</strong></p>
+<p>java.lang:type=OperatingSystem</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;freePhysicalMemorySize&quot;:&quot;806023168&quot;,&quot;maxFileDescriptorCount&quot;:&quot;4096&quot;,&quot;openFileDescriptorCount&quot;:&quot;283&quot;,&quot;processCpuLoad&quot;:&quot;0.0017562901839817224&quot;,&quot;systemCpuLoad&quot;:&quot;0.014336627412954635&quot;,&quot;systemLoadAverage&quot;:&quot;0.37&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Thread信息收集</strong></p>
+<p>java.lang:type=Threading</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;peakThreadCount&quot;:&quot;88&quot;,&quot;threadCount&quot;:&quot;74&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>获取mmaped和direct空间</strong></p>
+<p>通过BufferPoolMXBean获取used、capacity、count</p>
+<a id="more"></a>
+
+
+
+<h1 id="GC相关指标"><a href="#GC相关指标" class="headerlink" title="GC相关指标"></a>GC相关指标</h1><p><strong>Young GC</strong></p>
+<p>java.lang:type=GarbageCollector,name=G1 Young Generation</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;collectionCount&quot;:&quot;534&quot;,&quot;collectionTime&quot;:&quot;8258&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Old GC</strong></p>
+<p>java.lang:type=GarbageCollector,name=G1 Old Generation</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;collectionCount&quot;:&quot;0&quot;,&quot;collectionTime&quot;:&quot;0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="JVM相关指标"><a href="#JVM相关指标" class="headerlink" title="JVM相关指标"></a>JVM相关指标</h1><p>通过MemoryMXBean获取JVM相关信息HeapMemoryUsage和NonHeapMemoryUsage；通过MemoryPoolMXBean获取其他JVM内存空间指标，例如：Metaspace、Codespace等</p>
+<h1 id="Topic相关指标"><a href="#Topic相关指标" class="headerlink" title="Topic相关指标"></a>Topic相关指标</h1><p><strong>Topic消息入站速率（Byte）</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec,topic=” + topic</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Topic消息出站速率（Byte）</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=BytesOutPerSec,topic=” + topic</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Topic请求被拒速率</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=BytesRejectedPerSec,topic=” + topic</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Topic失败拉去请求速</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=FailedFetchRequestsPerSec,topic=” + topic;</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Topic发送请求失败速</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=FailedProduceRequestsPerSec,topic=” + topic</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Topic消息入站速率</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=MessagesInPerSec,topic=” + topic</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="Broker相关指标"><a href="#Broker相关指标" class="headerlink" title="Broker相关指标"></a>Broker相关指标</h1><p><strong>Log flush rate and time</strong></p>
+<p>kafka.log:type=LogFlushStats,name=LogFlushRateAndTimeMs</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;1.074103&quot;,&quot;75thPercentile&quot;:&quot;1.669793&quot;,&quot;95thPercentile&quot;:&quot;6.846556&quot;,&quot;98thPercentile&quot;:&quot;6.846556&quot;,&quot;999thPercentile&quot;:&quot;6.846556&quot;,&quot;99thPercentile&quot;:&quot;6.846556&quot;,&quot;count&quot;:&quot;19&quot;,&quot;max&quot;:&quot;6.846556&quot;,&quot;mean&quot;:&quot;1.628646052631579&quot;,&quot;min&quot;:&quot;0.512879&quot;,&quot;stdDev&quot;:&quot;1.6007003364105892&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>同步失效的副本数</strong></p>
+<p>kafka.server:type=ReplicaManager,name=UnderReplicatedPartitions</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;value&quot;:&quot;0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消息入站速率（消息数）</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=MessagesInPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;86845&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.6456600497006455&quot;,&quot;fiveMinuteRate&quot;:&quot;0.6444164288097876&quot;,&quot;meanRate&quot;:&quot;0.5314899330400695&quot;,&quot;oneMinuteRate&quot;:&quot;0.6494649408329609&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消息入站速率（Byte）</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;57302357&quot;,&quot;fifteenMinuteRate&quot;:&quot;379.11342092748146&quot;,&quot;fiveMinuteRate&quot;:&quot;371.8482236385939&quot;,&quot;meanRate&quot;:&quot;351.37122686037435&quot;,&quot;oneMinuteRate&quot;:&quot;351.8348952308101&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>消息出站速率（Byte）</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=BytesOutPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;246&quot;,&quot;fifteenMinuteRate&quot;:&quot;4.508738367219028E-34&quot;,&quot;fiveMinuteRate&quot;:&quot;1.4721921790135324E-98&quot;,&quot;meanRate&quot;:&quot;0.0015031168286836175&quot;,&quot;oneMinuteRate&quot;:&quot;2.964393875E-314&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>请求被拒速率</strong> </p>
+<p>kafka.server:type=BrokerTopicMetrics,name=BytesRejectedPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>失败拉去请求速率</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=FailedFetchRequestsPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>发送请求失败速率</strong></p>
+<p>kafka.server:type=BrokerTopicMetrics,name=FailedProduceRequestsPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Leader副本数</strong></p>
+<p>kafka.server:type=ReplicaManager,name=LeaderCount</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;value&quot;:&quot;92&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Partition数量</strong></p>
+<p>kafka.server:type=ReplicaManager,name=PartitionCount</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;value&quot;:&quot;135&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>下线Partition数量</strong></p>
+<p>kafka.controller:type=KafkaController,name=OfflinePartitionsCount</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;value&quot;:&quot;0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Broker网络处理线程</strong></p>
+<p>kafka.server:type=KafkaRequestHandlerPool,name=RequestHandlerAvgIdlePercent</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;164506926671008&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.9999327359820058&quot;,&quot;fiveMinuteRate&quot;:&quot;1.0000290054537715&quot;,&quot;meanRate&quot;:&quot;0.9998854371393514&quot;,&quot;oneMinuteRate&quot;:&quot;1.0007836499581673&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Leader选举比率</strong></p>
+<p>kafka.controller:type=ControllerStats,name=LeaderElectionRateAndTimeMs</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;7&quot;,&quot;fifteenMinuteRate&quot;:&quot;5.134993718576819E-82&quot;,&quot;fiveMinuteRate&quot;:&quot;6.882658450509451E-240&quot;,&quot;meanRate&quot;:&quot;4.2525243043608314E-5&quot;,&quot;oneMinuteRate&quot;:&quot;2.964393875E-314&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Unclean Leader选举比率</strong></p>
+<p>kafka.controller:type=ControllerStats,name=UncleanLeaderElectionsPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Controller存活</strong></p>
+<p>kafka.controller:type=KafkaController,name=ActiveControllerCount</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;value&quot;:&quot;1&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>请求速率</strong></p>
+<p>kafka.network:type=RequestMetrics,name=RequestsPerSec,request=Produce</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;83233&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.6303485369828705&quot;,&quot;fiveMinuteRate&quot;:&quot;0.6357199085092445&quot;,&quot;meanRate&quot;:&quot;0.5046486472186744&quot;,&quot;oneMinuteRate&quot;:&quot;0.6563203475530601&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Consumer拉取速率</strong></p>
+<p>kafka.network:type=RequestMetrics,name=RequestsPerSec,request=FetchConsumer</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;125796&quot;,&quot;fifteenMinuteRate&quot;:&quot;1.14193044007404E-33&quot;,&quot;fiveMinuteRate&quot;:&quot;7.699516480260211E-100&quot;,&quot;meanRate&quot;:&quot;0.7623419964866819&quot;,&quot;oneMinuteRate&quot;:&quot;2.964393875E-314&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Follower拉去速率</strong></p>
+<p>kafka.network:type=RequestMetrics,name=RequestsPerSec,request=FetchFollower</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;375108&quot;,&quot;fifteenMinuteRate&quot;:&quot;2.302746562040189&quot;,&quot;fiveMinuteRate&quot;:&quot;2.292459728166488&quot;,&quot;meanRate&quot;:&quot;2.2721808581484693&quot;,&quot;oneMinuteRate&quot;:&quot;2.2814260196672973&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Request total time</strong></p>
+<p>kafka.network:type=RequestMetrics,name=TotalTimeMs,request=Produce</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;1.0&quot;,&quot;75thPercentile&quot;:&quot;1.0&quot;,&quot;95thPercentile&quot;:&quot;2.0&quot;,&quot;98thPercentile&quot;:&quot;2.0&quot;,&quot;999thPercentile&quot;:&quot;28.0&quot;,&quot;99thPercentile&quot;:&quot;4.0&quot;,&quot;count&quot;:&quot;83384&quot;,&quot;max&quot;:&quot;48.0&quot;,&quot;mean&quot;:&quot;1.2344934279957787&quot;,&quot;min&quot;:&quot;0.0&quot;,&quot;stdDev&quot;:&quot;1.1783192073287214&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Consumer fetch total time</strong></p>
+<p>kafka.network:type=RequestMetrics,name=TotalTimeMs,request=FetchConsumer</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;500.0&quot;,&quot;75thPercentile&quot;:&quot;501.0&quot;,&quot;95thPercentile&quot;:&quot;501.0&quot;,&quot;98thPercentile&quot;:&quot;501.0&quot;,&quot;999thPercentile&quot;:&quot;501.971&quot;,&quot;99thPercentile&quot;:&quot;501.0&quot;,&quot;count&quot;:&quot;125796&quot;,&quot;max&quot;:&quot;535.0&quot;,&quot;mean&quot;:&quot;499.83123469744663&quot;,&quot;min&quot;:&quot;0.0&quot;,&quot;stdDev&quot;:&quot;17.138716708632025&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Follower fetch total time</strong></p>
+<p>kafka.network:type=RequestMetrics,name=TotalTimeMs,request=FetchFollower</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;500.0&quot;,&quot;75thPercentile&quot;:&quot;500.0&quot;,&quot;95thPercentile&quot;:&quot;501.0&quot;,&quot;98thPercentile&quot;:&quot;501.0&quot;,&quot;999thPercentile&quot;:&quot;507.826&quot;,&quot;99thPercentile&quot;:&quot;501.0&quot;,&quot;count&quot;:&quot;375564&quot;,&quot;max&quot;:&quot;532.0&quot;,&quot;mean&quot;:&quot;437.79763502359117&quot;,&quot;min&quot;:&quot;0.0&quot;,&quot;stdDev&quot;:&quot;148.25999023472986&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Time the follower fetch request waits in the request queue</strong></p>
+<p>kafka.network:type=RequestMetrics,name=RequestQueueTimeMs,request=FetchFollo</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;0.0&quot;,&quot;75thPercentile&quot;:&quot;0.0&quot;,&quot;95thPercentile&quot;:&quot;0.0&quot;,&quot;98thPercentile&quot;:&quot;0.0&quot;,&quot;999thPercentile&quot;:&quot;0.0&quot;,&quot;99thPercentile&quot;:&quot;0.0&quot;,&quot;count&quot;:&quot;376206&quot;,&quot;max&quot;:&quot;28.0&quot;,&quot;mean&quot;:&quot;0.0010260336092459982&quot;,&quot;min&quot;:&quot;0.0&quot;,&quot;stdDev&quot;:&quot;0.1282889653905258&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Time the Consumer fetch request waits in the request queue</strong></p>
+<p>kafka.network:type=RequestMetrics,name=RequestQueueTimeMs,request=FetchConsumer</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;0.0&quot;,&quot;75thPercentile&quot;:&quot;0.0&quot;,&quot;95thPercentile&quot;:&quot;0.0&quot;,&quot;98thPercentile&quot;:&quot;0.0&quot;,&quot;999thPercentile&quot;:&quot;0.0&quot;,&quot;99thPercentile&quot;:&quot;0.0&quot;,&quot;count&quot;:&quot;125796&quot;,&quot;max&quot;:&quot;24.0&quot;,&quot;mean&quot;:&quot;0.0018124582657636174&quot;,&quot;min&quot;:&quot;0.0&quot;,&quot;stdDev&quot;:&quot;0.18122860552537737&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Time the Produce fetch request waits in the request queue</strong></p>
+<p>kafka.network:type=RequestMetrics,name=RequestQueueTimeMs,request=Produce</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;50thPercentile&quot;:&quot;0.0&quot;,&quot;75thPercentile&quot;:&quot;0.0&quot;,&quot;95thPercentile&quot;:&quot;0.0&quot;,&quot;98thPercentile&quot;:&quot;0.0&quot;,&quot;999thPercentile&quot;:&quot;0.0&quot;,&quot;99thPercentile&quot;:&quot;0.0&quot;,&quot;count&quot;:&quot;83704&quot;,&quot;max&quot;:&quot;12.0&quot;,&quot;mean&quot;:&quot;2.6283092803211315E-4&quot;,&quot;min&quot;:&quot;0.0&quot;,&quot;stdDev&quot;:&quot;0.042892540270754634&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Broker I/O工作处理线程空闲率</strong></p>
+<p>kafka.network:type=SocketServer,name=NetworkProcessorAvgIdlePercent</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;value&quot;:&quot;1.0015540075894207&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>ISR变化速率</strong></p>
+<p>kafka.server:type=ReplicaManager,name=IsrShrinksPerSec</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;count&quot;:&quot;0&quot;,&quot;fifteenMinuteRate&quot;:&quot;0.0&quot;,&quot;fiveMinuteRate&quot;:&quot;0.0&quot;,&quot;meanRate&quot;:&quot;0.0&quot;,&quot;oneMinuteRate&quot;:&quot;0.0&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/c9cb0a93/" rel="prev" title="Kafka4# 从0.11.0.2升级到2.2.1">
+      <i class="fa fa-chevron-left"></i> Kafka4# 从0.11.0.2升级到2.2.1
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/ab8fecf6/" rel="next" title="Kafka3# 集群平滑扩容及Leader均衡">
+      Kafka3# 集群平滑扩容及Leader均衡 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95"><span class="nav-number">1.</span> <span class="nav-text">目录</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E7%9B%B8%E5%85%B3%E6%8C%87%E6%A0%87"><span class="nav-number">2.</span> <span class="nav-text">系统相关指标</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#GC%E7%9B%B8%E5%85%B3%E6%8C%87%E6%A0%87"><span class="nav-number">3.</span> <span class="nav-text">GC相关指标</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#JVM%E7%9B%B8%E5%85%B3%E6%8C%87%E6%A0%87"><span class="nav-number">4.</span> <span class="nav-text">JVM相关指标</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Topic%E7%9B%B8%E5%85%B3%E6%8C%87%E6%A0%87"><span class="nav-number">5.</span> <span class="nav-text">Topic相关指标</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Broker%E7%9B%B8%E5%85%B3%E6%8C%87%E6%A0%87"><span class="nav-number">6.</span> <span class="nav-text">Broker相关指标</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

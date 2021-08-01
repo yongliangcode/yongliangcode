@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="前言资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。 集群流控使用场景场景一  需要控制调用总量某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FA2# 集群流控使用场景和实现原理">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/dd40ab43/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="前言资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。 集群流控使用场景场景一  需要控制调用总量某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%BA%8C%20%E5%8D%95%E6%9C%BA%E6%B5%81%E9%87%8F%E4%B8%8D%E5%9D%87%E8%A1%A1.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%89%20%20%E9%83%A8%E7%BD%B2%E8%8A%82%E7%82%B9%E9%85%8D%E7%BD%AE%E4%B8%8D%E5%90%8C.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E9%9B%86%E7%BE%A4%E6%B5%81%E6%8E%A7%E5%8E%9F%E7%90%86.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E4%BB%A4%E7%89%8C%E7%AE%97%E6%B3%95%20(1).png">
+<meta property="article:published_time" content="2021-03-06T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.799Z">
+<meta property="article:tag" content="方案设计">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/dd40ab43/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>FA2# 集群流控使用场景和实现原理 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd40ab43/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FA2# 集群流控使用场景和实现原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。</p>
+<h1 id="集群流控使用场景"><a href="#集群流控使用场景" class="headerlink" title="集群流控使用场景"></a>集群流控使用场景</h1><h3 id="场景一-需要控制调用总量"><a href="#场景一-需要控制调用总量" class="headerlink" title="场景一  需要控制调用总量"></a>场景一  需要控制调用总量</h3><p>某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提供服务，第三方流量有限制，需要对总量进行管控。部署的节点可能扩缩容，这种单纯通过单机限流措施难以凑效。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png"></p>
+<a id="more"></a>
+
+
+
+<h3 id="场景二-单机流量不均衡"><a href="#场景二-单机流量不均衡" class="headerlink" title="场景二 单机流量不均衡"></a>场景二 单机流量不均衡</h3><p>应用APP部署了10个节点，总流量为2000QPS，每个节点200。这事理想状态，实际可能由于负载均衡造成流量倾斜。有的节点流量高、有的节点流量低。如果只从单机限流角度限流，可能会出现一个APP应用中有的节点已经发生限流，有的负载还很低的情况。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%BA%8C%20%E5%8D%95%E6%9C%BA%E6%B5%81%E9%87%8F%E4%B8%8D%E5%9D%87%E8%A1%A1.png"></p>
+<h3 id="场景三-部署节点配置不同"><a href="#场景三-部署节点配置不同" class="headerlink" title="场景三  部署节点配置不同"></a>场景三  部署节点配置不同</h3><p>应用APP部署了10个节点，有的节点2C4G，有的节点8C16G。这种混合部署的场景，如果只从单机设置限流阈值，只能以配置低的压测值作为设置阈值，高配置节点会造成资源浪费。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%89%20%20%E9%83%A8%E7%BD%B2%E8%8A%82%E7%82%B9%E9%85%8D%E7%BD%AE%E4%B8%8D%E5%90%8C.png"></p>
+<p><strong>备注：通过集群流控配合单机限流更好的应对不同场景流量防护，是流量防护中比较好的实践。</strong> </p>
+<h1 id="集群流控实现原理"><a href="#集群流控实现原理" class="headerlink" title="集群流控实现原理"></a>集群流控实现原理</h1><p>实现集群流控，需要统计请求的调用总量。我们采用在应用内部选一台机器作为Token Server，用于流量的统计和token的发放。</p>
+<h3 id="请求流程"><a href="#请求流程" class="headerlink" title="请求流程"></a>请求流程</h3><p>如下图所示，在请求链路中当服务A发起的请求调用B服务时，B服务开启了集群流控，其中一个节点作为Token Server，其他节点均为Token Client。流程如下：</p>
+<ul>
+<li>当请求到达节点时会向Token Server发起token请求</li>
+<li>Token Server根据是否达到阈值决定是否发放token</li>
+<li>承接请求的节点获取token后向下游调用，超过限流阈值Token Server未发放token，请求被拒绝</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E9%9B%86%E7%BE%A4%E6%B5%81%E6%8E%A7%E5%8E%9F%E7%90%86.png"></p>
+<h3 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h3><p>集群流控的实现依然基于令牌桶实现的，下面为示意图：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E4%BB%A4%E7%89%8C%E7%AE%97%E6%B3%95%20(1).png"></p>
+<p><strong>工作过程</strong></p>
+<ul>
+<li>请求流量从令牌桶中获取令牌，持有令牌放行，否则被拒</li>
+<li>假如设置阈值每秒允许100个请求通过，则请求发送速率r=100/s</li>
+<li>需要令牌生产速率为1/r，即1/100每10毫秒产生一个令牌</li>
+<li>令牌桶容量为b已满多余的令牌将被丢弃</li>
+<li>令牌桶为空请求被拒</li>
+<li>允许突发流量最大突发流量为令牌桶容量b</li>
+<li>请求通过相应的令牌从令牌桶中移除</li>
+</ul>
+<h3 id="动态选主"><a href="#动态选主" class="headerlink" title="动态选主"></a>动态选主</h3><p>我们的服务有发布、有扩缩容，原来被选为Token Server的节点可能会下线等，我们采取了基于分布式锁（公平锁）的方式来动态选主。</p>
+<p>使用公平锁主要避免独占锁带来的羊群效益。</p>
+<h3 id="阈值设置"><a href="#阈值设置" class="headerlink" title="阈值设置"></a>阈值设置</h3><p>集群阈值的设置有两种类型：全局阈值和单机均摊</p>
+<ul>
+<li><p>全局阈值表示整个集群能承受的总阈值流量，不随节点的变化而变化<br>例如：全局阈值设置为500，无论该应用部署了多少节点，总的流量阈值保持500不变</p>
+</li>
+<li><p>单机均摊指每个节点能承受的阈值，随着节点的增减Token Server的阈值会动态变化<br>例如：单机均摊设置为100，3个节点集群流控总阈值为300；扩容了两个节点后，总阈值则为500</p>
+</li>
+</ul>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" rel="tag"># 方案设计</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/8631788a/" rel="prev" title="Netty14# 池化内存之线程缓存">
+      <i class="fa fa-chevron-left"></i> Netty14# 池化内存之线程缓存
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/a540a8f2/" rel="next" title="SK6# 上海居转户随记">
+      SK6# 上海居转户随记 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%9B%86%E7%BE%A4%E6%B5%81%E6%8E%A7%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">2.</span> <span class="nav-text">集群流控使用场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%E4%B8%80-%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F"><span class="nav-number">2.0.1.</span> <span class="nav-text">场景一  需要控制调用总量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%E4%BA%8C-%E5%8D%95%E6%9C%BA%E6%B5%81%E9%87%8F%E4%B8%8D%E5%9D%87%E8%A1%A1"><span class="nav-number">2.0.2.</span> <span class="nav-text">场景二 单机流量不均衡</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%E4%B8%89-%E9%83%A8%E7%BD%B2%E8%8A%82%E7%82%B9%E9%85%8D%E7%BD%AE%E4%B8%8D%E5%90%8C"><span class="nav-number">2.0.3.</span> <span class="nav-text">场景三  部署节点配置不同</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%9B%86%E7%BE%A4%E6%B5%81%E6%8E%A7%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">集群流控实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B"><span class="nav-number">3.0.1.</span> <span class="nav-text">请求流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">3.0.2.</span> <span class="nav-text">实现原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E9%80%89%E4%B8%BB"><span class="nav-number">3.0.3.</span> <span class="nav-text">动态选主</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%88%E5%80%BC%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.0.4.</span> <span class="nav-text">阈值设置</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="问题描述短信报警堆内存GC后依然超过4G内存，跟上篇文章所说情况相同。只是上次情况告警短信没发出来。这次介入前，dump了该节点的堆照，方便定位引起的问题。 告警GC日志，回收后依然在4G内存，回收前后只减少了几百M。 1234567891011121314151617181920212223242526272019-05-26T20:41:52.086+0800: 12768164.084: [">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka2# 堆内存不能正常回收问题分析（0.11.0.2版本）">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/d1c2f69e/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="问题描述短信报警堆内存GC后依然超过4G内存，跟上篇文章所说情况相同。只是上次情况告警短信没发出来。这次介入前，dump了该节点的堆照，方便定位引起的问题。 告警GC日志，回收后依然在4G内存，回收前后只减少了几百M。 1234567891011121314151617181920212223242526272019-05-26T20:41:52.086+0800: 12768164.084: [">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100318.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100448.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100710.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100835.png">
+<meta property="article:published_time" content="2019-05-16T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.812Z">
+<meta property="article:tag" content="Kafka">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100318.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/d1c2f69e/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Kafka2# 堆内存不能正常回收问题分析（0.11.0.2版本） | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d1c2f69e/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Kafka2# 堆内存不能正常回收问题分析（0.11.0.2版本）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-05-16 11:55:01" itemprop="dateCreated datePublished" datetime="2019-05-16T11:55:01+08:00">2019-05-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index"><span itemprop="name">Kafka</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>短信报警堆内存GC后依然超过4G内存，跟上篇文章所说情况相同。只是上次情况告警短信没发出来。这次介入前，dump了该节点的堆照，方便定位引起的问题。</p>
+<p>告警GC日志，回收后依然在4G内存，回收前后只减少了几百M。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">2019-05-26T20:41:52.086+0800: 12768164.084: [GC pause (G1 Evacuation Pause) (young), 0.0296753 secs]</span><br><span class="line">   [Parallel Time: 27.0 ms, GC Workers: 28]</span><br><span class="line">      [GC Worker Start (ms): Min: 12768164084.0, Avg: 12768164084.2, Max: 12768164084.5, Diff: 0.5]</span><br><span class="line">      [Ext Root Scanning (ms): Min: 18.1, Avg: 19.0, Max: 19.9, Diff: 1.8, Sum: 532.0]</span><br><span class="line">      [Update RS (ms): Min: 1.2, Avg: 1.7, Max: 2.3, Diff: 1.1, Sum: 47.6]</span><br><span class="line">         [Processed Buffers: Min: 1, Avg: 2.4, Max: 8, Diff: 7, Sum: 68]</span><br><span class="line">      [Scan RS (ms): Min: 1.2, Avg: 1.8, Max: 2.1, Diff: 0.9, Sum: 49.6]</span><br><span class="line">      [Code Root Scanning (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.0]</span><br><span class="line">      [Object Copy (ms): Min: 3.1, Avg: 3.9, Max: 4.6, Diff: 1.4, Sum: 110.6]</span><br><span class="line">      [Termination (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.4]</span><br><span class="line">         [Termination Attempts: Min: 1, Avg: 1.0, Max: 1, Diff: 0, Sum: 28]</span><br><span class="line">      [GC Worker Other (ms): Min: 0.0, Avg: 0.1, Max: 0.1, Diff: 0.1, Sum: 1.6]</span><br><span class="line">      [GC Worker Total (ms): Min: 26.2, Avg: 26.5, Max: 26.7, Diff: 0.5, Sum: 742.2]</span><br><span class="line">      [GC Worker End (ms): Min: 12768164110.7, Avg: 12768164110.7, Max: 12768164110.8, Diff: 0.1]</span><br><span class="line">   [Code Root Fixup: 0.1 ms]</span><br><span class="line">   [Code Root Purge: 0.0 ms]</span><br><span class="line">   [Clear CT: 0.7 ms]</span><br><span class="line">   [Other: 1.9 ms]</span><br><span class="line">      [Choose CSet: 0.0 ms]</span><br><span class="line">      [Ref Proc: 0.6 ms]</span><br><span class="line">      [Ref Enq: 0.0 ms]</span><br><span class="line">      [Redirty Cards: 0.3 ms]</span><br><span class="line">      [Humongous Register: 0.1 ms]</span><br><span class="line">      [Humongous Reclaim: 0.0 ms]</span><br><span class="line">      [Free CSet: 0.4 ms]</span><br><span class="line">   [Eden: 400.0M(400.0M)-&gt;0.0B(400.0M) Survivors: 8192.0K-&gt;8192.0K Heap: 4426.3M(8192.0M)-&gt;4024.2M(8192.0M)]</span><br><span class="line"> [Times: user&#x3D;0.75 sys&#x3D;0.00, real&#x3D;0.03 secs]</span><br></pre></td></tr></table></figure>
+
+
+
+<a id="more"></a>
+
+
+
+<h1 id="堆内存分析"><a href="#堆内存分析" class="headerlink" title="堆内存分析"></a>堆内存分析</h1><p>有个对象的内存占用高达2.5G</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100318.png"></p>
+<p>通过图示可以看到该类：</p>
+<p>org.apache.kafka.common.metrics.JmxReporter有个Map，持有高达近330万个的子Map对象。这些子Map中的结构都类似，只是clientId数值不同。</p>
+<p>问题：为何消费者注册到该Reporter不删除呢？</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100448.png"></p>
+<h1 id="代码追踪"><a href="#代码追踪" class="headerlink" title="代码追踪"></a>代码追踪</h1><p><strong>JmxReport类分析</strong> </p>
+<p>下面贴出JmxReporter完整的类，成员变量</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">private final Map&lt;String, KafkaMbean&gt; mbeans &#x3D; new HashMap&lt;String, KafkaMbean&gt;();即该mbeans持有330万个子对象。</span><br><span class="line"></span><br><span class="line">KafkaMbean中的两个成员变量：</span><br><span class="line"></span><br><span class="line">private final ObjectName objectName;</span><br><span class="line"></span><br><span class="line">private final Map&lt;String, KafkaMetric&gt; metrics;</span><br><span class="line"></span><br><span class="line">metrics中的key即为：堆分析中的kafka.server:type&#x3D;Request,client-id&#x3D;admin-3685211</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br></pre></td><td class="code"><pre><span class="line">package org.apache.kafka.common.metrics;</span><br><span class="line"></span><br><span class="line">import java.lang.management.ManagementFactory;</span><br><span class="line">import java.util.HashMap;</span><br><span class="line">import java.util.List;</span><br><span class="line">import java.util.Map;</span><br><span class="line"></span><br><span class="line">import javax.management.Attribute;</span><br><span class="line">import javax.management.AttributeList;</span><br><span class="line">import javax.management.AttributeNotFoundException;</span><br><span class="line">import javax.management.DynamicMBean;</span><br><span class="line">import javax.management.InvalidAttributeValueException;</span><br><span class="line">import javax.management.JMException;</span><br><span class="line">import javax.management.MBeanAttributeInfo;</span><br><span class="line">import javax.management.MBeanException;</span><br><span class="line">import javax.management.MBeanInfo;</span><br><span class="line">import javax.management.MBeanServer;</span><br><span class="line">import javax.management.MalformedObjectNameException;</span><br><span class="line">import javax.management.ObjectName;</span><br><span class="line">import javax.management.ReflectionException;</span><br><span class="line"></span><br><span class="line">import org.apache.kafka.common.KafkaException;</span><br><span class="line">import org.apache.kafka.common.MetricName;</span><br><span class="line">import org.slf4j.Logger;</span><br><span class="line">import org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Register metrics in JMX as dynamic mbeans based on the metric names</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class JmxReporter implements MetricsReporter &#123;</span><br><span class="line"></span><br><span class="line">    private static final Logger log &#x3D; LoggerFactory.getLogger(JmxReporter.class);</span><br><span class="line">    private static final Object LOCK &#x3D; new Object();</span><br><span class="line">    private String prefix;</span><br><span class="line">    private final Map&lt;String, KafkaMbean&gt; mbeans &#x3D; new HashMap&lt;String, KafkaMbean&gt;();</span><br><span class="line"></span><br><span class="line">    public JmxReporter() &#123;</span><br><span class="line">        this(&quot;&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * Create a JMX reporter that prefixes all metrics with the given string.</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public JmxReporter(String prefix) &#123;</span><br><span class="line">        this.prefix &#x3D; prefix;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void configure(Map&lt;String, ?&gt; configs) &#123;&#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void init(List&lt;KafkaMetric&gt; metrics) &#123;</span><br><span class="line">        synchronized (LOCK) &#123;</span><br><span class="line">            for (KafkaMetric metric : metrics)</span><br><span class="line">                addAttribute(metric);</span><br><span class="line">            for (KafkaMbean mbean : mbeans.values())</span><br><span class="line">                reregister(mbean);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    boolean containsMbean(String mbeanName) &#123;</span><br><span class="line">        return mbeans.containsKey(mbeanName);</span><br><span class="line">    &#125;</span><br><span class="line">    @Override</span><br><span class="line">    public void metricChange(KafkaMetric metric) &#123;</span><br><span class="line">        synchronized (LOCK) &#123;</span><br><span class="line">            KafkaMbean mbean &#x3D; addAttribute(metric);</span><br><span class="line">            reregister(mbean);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void metricRemoval(KafkaMetric metric) &#123;</span><br><span class="line">        synchronized (LOCK) &#123;</span><br><span class="line">            MetricName metricName &#x3D; metric.metricName();</span><br><span class="line">            String mBeanName &#x3D; getMBeanName(prefix, metricName);</span><br><span class="line">            KafkaMbean mbean &#x3D; removeAttribute(metric, mBeanName);</span><br><span class="line">            if (mbean !&#x3D; null) &#123;</span><br><span class="line">                if (mbean.metrics.isEmpty()) &#123;</span><br><span class="line">                    unregister(mbean);</span><br><span class="line">                    mbeans.remove(mBeanName);</span><br><span class="line">                &#125; else</span><br><span class="line">                    reregister(mbean);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    private KafkaMbean removeAttribute(KafkaMetric metric, String mBeanName) &#123;</span><br><span class="line">        MetricName metricName &#x3D; metric.metricName();</span><br><span class="line">        KafkaMbean mbean &#x3D; this.mbeans.get(mBeanName);</span><br><span class="line">        if (mbean !&#x3D; null)</span><br><span class="line">            mbean.removeAttribute(metricName.name());</span><br><span class="line">        return mbean;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    private KafkaMbean addAttribute(KafkaMetric metric) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            MetricName metricName &#x3D; metric.metricName();</span><br><span class="line">            String mBeanName &#x3D; getMBeanName(prefix, metricName);</span><br><span class="line">            if (!this.mbeans.containsKey(mBeanName))</span><br><span class="line">                mbeans.put(mBeanName, new KafkaMbean(mBeanName));</span><br><span class="line">            KafkaMbean mbean &#x3D; this.mbeans.get(mBeanName);</span><br><span class="line">            mbean.setAttribute(metricName.name(), metric);</span><br><span class="line">            return mbean;</span><br><span class="line">        &#125; catch (JMException e) &#123;</span><br><span class="line">            throw new KafkaException(&quot;Error creating mbean attribute for metricName :&quot; + metric.metricName(), e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @param metricName</span><br><span class="line">     * @return standard JMX MBean name in the following format domainName:type&#x3D;metricType,key1&#x3D;val1,key2&#x3D;val2</span><br><span class="line">     *&#x2F;</span><br><span class="line">    static String getMBeanName(String prefix, MetricName metricName) &#123;</span><br><span class="line">        StringBuilder mBeanName &#x3D; new StringBuilder();</span><br><span class="line">        mBeanName.append(prefix);</span><br><span class="line">        mBeanName.append(&quot;:type&#x3D;&quot;);</span><br><span class="line">        mBeanName.append(metricName.group());</span><br><span class="line">        for (Map.Entry&lt;String, String&gt; entry : metricName.tags().entrySet()) &#123;</span><br><span class="line">            if (entry.getKey().length() &lt;&#x3D; 0 || entry.getValue().length() &lt;&#x3D; 0)</span><br><span class="line">                continue;</span><br><span class="line">            mBeanName.append(&quot;,&quot;);</span><br><span class="line">            mBeanName.append(entry.getKey());</span><br><span class="line">            mBeanName.append(&quot;&#x3D;&quot;);</span><br><span class="line">            mBeanName.append(entry.getValue());</span><br><span class="line">        &#125;</span><br><span class="line">        return mBeanName.toString();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public void close() &#123;</span><br><span class="line">        synchronized (LOCK) &#123;</span><br><span class="line">            for (KafkaMbean mbean : this.mbeans.values())</span><br><span class="line">                unregister(mbean);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    private void unregister(KafkaMbean mbean) &#123;</span><br><span class="line">        MBeanServer server &#x3D; ManagementFactory.getPlatformMBeanServer();</span><br><span class="line">        try &#123;</span><br><span class="line">            if (server.isRegistered(mbean.name()))</span><br><span class="line">                server.unregisterMBean(mbean.name());</span><br><span class="line">        &#125; catch (JMException e) &#123;</span><br><span class="line">            throw new KafkaException(&quot;Error unregistering mbean&quot;, e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    private void reregister(KafkaMbean mbean) &#123;</span><br><span class="line">        unregister(mbean);</span><br><span class="line">        try &#123;</span><br><span class="line">            ManagementFactory.getPlatformMBeanServer().registerMBean(mbean, mbean.name());</span><br><span class="line">        &#125; catch (JMException e) &#123;</span><br><span class="line">            throw new KafkaException(&quot;Error registering mbean &quot; + mbean.name(), e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    private static class KafkaMbean implements DynamicMBean &#123;</span><br><span class="line">        private final ObjectName objectName;</span><br><span class="line">        private final Map&lt;String, KafkaMetric&gt; metrics;</span><br><span class="line"></span><br><span class="line">        public KafkaMbean(String mbeanName) throws MalformedObjectNameException &#123;</span><br><span class="line">            this.metrics &#x3D; new HashMap&lt;String, KafkaMetric&gt;();</span><br><span class="line">            this.objectName &#x3D; new ObjectName(mbeanName);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        public ObjectName name() &#123;</span><br><span class="line">            return objectName;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        public void setAttribute(String name, KafkaMetric metric) &#123;</span><br><span class="line">            this.metrics.put(name, metric);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public Object getAttribute(String name) throws AttributeNotFoundException, MBeanException, ReflectionException &#123;</span><br><span class="line">            if (this.metrics.containsKey(name))</span><br><span class="line">                return this.metrics.get(name).value();</span><br><span class="line">            else</span><br><span class="line">                throw new AttributeNotFoundException(&quot;Could not find attribute &quot; + name);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public AttributeList getAttributes(String[] names) &#123;</span><br><span class="line">            try &#123;</span><br><span class="line">                AttributeList list &#x3D; new AttributeList();</span><br><span class="line">                for (String name : names)</span><br><span class="line">                    list.add(new Attribute(name, getAttribute(name)));</span><br><span class="line">                return list;</span><br><span class="line">            &#125; catch (Exception e) &#123;</span><br><span class="line">                log.error(&quot;Error getting JMX attribute: &quot;, e);</span><br><span class="line">                return new AttributeList();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        public KafkaMetric removeAttribute(String name) &#123;</span><br><span class="line">            return this.metrics.remove(name);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public MBeanInfo getMBeanInfo() &#123;</span><br><span class="line">            MBeanAttributeInfo[] attrs &#x3D; new MBeanAttributeInfo[metrics.size()];</span><br><span class="line">            int i &#x3D; 0;</span><br><span class="line">            for (Map.Entry&lt;String, KafkaMetric&gt; entry : this.metrics.entrySet()) &#123;</span><br><span class="line">                String attribute &#x3D; entry.getKey();</span><br><span class="line">                KafkaMetric metric &#x3D; entry.getValue();</span><br><span class="line">                attrs[i] &#x3D; new MBeanAttributeInfo(attribute,</span><br><span class="line">                                                  double.class.getName(),</span><br><span class="line">                                                  metric.metricName().description(),</span><br><span class="line">                                                  true,</span><br><span class="line">                                                  false,</span><br><span class="line">                                                  false);</span><br><span class="line">                i +&#x3D; 1;</span><br><span class="line">            &#125;</span><br><span class="line">            return new MBeanInfo(this.getClass().getName(), &quot;&quot;, attrs, null, null, null);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public Object invoke(String name, Object[] params, String[] sig) throws MBeanException, ReflectionException &#123;</span><br><span class="line">            throw new UnsupportedOperationException(&quot;Set not allowed.&quot;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void setAttribute(Attribute attribute) throws AttributeNotFoundException,</span><br><span class="line">                                                     InvalidAttributeValueException,</span><br><span class="line">                                                     MBeanException,</span><br><span class="line">                                                     ReflectionException &#123;</span><br><span class="line">            throw new UnsupportedOperationException(&quot;Set not allowed.&quot;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public AttributeList setAttributes(AttributeList list) &#123;</span><br><span class="line">            throw new UnsupportedOperationException(&quot;Set not allowed.&quot;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Jconsole查看</strong> </p>
+<p>kafka.server:type=Request</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100710.png"></p>
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>刚开始觉得是我们使用的问题，是否资源没有关闭，查看源代码也未能看出哪里出了问题。<br>后来确定为kafka 0.11.0.2版本的Bug，在0.11.0.3版本已经修复。</p>
+<p>ISSUE<br><a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/KAFKA-6199">https://issues.apache.org/jira/browse/KAFKA-6199</a><br><a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/KAFKA-6307">https://issues.apache.org/jira/browse/KAFKA-6307</a></p>
+<p>两个版本的源码对比 JmxReporter</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210224100835.png"></p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/9706ef5d/" rel="prev" title="Kafka1# 异常复盘NotLeaderForPartitionException.md">
+      <i class="fa fa-chevron-left"></i> Kafka1# 异常复盘NotLeaderForPartitionException.md
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/c9cb0a93/" rel="next" title="Kafka4# 从0.11.0.2升级到2.2.1">
+      Kafka4# 从0.11.0.2升级到2.2.1 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%8F%8F%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">问题描述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A0%86%E5%86%85%E5%AD%98%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">堆内存分析</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E8%BF%BD%E8%B8%AA"><span class="nav-number">3.</span> <span class="nav-text">代码追踪</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3"><span class="nav-number">4.</span> <span class="nav-text">问题解决</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

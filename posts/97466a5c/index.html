@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言前面聊了大于8KB的内存分配，那小于8KB的呢？上一篇的平衡二叉树第十一层的叶子节点最小也是8KB，那比如要分配128B的缓存，直接分给8KB显然是不合适的，Tiny是小于512Byte，Small介于512B~8KB，Tiny和Small统称Subpage，本文就聊聊他们的内存分配情况，这块应该是整个netty最为复杂的部分了。 内容提要下面是以分配128B为例的整体流程架构图，下面大体叙述">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty16# 池化内存Subpage类型内存分配">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/97466a5c/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言前面聊了大于8KB的内存分配，那小于8KB的呢？上一篇的平衡二叉树第十一层的叶子节点最小也是8KB，那比如要分配128B的缓存，直接分给8KB显然是不合适的，Tiny是小于512Byte，Small介于512B~8KB，Tiny和Small统称Subpage，本文就聊聊他们的内存分配情况，这块应该是整个netty最为复杂的部分了。 内容提要下面是以分配128B为例的整体流程架构图，下面大体叙述">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/subpages%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210403195729.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/tinySubpagePools%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84%E6%96%B0.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%8F%89%E6%A0%91%E5%88%86%E5%B8%83%20(1).png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/bitmap%E4%BA%8C%E8%BF%9B%E5%88%B6%E4%BD%8D%E5%88%9D%E5%A7%8B%E5%8C%96%E7%8A%B6%E6%80%81%20(1).png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/subpages%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84%20(2).png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410194035.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410195035.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410200757.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410201041.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410201407.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410202216.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%AC%AC%E4%B8%80%E6%AC%A1%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%AC%AC%E4%BA%8C%E6%AC%A1%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%20(1).png">
+<meta property="article:published_time" content="2021-04-10T10:25:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.839Z">
+<meta property="article:tag" content="Netty">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/subpages%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/97466a5c/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Netty16# 池化内存Subpage类型内存分配 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/97466a5c/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Netty16# 池化内存Subpage类型内存分配
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-04-10 18:25:01" itemprop="dateCreated datePublished" datetime="2021-04-10T18:25:01+08:00">2021-04-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>前面聊了大于8KB的内存分配，那小于8KB的呢？上一篇的平衡二叉树第十一层的叶子节点最小也是8KB，那比如要分配128B的缓存，直接分给8KB显然是不合适的，Tiny是小于512Byte，Small介于512B~8KB，Tiny和Small统称Subpage，本文就聊聊他们的内存分配情况，这块应该是整个netty最为复杂的部分了。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><p>下面是以分配128B为例的整体流程架构图，下面大体叙述下其流程。</p>
+<ul>
+<li><p>先从平衡二叉树的第11层选一个未分配的叶子节点大小为8KB的一个Page<br>备注：本例中为memoryMap[2048]</p>
+</li>
+<li><p>对该Page进行切割，假如要分配128B，整体会切割为64块<br>备注：8192/128=64</p>
+</li>
+<li><p>通过long类型二进制64位来标记分割成各个块的分配状态</p>
+<p>备注：0:未分配，1:已分配</p>
+</li>
+<li><p>一个bitmap数组长度为8，每个元素都能对64块内存进行标记</p>
+</li>
+<li><p>建立了二叉树节点与切分块之间的映射关系<br>备注：memoryMapIdx ^ maxSubpageAllocs</p>
+</li>
+<li><p>分配后建立二叉树叶子节点与标记位之间的关系，可以指向内存一块区域<br>备注：0x4000000000000000L | (long) bitmapIdx &lt;&lt; 32 | memoryMapIdx</p>
+</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/subpages%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84.png"></p>
+<a id="more"></a>
+
+
+
+<h1 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h1><p><strong>示例代码</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testAllocateSubpage</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    ByteBufAllocator allocator = <span class="keyword">new</span> PooledByteBufAllocator();</span><br><span class="line">    allocator.directBuffer(<span class="number">128</span>); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>备注：以分配128B的内存为例，分析其分配过程。</p>
+<p><strong>源码分析</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">long</span> <span class="title">allocateSubpage</span><span class="params">(<span class="keyword">int</span> normCapacity)</span> </span>&#123;</span><br><span class="line">    PoolSubpage&lt;T&gt; head = arena.findSubpagePoolHead(normCapacity); <span class="comment">// 注解@1</span></span><br><span class="line">  	<span class="keyword">int</span> d = maxOrder; </span><br><span class="line">    <span class="keyword">synchronized</span> (head) &#123;</span><br><span class="line">        <span class="keyword">int</span> id = allocateNode(d); <span class="comment">// 注解@2</span></span><br><span class="line">			  <span class="keyword">if</span> (id &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> id;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">final</span> PoolSubpage&lt;T&gt;[] subpages = <span class="keyword">this</span>.subpages; <span class="comment">// 注解@3</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> pageSize = <span class="keyword">this</span>.pageSize;</span><br><span class="line">        freeBytes -= pageSize;</span><br><span class="line">        <span class="keyword">int</span> subpageIdx = subpageIdx(id); <span class="comment">// 注解@4</span></span><br><span class="line"></span><br><span class="line">        PoolSubpage&lt;T&gt; subpage = subpages[subpageIdx]; </span><br><span class="line">        <span class="keyword">if</span> (subpage == <span class="keyword">null</span>) &#123; <span class="comment">// 注解@5</span></span><br><span class="line">            subpage = <span class="keyword">new</span> PoolSubpage&lt;T&gt;(head, <span class="keyword">this</span>, id, runOffset(id), pageSize, normCapacity);</span><br><span class="line">            subpages[subpageIdx] = subpage;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            subpage.init(head, normCapacity);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> subpage.allocate(); <span class="comment">// 注解@6</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> 从tinySubpagePools中获取PoolSubpage。获取过程为elemSize &gt;&gt;&gt; 4（除以16）来获取。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210403195729.png"></p>
+<p><strong>tinySubpagePools结构</strong></p>
+<p>tinySubpagePools被初始化成长度为32的数组，元素之间差额为16B。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/tinySubpagePools%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84%E6%96%B0.png"></p>
+<p><strong>注解@2</strong> allocateNode 在上一篇文章分析过，d = maxOrder = 1。表示在平衡二叉树的第11层找到可分配的节点，具体为memoryMap数组中的下标。如果整个树都没有内存可分配了，返回的id=-1。</p>
+<p><strong>注解@3</strong> 先看下subpages的初始化，maxSubpageAllocs = 1 &lt;&lt; maxOrder= 2048。也就是PoolSubpage<T>[] subpages的长度为平衡二叉树第11层所有的节点数（2^11）。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">subpages = newSubpageArray(maxSubpageAllocs);</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>注解@4</strong> 将平衡二叉树第11层的下标memoryMap[]的下标转换为subpages[]数组的下标。转换关系为memoryMapIdx ^ maxSubpageAllocs。</p>
+<p>例如：平衡二叉树第11层第1个节点数组下标为2048，转换为subpages的下标为0，平衡二叉树第11层第2个节点数组下标为2049，转换为subpages的下标为1，平衡二叉树第11层第2个节点数组下标为2050，转换为subpages的下标为2。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%8F%89%E6%A0%91%E5%88%86%E5%B8%83%20(1).png"></p>
+<p><strong>注解@5</strong> 初始化PoolSubpage</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">PoolSubpage(PoolSubpage&lt;T&gt; head, PoolChunk&lt;T&gt; chunk, <span class="keyword">int</span> memoryMapIdx, <span class="keyword">int</span> runOffset, <span class="keyword">int</span> pageSize, <span class="keyword">int</span> elemSize) &#123;</span><br><span class="line">  <span class="keyword">this</span>.chunk = chunk;</span><br><span class="line">  <span class="keyword">this</span>.memoryMapIdx = memoryMapIdx;</span><br><span class="line">  <span class="keyword">this</span>.runOffset = runOffset;</span><br><span class="line">  <span class="keyword">this</span>.pageSize = pageSize;</span><br><span class="line">  bitmap = <span class="keyword">new</span> <span class="keyword">long</span>[pageSize &gt;&gt;&gt; <span class="number">10</span>]; <span class="comment">// pageSize / 16 / 64</span></span><br><span class="line">  init(head, elemSize);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>参数说明</strong> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">head: PoolSubpage数组中的一个元素，本例中为第4个元素</span><br><span class="line"></span><br><span class="line">chunk: 当前PoolChunk实例</span><br><span class="line"></span><br><span class="line">memoryMapIdx: 平衡二叉树第11层用于分配的节点，具体为memoryMap数组下标</span><br><span class="line"></span><br><span class="line">elemSize: 待分配的内存，本例中为128KB</span><br><span class="line"></span><br><span class="line">bitmap: long数组长度为8「8192无符号右移10位&#x3D;8」</span><br></pre></td></tr></table></figure>
+
+<p><strong>初始化说明</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">init</span><span class="params">(PoolSubpage&lt;T&gt; head, <span class="keyword">int</span> elemSize)</span> </span>&#123;</span><br><span class="line">     doNotDestroy = <span class="keyword">true</span>;</span><br><span class="line">  	 <span class="comment">// 待分配内存</span></span><br><span class="line">     <span class="keyword">this</span>.elemSize = elemSize; </span><br><span class="line">     <span class="keyword">if</span> (elemSize != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// maxNumElems表示可以被切割成几份（8192除以待分配内存）例如：64=8192/128被切成了64份</span></span><br><span class="line">            maxNumElems = numAvail = pageSize / elemSize;</span><br><span class="line">            nextAvail = <span class="number">0</span>;</span><br><span class="line">            <span class="comment">// 无符号右移6位，高位补零（相当于除以64）例如：64的二进制右移6位为1，128的二进制右移6位为2</span></span><br><span class="line">            bitmapLength = maxNumElems &gt;&gt;&gt; <span class="number">6</span>;</span><br><span class="line">            <span class="keyword">if</span> ((maxNumElems &amp; <span class="number">63</span>) != <span class="number">0</span>) &#123; <span class="comment">// 相当于是否能被64整除</span></span><br><span class="line">                bitmapLength ++; <span class="comment">// 不能被整除递增bitmapLength</span></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; bitmapLength; i ++) &#123;</span><br><span class="line">                bitmap[i] = <span class="number">0</span>; <span class="comment">// 等于零表示未被分配</span></span><br><span class="line">            &#125;</span><br><span class="line">     &#125;</span><br><span class="line">     addToPool(head);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>过程说明</strong> </p>
+<p>@1 先计算一个Page被切成了几份 maxNumElems（ pageSize / elemSize）</p>
+<p>@2 计算bitmap数组长度bitmapLength（maxNumElems无符号右移6位相当于除以64）</p>
+<p><strong>备注：</strong> 此处不太好理解为什么要maxNumElems要除以64来计算bitmap的长度呢？也就是bitmap数组中的每个元素可以标记64个被切的内存块。bitmap是long数组，每个long类型是64位，他用每个二进制位来标记被切内存块的分配情况。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/bitmap%E4%BA%8C%E8%BF%9B%E5%88%B6%E4%BD%8D%E5%88%9D%E5%A7%8B%E5%8C%96%E7%8A%B6%E6%80%81%20(1).png"></p>
+<p><strong>加入链表</strong> </p>
+<p>新构建的PoolSubpage与tinySubpagePools中的PoolSubpage建成链表关系。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addToPool</span><span class="params">(PoolSubpage&lt;T&gt; head)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">assert</span> prev == <span class="keyword">null</span> &amp;&amp; next == <span class="keyword">null</span>;</span><br><span class="line">    prev = head;</span><br><span class="line">    next = head.next;</span><br><span class="line">    next.prev = <span class="keyword">this</span>;</span><br><span class="line">    head.next = <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong> 构造的PoolSubpage中持有了一个bitmap[]数组，数组长度与待分配的内存有关。待分配内存大小为elemSize，数组长度=PageSize/elemSize，并将bitmap数组的元素标记为未分配。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/subpages%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84%20(2).png"></p>
+<p><strong>注解@6</strong> 分配内存</p>
+<p>内存的分配以两次分配128B内存为例观察期分配过程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testAllocateSubpage</span><span class="params">()</span> </span>&#123;</span><br><span class="line">   ByteBufAllocator allocator = <span class="keyword">new</span> PooledByteBufAllocator();</span><br><span class="line">   allocator.directBuffer(<span class="number">128</span>); <span class="comment">// 第一次分配</span></span><br><span class="line">   allocator.directBuffer(<span class="number">128</span>); <span class="comment">// 第二次分配</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>第一次分配</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410194035.png"></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410195035.png"></p>
+<p><strong>第二次分配</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410200757.png"></p>
+<p>第一次轮询第一位已被占用，需要向右移位。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410201041.png"></p>
+<p>第二次轮询第二位未被占用。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410201407.png"></p>
+<p>第二次分配过程</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210410202216.png"></p>
+<h1 id="两次内存分配图示"><a href="#两次内存分配图示" class="headerlink" title="两次内存分配图示"></a>两次内存分配图示</h1><p><strong>第一次分配128B图示</strong></p>
+<p>此时64位第一位被标记为1，bitmap[0] = 1</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%AC%AC%E4%B8%80%E6%AC%A1%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D.png"></p>
+<p><strong>第二次分配128B图示</strong></p>
+<p>此时64位第二位也被标记为1，bitmap[0] = 3</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%AC%AC%E4%BA%8C%E6%AC%A1%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%20(1).png"></p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Netty/" rel="tag"># Netty</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/6531e1a8/" rel="prev" title="FA3# ZK做注册中心不是最好的选择">
+      <i class="fa fa-chevron-left"></i> FA3# ZK做注册中心不是最好的选择
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/27ee073a/" rel="next" title="Sentinel20# 针对调用来源限流的分析">
+      Sentinel20# 针对调用来源限流的分析 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">源码分析</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%A4%E6%AC%A1%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%9B%BE%E7%A4%BA"><span class="nav-number">4.</span> <span class="nav-text">两次内存分配图示</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言Nacos注册中心的主要流程基本上撸完了，下面开始撸配置中心。本文从示例入手走查了客户端的初始化流程，Listener的注册逻辑和执行逻辑。 内容提要示例 通过示例构建ConfigService、注册了Listener分析其流程  Client初始化概览 支持多种获取server地址方式（本地、endpoint） 支持多种namespace设置（本地、阿里云） 支持超时时间、重试时间等参数设置">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos13# 配置管理客户端流程">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/11be6e51/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言Nacos注册中心的主要流程基本上撸完了，下面开始撸配置中心。本文从示例入手走查了客户端的初始化流程，Listener的注册逻辑和执行逻辑。 内容提要示例 通过示例构建ConfigService、注册了Listener分析其流程  Client初始化概览 支持多种获取server地址方式（本地、endpoint） 支持多种namespace设置（本地、阿里云） 支持超时时间、重试时间等参数设置">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-15T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.873Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/11be6e51/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos13# 配置管理客户端流程 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/11be6e51/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos13# 配置管理客户端流程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-15 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-15T11:55:01+08:00">2021-08-15</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos注册中心的主要流程基本上撸完了，下面开始撸配置中心。本文从示例入手走查了客户端的初始化流程，Listener的注册逻辑和执行逻辑。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><ul>
+<li>通过示例构建ConfigService、注册了Listener分析其流程</li>
+</ul>
+<h3 id="Client初始化概览"><a href="#Client初始化概览" class="headerlink" title="Client初始化概览"></a>Client初始化概览</h3><ul>
+<li>支持多种获取server地址方式（本地、endpoint）</li>
+<li>支持多种namespace设置（本地、阿里云）</li>
+<li>支持超时时间、重试时间等参数设置</li>
+<li>支持用户名和密码验证</li>
+<li>长轮询会从BlockingQueue中获取元素，队列有元素立即执行executeConfigListen，队列无元素阻塞5秒钟执行executeConfigListen()</li>
+</ul>
+<h3 id="Listener注册逻辑"><a href="#Listener注册逻辑" class="headerlink" title="Listener注册逻辑"></a>Listener注册逻辑</h3><ul>
+<li>client添加Listener后会在cacheMap中缓存CacheData</li>
+<li>cacheMap中key由「dataId+group+tenant」拼接而成</li>
+<li>每个CacheData会绑定注册的Listener列表</li>
+<li>每个CacheData会绑定taskId，3000个不同的CacheData对应一个taskId</li>
+<li>设置isSyncWithServer=false表示 cache md5 data不是来自server同步</li>
+<li>BlockingQueue中添加new Object() 供长轮询判断立即执行使用</li>
+</ul>
+<h3 id="配置变更执行逻辑"><a href="#配置变更执行逻辑" class="headerlink" title="配置变更执行逻辑"></a>配置变更执行逻辑</h3><ul>
+<li>执行逻辑由executeConfigListen方法实现</li>
+<li>当CacheData从Server同步后，会校验md5是否变更了，变更则回调注册的Listener完成通知</li>
+<li>注册Listener后会构建与server的RPC通道rpcClient</li>
+<li>向server发起变更查询请求configChangeListenRequest</li>
+<li>Server端通过比较缓存的md5值，返回client变更的key列表</li>
+<li>Client通过变更的key列表向server发起配置查询请求ConfigQueryRequest</li>
+<li>获取变更内容，并回调注册的Listener完成通知</li>
+<li>回调注册的Listener是通过线程池异步执行Runnble Job实现的</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="示例-1"><a href="#示例-1" class="headerlink" title="示例"></a><strong>示例</strong></h1><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test01</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  String serverAddr = <span class="string">&quot;localhost:8848&quot;</span>;</span><br><span class="line">  String dataId = <span class="string">&quot;test&quot;</span>;</span><br><span class="line">  String group = <span class="string">&quot;DEFAULT_GROUP&quot;</span>;</span><br><span class="line">  Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">  properties.put(<span class="string">&quot;serverAddr&quot;</span>, serverAddr);</span><br><span class="line">  <span class="comment">// 构建ConfigService</span></span><br><span class="line">  ConfigService configService = NacosFactory.createConfigService(properties);</span><br><span class="line">  configService.addListener(dataId, group, <span class="keyword">new</span> Listener() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">receiveConfigInfo</span><span class="params">(String configInfo)</span> </span>&#123;</span><br><span class="line">      System.out.println(<span class="string">&quot;receive:&quot;</span> + configInfo);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Executor <span class="title">getExecutor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;);</span><br><span class="line">  System.in.read();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 示例中构建了ConfigService，注入Listener接受server配置变更通知。</p>
+<h1 id="Client初始化概览-1"><a href="#Client初始化概览-1" class="headerlink" title="Client初始化概览"></a>Client初始化概览</h1><p><strong>NacosConfigService构造方法</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">NacosConfigService</span><span class="params">(Properties properties)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">  ValidatorUtils.checkInitParam(properties);</span><br><span class="line">  <span class="comment">// 注解@1</span></span><br><span class="line">  initNamespace(properties);</span><br><span class="line">  <span class="comment">// 注解@2</span></span><br><span class="line">  ServerListManager serverListManager = <span class="keyword">new</span> ServerListManager(properties);</span><br><span class="line">  <span class="comment">// 注解@3</span></span><br><span class="line">  serverListManager.start();</span><br><span class="line">  <span class="comment">// 注解@4</span></span><br><span class="line">  <span class="keyword">this</span>.worker = <span class="keyword">new</span> ClientWorker(<span class="keyword">this</span>.configFilterChainManager, serverListManager, properties);</span><br><span class="line">  <span class="comment">// 将被废弃HttpAgent，先忽略</span></span><br><span class="line">  <span class="comment">// will be deleted in 2.0 later versions</span></span><br><span class="line">  agent = <span class="keyword">new</span> ServerHttpAgent(serverListManager);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> 设置namespace可以通过properties.setProperty(PropertyKeyConst.NAMESPACE)，代码中会兼容阿里云环境，在此忽略，默认为空。</p>
+<p><strong>注解@2</strong> 初始化namespace、server地址等信息</p>
+<p><strong>注解@3</strong> 启动主要用于endpoint方式定时获取server地址，当本地传入isFixed=true</p>
+<p><strong>注解@4</strong> clientWorker初始化</p>
+<p><strong>ClientWorker初始化</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ClientWorker</span><span class="params">(<span class="keyword">final</span> ConfigFilterChainManager configFilterChainManager, ServerListManager serverListManager,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> Properties properties)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.configFilterChainManager = configFilterChainManager;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 注解@5</span></span><br><span class="line">  init(properties);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 注解@6</span></span><br><span class="line">  agent = <span class="keyword">new</span> ConfigRpcTransportClient(properties, serverListManager);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 调度线程池，「处理器核数」</span></span><br><span class="line">  ScheduledExecutorService executorService = Executors</span><br><span class="line">    .newScheduledThreadPool(Runtime.getRuntime().availableProcessors(), <span class="keyword">new</span> ThreadFactory() &#123;</span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> Thread <span class="title">newThread</span><span class="params">(Runnable r)</span> </span>&#123;</span><br><span class="line">        Thread t = <span class="keyword">new</span> Thread(r);</span><br><span class="line">        t.setName(<span class="string">&quot;com.alibaba.nacos.client.Worker&quot;</span>);</span><br><span class="line">        t.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">        <span class="keyword">return</span> t;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">  agent.setExecutor(executorService);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 注解@7</span></span><br><span class="line">  agent.start();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5</strong> 初始化超时时间、重试时间等</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(Properties properties)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 超时时间，默认30秒</span></span><br><span class="line">    timeout = Math.max(ConvertUtils.toInt(properties.getProperty(PropertyKeyConst.CONFIG_LONG_POLL_TIMEOUT),</span><br><span class="line">            Constants.CONFIG_LONG_POLL_TIMEOUT), Constants.MIN_CONFIG_LONG_POLL_TIMEOUT);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 重试时间，默认2秒</span></span><br><span class="line">    taskPenaltyTime = ConvertUtils</span><br><span class="line">            .toInt(properties.getProperty(PropertyKeyConst.CONFIG_RETRY_TIME), Constants.CONFIG_RETRY_TIME);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 开启配置删除同步，默认false</span></span><br><span class="line">    <span class="keyword">this</span>.enableRemoteSyncConfig = Boolean</span><br><span class="line">            .parseBoolean(properties.getProperty(PropertyKeyConst.ENABLE_REMOTE_SYNC_CONFIG));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@6</strong> gRPC config agent初始化</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ConfigTransportClient</span><span class="params">(Properties properties, ServerListManager serverListManager)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 默认编码UTF-8</span></span><br><span class="line">    String encodeTmp = properties.getProperty(PropertyKeyConst.ENCODE);</span><br><span class="line">    <span class="keyword">if</span> (StringUtils.isBlank(encodeTmp)) &#123;</span><br><span class="line">        <span class="keyword">this</span>.encode = Constants.ENCODE;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">this</span>.encode = encodeTmp.trim();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// namespace租户，默认空</span></span><br><span class="line">    <span class="keyword">this</span>.tenant = properties.getProperty(PropertyKeyConst.NAMESPACE);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">this</span>.serverListManager = serverListManager;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 用户名和密码验证</span></span><br><span class="line">    <span class="keyword">this</span>.securityProxy = <span class="keyword">new</span> SecurityProxy(properties,</span><br><span class="line">            ConfigHttpClientManager.getInstance().getNacosRestTemplate());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7</strong> gRPC agent启动</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    <span class="comment">// 简单用户名和密码验证</span></span><br><span class="line">    <span class="keyword">if</span> (securityProxy.isEnabled()) &#123;</span><br><span class="line">        securityProxy.login(serverListManager.getServerUrls());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.executor.scheduleWithFixedDelay(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                securityProxy.login(serverListManager.getServerUrls());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, <span class="number">0</span>, <span class="keyword">this</span>.securityInfoRefreshIntervalMills, TimeUnit.MILLISECONDS);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    startInternal();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startInternal</span><span class="params">()</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    executor.schedule(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">true</span>) &#123; <span class="comment">// 一直运行</span></span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="comment">// 最长等待5秒</span></span><br><span class="line">                    listenExecutebell.poll(<span class="number">5L</span>, TimeUnit.SECONDS);</span><br><span class="line">                    executeConfigListen();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    LOGGER.error(<span class="string">&quot;[ rpc listen execute ] [rpc listen] exception&quot;</span>, e);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="number">0L</span>, TimeUnit.MILLISECONDS);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong> 线程会一直运行，从BlockingQueue中获取元素。队里不为空，获取后立即执行executeConfigListen()；队列为空等待5秒后执行</p>
+<p>executeConfigListen()。</p>
+<h1 id="Listener注册逻辑-1"><a href="#Listener注册逻辑-1" class="headerlink" title="Listener注册逻辑"></a>Listener注册逻辑</h1><p>executeConfigListen的逻辑有点复杂，先看示例代码中的添加Listener部分。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">configService.addListener(dataId, group, <span class="keyword">new</span> Listener() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">receiveConfigInfo</span><span class="params">(String configInfo)</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;receive:&quot;</span> + configInfo);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Executor <span class="title">getExecutor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTenantListeners</span><span class="params">(String dataId, String group, List&lt;? extends Listener&gt; listeners)</span></span></span><br><span class="line"><span class="function">        <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 默认DEFAULT_GROUP</span></span><br><span class="line">    group = null2defaultGroup(group);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 租户，默认空</span></span><br><span class="line">    String tenant = agent.getTenant();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 注解@8</span></span><br><span class="line">    CacheData cache = addCacheDataIfAbsent(dataId, group, tenant);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (cache) &#123;</span><br><span class="line">        <span class="keyword">for</span> (Listener listener : listeners) &#123;</span><br><span class="line">            cache.addListener(listener);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// cache md5 data是否来自server同步</span></span><br><span class="line">        cache.setSyncWithServer(<span class="keyword">false</span>);</span><br><span class="line">      	<span class="comment">// BlockingQueue中添加new Object()</span></span><br><span class="line">        agent.notifyListenConfig();</span><br><span class="line">    &#125;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@8</strong>  构建缓存数据CacheData并放入cacheMap中，缓存的key为 「dataId+group+tenant」例如：test+DEFAULT_GROUP。</p>
+<p>每个CacheData会绑定对应的taskId，每3000个CacheData对应一个taskId。其实从后面的代码中可以看出，每个taskId会对应一个gRPC Client。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> CacheData <span class="title">addCacheDataIfAbsent</span><span class="params">(String dataId, String group, String tenant)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 从缓存中获取</span></span><br><span class="line">    CacheData cache = getCache(dataId, group, tenant);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> != cache) &#123;</span><br><span class="line">        <span class="keyword">return</span> cache;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 构造缓存key以+连接，test+DEFAULT_GROUP</span></span><br><span class="line">    String key = GroupKey.getKeyTenant(dataId, group, tenant);</span><br><span class="line">    <span class="keyword">synchronized</span> (cacheMap) &#123;</span><br><span class="line">        CacheData cacheFromMap = getCache(dataId, group, tenant);</span><br><span class="line">        <span class="comment">// multiple listeners on the same dataid+group and race condition,so</span></span><br><span class="line">        <span class="comment">// double check again</span></span><br><span class="line">        <span class="comment">// other listener thread beat me to set to cacheMap</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != cacheFromMap) &#123; <span class="comment">// 再检查一遍</span></span><br><span class="line">            cache = cacheFromMap;</span><br><span class="line">            <span class="comment">// reset so that server not hang this check</span></span><br><span class="line">            cache.setInitializing(<span class="keyword">true</span>); <span class="comment">// 缓存正在初始化</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">// 构造缓存数据对象</span></span><br><span class="line">            cache = <span class="keyword">new</span> CacheData(configFilterChainManager, agent.getName(), dataId, group, tenant);</span><br><span class="line">            <span class="comment">// 初始值taskId=0，注意此处每3000个CacheData共用一个taskId</span></span><br><span class="line">            <span class="keyword">int</span> taskId = cacheMap.get().size() / (<span class="keyword">int</span>) ParamUtil.getPerTaskConfigSize();</span><br><span class="line">            cache.setTaskId(taskId);</span><br><span class="line">            <span class="comment">// fix issue # 1317</span></span><br><span class="line">            <span class="keyword">if</span> (enableRemoteSyncConfig) &#123; <span class="comment">// 默认false</span></span><br><span class="line">                String[] ct = getServerConfig(dataId, group, tenant, <span class="number">3000L</span>, <span class="keyword">false</span>);</span><br><span class="line">                cache.setContent(ct[<span class="number">0</span>]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        Map&lt;String, CacheData&gt; copy = <span class="keyword">new</span> HashMap&lt;String, CacheData&gt;(<span class="keyword">this</span>.cacheMap.get());</span><br><span class="line">        <span class="comment">// key = test+DEFAULT_GROUP</span></span><br><span class="line">        copy.put(key, cache);</span><br><span class="line">        <span class="comment">// cacheMap = &#123;test+DEFAULT_GROUP=CacheData [test, DEFAULT_GROUP]&#125;</span></span><br><span class="line">        cacheMap.set(copy);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    LOGGER.info(<span class="string">&quot;[&#123;&#125;] [subscribe] &#123;&#125;&quot;</span>, agent.getName(), key);</span><br><span class="line"></span><br><span class="line">    MetricsMonitor.getListenConfigCountMonitor().set(cacheMap.get().size());</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> cache;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>具体缓存内容</strong> </p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>name</td>
+<td>ConfigTransportClient名称，config_rpc_client</td>
+</tr>
+<tr>
+<td>configFilterChainManager</td>
+<td>filter拦截链条，可以执行一些列拦截器</td>
+</tr>
+<tr>
+<td>dataId</td>
+<td>dataId</td>
+</tr>
+<tr>
+<td>group</td>
+<td>group名称，默认为DEFAULT_GROUP</td>
+</tr>
+<tr>
+<td>tenant</td>
+<td>租户名称</td>
+</tr>
+<tr>
+<td>listeners</td>
+<td>添加的Listener列表，线程安全CopyOnWriteArrayList</td>
+</tr>
+<tr>
+<td>content</td>
+<td>启动时会从本地文件读入，默认为null</td>
+</tr>
+<tr>
+<td>md5</td>
+<td>content的md5字符串</td>
+</tr>
+</tbody></table>
+<p><strong>小结</strong>：添加监听器逻辑如下：构建CacheData，并缓存在cacheMap中，key是由「dataId+group+tenant」组成；每个CacheData会绑定了Listener列表，也绑定了taskId，3000个不同的CacheData对应一个taskId，对应一个gRPC通道实例；设置isSyncWithServer=false表示 cache md5 data不是来自server同步，BlockingQueue中添加new Object() 供前面提到的长轮询判断使用。</p>
+<h1 id="配置变更执行逻辑-1"><a href="#配置变更执行逻辑-1" class="headerlink" title="配置变更执行逻辑"></a>配置变更执行逻辑</h1><p>上文中提到一个线程一直在轮询，轮询执行executeConfigListen方法，这个方法比较关键。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">executeConfigListen</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    Map&lt;String<span class="comment">/*taskId*/</span>, List&lt;CacheData&gt;&gt; listenCachesMap = <span class="keyword">new</span> HashMap&lt;String, List&lt;CacheData&gt;&gt;(<span class="number">16</span>);</span><br><span class="line">    Map&lt;String, List&lt;CacheData&gt;&gt; removeListenCachesMap = <span class="keyword">new</span> HashMap&lt;String, List&lt;CacheData&gt;&gt;(<span class="number">16</span>);</span><br><span class="line">    <span class="keyword">long</span> now = System.currentTimeMillis();</span><br><span class="line">    <span class="comment">// 超过5分钟</span></span><br><span class="line">    <span class="keyword">boolean</span> needAllSync = now - lastAllSyncTime &gt;= ALL_SYNC_INTERNAL;</span><br><span class="line">    <span class="keyword">for</span> (CacheData cache : cacheMap.get().values()) &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (cache) &#123;</span><br><span class="line">            <span class="comment">// --------注解@9开始--------</span></span><br><span class="line">            <span class="keyword">if</span> (cache.isSyncWithServer()) &#123; </span><br><span class="line">                cache.checkListenerMd5(); <span class="comment">// 内容有变更通知Listener执行</span></span><br><span class="line">                <span class="keyword">if</span> (!needAllSync) &#123; <span class="comment">// 不超过5分钟则不再全局校验</span></span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">						<span class="comment">// --------注解@9结束--------</span></span><br><span class="line">            <span class="keyword">if</span> (!CollectionUtils.isEmpty(cache.getListeners())) &#123; <span class="comment">// 有添加Listeners</span></span><br><span class="line">                <span class="comment">// get listen config 默认 false</span></span><br><span class="line">                <span class="keyword">if</span> (!cache.isUseLocalConfigInfo()) &#123;</span><br><span class="line">                    List&lt;CacheData&gt; cacheDatas = listenCachesMap.get(String.valueOf(cache.getTaskId()));</span><br><span class="line">                    <span class="keyword">if</span> (cacheDatas == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        cacheDatas = <span class="keyword">new</span> LinkedList&lt;CacheData&gt;();</span><br><span class="line">                        listenCachesMap.put(String.valueOf(cache.getTaskId()), cacheDatas);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">// CacheData [test, DEFAULT_GROUP]</span></span><br><span class="line">                    cacheDatas.add(cache);</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (CollectionUtils.isEmpty(cache.getListeners())) &#123; <span class="comment">// 没有添加Listeners</span></span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (!cache.isUseLocalConfigInfo()) &#123;</span><br><span class="line">                    List&lt;CacheData&gt; cacheDatas = removeListenCachesMap.get(String.valueOf(cache.getTaskId()));</span><br><span class="line">                    <span class="keyword">if</span> (cacheDatas == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        cacheDatas = <span class="keyword">new</span> LinkedList&lt;CacheData&gt;();</span><br><span class="line">                        removeListenCachesMap.put(String.valueOf(cache.getTaskId()), cacheDatas);</span><br><span class="line">                    &#125;</span><br><span class="line">                    cacheDatas.add(cache);</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">boolean</span> hasChangedKeys = <span class="keyword">false</span>;</span><br><span class="line">  </span><br><span class="line">		<span class="comment">//-------------------注解@10开始---------------------------------</span></span><br><span class="line">  </span><br><span class="line">    <span class="keyword">if</span> (!listenCachesMap.isEmpty()) &#123; <span class="comment">// 有Listeners</span></span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, List&lt;CacheData&gt;&gt; entry : listenCachesMap.entrySet()) &#123;</span><br><span class="line">            String taskId = entry.getKey();</span><br><span class="line">            List&lt;CacheData&gt; listenCaches = entry.getValue();</span><br><span class="line"></span><br><span class="line">            ConfigBatchListenRequest configChangeListenRequest = buildConfigRequest(listenCaches);</span><br><span class="line">            configChangeListenRequest.setListen(<span class="keyword">true</span>);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 注解@10.1 每个taskId构建rpcClient</span></span><br><span class="line">                RpcClient rpcClient = ensureRpcClient(taskId);</span><br><span class="line">                <span class="comment">// 注解@10.2</span></span><br><span class="line">                ConfigChangeBatchListenResponse configChangeBatchListenResponse = (ConfigChangeBatchListenResponse) requestProxy(</span><br><span class="line">                        rpcClient, configChangeListenRequest);</span><br><span class="line">                <span class="keyword">if</span> (configChangeBatchListenResponse != <span class="keyword">null</span> &amp;&amp; configChangeBatchListenResponse.isSuccess()) &#123;</span><br><span class="line"></span><br><span class="line">                    Set&lt;String&gt; changeKeys = <span class="keyword">new</span> HashSet&lt;String&gt;();</span><br><span class="line">                    <span class="comment">// handle changed keys,notify listener</span></span><br><span class="line">                    <span class="comment">// 有变化的configContext</span></span><br><span class="line">                    <span class="keyword">if</span> (!CollectionUtils.isEmpty(configChangeBatchListenResponse.getChangedConfigs())) &#123;</span><br><span class="line">                        hasChangedKeys = <span class="keyword">true</span>;</span><br><span class="line">                        <span class="keyword">for</span> (ConfigChangeBatchListenResponse.ConfigContext changeConfig : configChangeBatchListenResponse.getChangedConfigs()) &#123;</span><br><span class="line">                            String changeKey = GroupKey</span><br><span class="line">                                    .getKeyTenant(changeConfig.getDataId(), changeConfig.getGroup(),</span><br><span class="line">                                            changeConfig.getTenant());</span><br><span class="line">                            changeKeys.add(changeKey);</span><br><span class="line">                            <span class="keyword">boolean</span> isInitializing = cacheMap.get().get(changeKey).isInitializing();</span><br><span class="line">                            <span class="comment">// 注解@10.3 回调Listener</span></span><br><span class="line">                            refreshContentAndCheck(changeKey, !isInitializing);</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="comment">//handler content configs</span></span><br><span class="line">                    <span class="keyword">for</span> (CacheData cacheData : listenCaches) &#123;</span><br><span class="line">                        String groupKey = GroupKey</span><br><span class="line">                                .getKeyTenant(cacheData.dataId, cacheData.group, cacheData.getTenant());</span><br><span class="line">                        <span class="keyword">if</span> (!changeKeys.contains(groupKey)) &#123; <span class="comment">// 注解@10.4</span></span><br><span class="line">                            <span class="comment">//sync:cache data md5 = server md5 &amp;&amp; cache data md5 = all listeners md5.</span></span><br><span class="line">                            <span class="keyword">synchronized</span> (cacheData) &#123;</span><br><span class="line">                                <span class="keyword">if</span> (!cacheData.getListeners().isEmpty()) &#123;</span><br><span class="line">                                    cacheData.setSyncWithServer(<span class="keyword">true</span>);</span><br><span class="line">                                    <span class="keyword">continue</span>;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                        cacheData.setInitializing(<span class="keyword">false</span>);</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line"></span><br><span class="line">                LOGGER.error(<span class="string">&quot;Async listen config change error &quot;</span>, e);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">50L</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException interruptedException) &#123;</span><br><span class="line">                    <span class="comment">//ignore</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">	<span class="comment">//-------------------注解@10结束---------------------------------</span></span><br><span class="line">    <span class="keyword">if</span> (!removeListenCachesMap.isEmpty()) &#123;</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, List&lt;CacheData&gt;&gt; entry : removeListenCachesMap.entrySet()) &#123;</span><br><span class="line">            String taskId = entry.getKey();</span><br><span class="line">            List&lt;CacheData&gt; removeListenCaches = entry.getValue();</span><br><span class="line">            ConfigBatchListenRequest configChangeListenRequest = buildConfigRequest(removeListenCaches);</span><br><span class="line">            configChangeListenRequest.setListen(<span class="keyword">false</span>);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 向server发送Listener取消订阅请求ConfigBatchListenRequest#listen为false</span></span><br><span class="line">                RpcClient rpcClient = ensureRpcClient(taskId);</span><br><span class="line">                <span class="keyword">boolean</span> removeSuccess = unListenConfigChange(rpcClient, configChangeListenRequest);</span><br><span class="line">                <span class="keyword">if</span> (removeSuccess) &#123;</span><br><span class="line">                    <span class="keyword">for</span> (CacheData cacheData : removeListenCaches) &#123;</span><br><span class="line">                        <span class="keyword">synchronized</span> (cacheData) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (cacheData.getListeners().isEmpty()) &#123;</span><br><span class="line">                                <span class="comment">// 移除本地缓存</span></span><br><span class="line">                                ClientWorker.<span class="keyword">this</span></span><br><span class="line">                                        .removeCache(cacheData.dataId, cacheData.group, cacheData.tenant);</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                LOGGER.error(<span class="string">&quot;async remove listen config change error &quot;</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Thread.sleep(<span class="number">50L</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException interruptedException) &#123;</span><br><span class="line">                <span class="comment">//ignore</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (needAllSync) &#123;</span><br><span class="line">        lastAllSyncTime = now;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//If has changed keys,notify re sync md5.</span></span><br><span class="line">    <span class="keyword">if</span> (hasChangedKeys) &#123; <span class="comment">// key有变化触发下一轮轮询</span></span><br><span class="line">        notifyListenConfig();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@9</strong> isSyncWithServer初始为false，在下文代码中校验结束后会设置为true，表示md5 cache data同步来自server。如果为true会校验Md5.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">checkListenerMd5</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (ManagerListenerWrap wrap : listeners) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!md5.equals(wrap.lastCallMd5)) &#123; <span class="comment">// 注解@9.1</span></span><br><span class="line">            safeNotifyListener(dataId, group, content, type, md5, wrap);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@9.1</strong>  配置内容有变更时，回调到我们示例中注册的Listener中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">safeNotifyListener</span><span class="params">(<span class="keyword">final</span> String dataId, <span class="keyword">final</span> String group, <span class="keyword">final</span> String content, <span class="keyword">final</span> String type,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">final</span> String md5, <span class="keyword">final</span> ManagerListenerWrap listenerWrap)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> Listener listener = listenerWrap.listener;</span><br><span class="line">    <span class="keyword">if</span> (listenerWrap.inNotifying) &#123;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    Runnable job = <span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">long</span> start = System.currentTimeMillis();</span><br><span class="line">            ClassLoader myClassLoader = Thread.currentThread().getContextClassLoader();</span><br><span class="line">            ClassLoader appClassLoader = listener.getClass().getClassLoader();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (listener <span class="keyword">instanceof</span> AbstractSharedListener) &#123;</span><br><span class="line">                    AbstractSharedListener adapter = (AbstractSharedListener) listener;</span><br><span class="line">                    adapter.fillContext(dataId, group);</span><br><span class="line">                   <span class="comment">// ...</span></span><br><span class="line">                &#125;</span><br><span class="line">                Thread.currentThread().setContextClassLoader(appClassLoader);</span><br><span class="line"></span><br><span class="line">                ConfigResponse cr = <span class="keyword">new</span> ConfigResponse();</span><br><span class="line">                cr.setDataId(dataId);</span><br><span class="line">                cr.setGroup(group);</span><br><span class="line">                cr.setContent(content);</span><br><span class="line">                <span class="comment">// filter拦截继续过滤</span></span><br><span class="line">                configFilterChainManager.doFilter(<span class="keyword">null</span>, cr);</span><br><span class="line"></span><br><span class="line">                String contentTmp = cr.getContent();</span><br><span class="line">                listenerWrap.inNotifying = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">                <span class="comment">// 注解@9.2</span></span><br><span class="line">                listener.receiveConfigInfo(contentTmp);</span><br><span class="line">                <span class="comment">// compare lastContent and content</span></span><br><span class="line">                <span class="keyword">if</span> (listener <span class="keyword">instanceof</span> AbstractConfigChangeListener) &#123;</span><br><span class="line">                    Map data = ConfigChangeHandler.getInstance()</span><br><span class="line">                            .parseChangeData(listenerWrap.lastContent, content, type);</span><br><span class="line">                    ConfigChangeEvent event = <span class="keyword">new</span> ConfigChangeEvent(data);</span><br><span class="line">                    <span class="comment">// 回调变更事件方法</span></span><br><span class="line">                    ((AbstractConfigChangeListener) listener).receiveConfigChange(event);</span><br><span class="line">                    listenerWrap.lastContent = content;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                listenerWrap.lastCallMd5 = md5;</span><br><span class="line">                <span class="comment">// ..</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (NacosException ex) &#123;</span><br><span class="line">               <span class="comment">// ...</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">               <span class="comment">// ...</span></span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                listenerWrap.inNotifying = <span class="keyword">false</span>;</span><br><span class="line">                Thread.currentThread().setContextClassLoader(myClassLoader);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">long</span> startNotify = System.currentTimeMillis();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      	<span class="comment">// 注解@9.3</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != listener.getExecutor()) &#123;</span><br><span class="line">            listener.getExecutor().execute(job);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                INTERNAL_NOTIFIER.submit(job); <span class="comment">// 默认线程池执行，为5个线程</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (RejectedExecutionException rejectedExecutionException) &#123;</span><br><span class="line">                <span class="comment">// ...</span></span><br><span class="line">                job.run();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable throwable) &#123;</span><br><span class="line">                <span class="comment">// ...</span></span><br><span class="line">                job.run();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">       <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">long</span> finishNotify = System.currentTimeMillis();</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@9.2</strong> 回调注册Listener的receiveConfigInfo方法或者receiveConfigChange逻辑</p>
+<p><strong>注解@9.3</strong> 优先使用我们示例中注册提供的线程池执行job，如果没有设置使用默认线程池「INTERNAL_NOTIFIER」，默认5个线程</p>
+<p><strong>备注：</strong> 当CacheData从server同步后，会校验md5是否变更了，当变更时会回调到我们注册的Listener完成通知。通知任务被封装成Runnable任务，执行线程池可以自定义，默认为5个线程。</p>
+<p><strong>注解@10.1</strong> 每个taskId构建rpcClient，例如：taskId= config-0-c70e0314-4770-43f5-add4-f258a4083fd7；结合上下文每3000个CacheData对应一个rpcClient。</p>
+<p><strong>注解@10.2</strong> 向server发起configChangeListenRequest，server端由ConfigChangeBatchListenRequestHandler处理，还是比较md5</p>
+<p>是否变更了，变更后server端返回变更的key列表。</p>
+<p><strong>注解@10.3</strong> 当server返回变更key列表时执行refreshContentAndCheck方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">refreshContentAndCheck</span><span class="params">(CacheData cacheData, <span class="keyword">boolean</span> notify)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 注解@10.3.1</span></span><br><span class="line">        String[] ct = getServerConfig(cacheData.dataId, cacheData.group, cacheData.tenant, <span class="number">3000L</span>, notify);</span><br><span class="line">        cacheData.setContent(ct[<span class="number">0</span>]);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != ct[<span class="number">1</span>]) &#123;</span><br><span class="line">            cacheData.setType(ct[<span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (notify) &#123; <span class="comment">// 记录日志</span></span><br><span class="line">           <span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 注解@10.3.2</span></span><br><span class="line">        cacheData.checkListenerMd5();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="comment">//...</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@10.3.1</strong> 向server发起ConfigQueryRequest，查询配置内容</p>
+<p><strong>注解@10.3.2</strong> 回调注册的Listener逻辑见 <strong>注解@9</strong> </p>
+<p> <strong>注解@10.4</strong>  key没有变化的，内容由server同步，设置SyncWithServer=true，下一轮逻辑会由 <strong>注解@9</strong> 部分执行</p>
+<p><strong>备注：</strong> 从整个<strong>注解@10</strong> 注册Listener后，会构建与server的RPC通道rpcClient；向server发起变更查询请求configChangeListenRequest，server端通过比较缓存的md5值，返回client变更的key列表；client通过变更的key列表向server发起配置查询请求ConfigQueryRequest，获取变更内容，并回调我们注册的Listener。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/bef6941/" rel="prev" title="Nacos12# 随机权重负载均衡算法">
+      <i class="fa fa-chevron-left"></i> Nacos12# 随机权重负载均衡算法
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/6e152957/" rel="next" title="Nacos14# 配置管理服务端流程">
+      Nacos14# 配置管理服务端流程 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-number">2.0.1.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Client%E5%88%9D%E5%A7%8B%E5%8C%96%E6%A6%82%E8%A7%88"><span class="nav-number">2.0.2.</span> <span class="nav-text">Client初始化概览</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Listener%E6%B3%A8%E5%86%8C%E9%80%BB%E8%BE%91"><span class="nav-number">2.0.3.</span> <span class="nav-text">Listener注册逻辑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%8F%98%E6%9B%B4%E6%89%A7%E8%A1%8C%E9%80%BB%E8%BE%91"><span class="nav-number">2.0.4.</span> <span class="nav-text">配置变更执行逻辑</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B-1"><span class="nav-number">3.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Client%E5%88%9D%E5%A7%8B%E5%8C%96%E6%A6%82%E8%A7%88-1"><span class="nav-number">4.</span> <span class="nav-text">Client初始化概览</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Listener%E6%B3%A8%E5%86%8C%E9%80%BB%E8%BE%91-1"><span class="nav-number">5.</span> <span class="nav-text">Listener注册逻辑</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%8F%98%E6%9B%B4%E6%89%A7%E8%A1%8C%E9%80%BB%E8%BE%91-1"><span class="nav-number">6.</span> <span class="nav-text">配置变更执行逻辑</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

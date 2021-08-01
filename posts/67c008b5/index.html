@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言本文接着撸Distro协议，上文中分析了在Nacos server启动时会进行全量数据同步和数据校验，具体数据即客户端注册节点信息含命名空间、分组名称、服务名称、节点Instance信息等。什么时候会触发增量同步？增量同步都干了些啥，下文接着撸撸增量数据同步。 内容提要增量数据同步 在Nacos节点启动时通过事件驱动模式订阅了ClientChangedEvent、ClientDisconnec">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos7# Distro协议增量同步">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/67c008b5/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言本文接着撸Distro协议，上文中分析了在Nacos server启动时会进行全量数据同步和数据校验，具体数据即客户端注册节点信息含命名空间、分组名称、服务名称、节点Instance信息等。什么时候会触发增量同步？增量同步都干了些啥，下文接着撸撸增量数据同步。 内容提要增量数据同步 在Nacos节点启动时通过事件驱动模式订阅了ClientChangedEvent、ClientDisconnec">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210629174459.png">
+<meta property="article:published_time" content="2021-07-03T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.879Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210629174459.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/67c008b5/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos7# Distro协议增量同步 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/67c008b5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos7# Distro协议增量同步
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本文接着撸Distro协议，上文中分析了在Nacos server启动时会进行全量数据同步和数据校验，具体数据即客户端注册节点信息含命名空间、分组名称、服务名称、节点Instance信息等。什么时候会触发增量同步？增量同步都干了些啥，下文接着撸撸增量数据同步。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="增量数据同步"><a href="#增量数据同步" class="headerlink" title="增量数据同步"></a>增量数据同步</h3><ul>
+<li>在Nacos节点启动时通过事件驱动模式订阅了ClientChangedEvent、ClientDisconnectEvent和ClientVerifyFailedEvent事件</li>
+<li>当节点收到ClientChangedEvent事件时，会向集群中其他节点发送更新Client信息请求，其他节点收到后更新缓存</li>
+<li>当节点收到ClientVerifyFailedEvent事件时，向该Event指定的目标节点发起新增该Event指定的Client信息请求，目标节点收到后更新到自己缓存中</li>
+<li>当节点收到ClientDisconnectEvent事件时，会向集群中其他节点发送删除Client信息请求，其他节点收到后将该Client缓存删除</li>
+</ul>
+<h3 id="增量事件触发"><a href="#增量事件触发" class="headerlink" title="增量事件触发"></a>增量事件触发</h3><ul>
+<li>当有服务注册或者注销时会触发ClientEvent.ClientChangedEvent事件，即客户端调用naming.registerInstance或者naming.deregisterInstance</li>
+<li>定时任务每隔3秒钟定时检查缓存中的所有连接，如果超过保鲜期20秒则再次发起连接请求，连接未成功则注销关闭该连接并发布ClientEvent.ClientDisconnectEvent事件</li>
+<li>Nacos集群之间通过每5秒发送心跳校验数据请求（具体为本节点负责Client信息），其他节点接受到校验请求，如果缓存中存在该client表示校验成功，同时更新保鲜时间；否则校验失败，回调返回失败Response，请求节点收到失败的Response后会发布ClientVerifyFailedEvent事件</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="增量数据同步-1"><a href="#增量数据同步-1" class="headerlink" title="增量数据同步"></a>增量数据同步</h1><p>将代码翻到DistroClientDataProcessor类中，该类继承了SmartSubscriber，遵循Subscriber/Notify模式，即事件驱动模式。该模式前面文章中分析过，当有订阅的事件时会进行回调通知。</p>
+<h3 id="订阅的事件"><a href="#订阅的事件" class="headerlink" title="订阅的事件"></a>订阅的事件</h3><p>DistroClientDataProcessor订阅了ClientChangedEvent、ClientDisconnectEvent和ClientVerifyFailedEvent事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Class&lt;? extends Event&gt;&gt; subscribeTypes() &#123;</span><br><span class="line">  List&lt;Class&lt;? extends Event&gt;&gt; result = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">  result.add(ClientEvent.ClientChangedEvent.class);</span><br><span class="line">  result.add(ClientEvent.ClientDisconnectEvent.class);</span><br><span class="line">  result.add(ClientEvent.ClientVerifyFailedEvent.class);</span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当有上述三个事件产生时，DefaultPublisher回调onEvent方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (EnvUtil.getStandaloneMode()) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!upgradeJudgement.isUseGrpcFeatures()) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientEvent.ClientVerifyFailedEvent) &#123;</span><br><span class="line">      	<span class="comment">// 注解@1</span></span><br><span class="line">        syncToVerifyFailedServer((ClientEvent.ClientVerifyFailedEvent) event);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 注解@2</span></span><br><span class="line">        syncToAllServer((ClientEvent) event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong> 将ClientVerifyFailedEvent同步给校验失败的节点，操作类型为ADD</p>
+<p><strong>注解@2</strong> 将同步给集群中的其他节</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">syncToAllServer</span><span class="params">(ClientEvent event)</span> </span>&#123;</span><br><span class="line">    Client client = event.getClient();</span><br><span class="line">    <span class="comment">// Only ephemeral data sync by Distro, persist client should sync by raft.</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == client || !client.isEphemeral() || !clientManager.isResponsibleClient(client)) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientEvent.ClientDisconnectEvent) &#123;</span><br><span class="line">      	<span class="comment">// 注解@3</span></span><br><span class="line">        DistroKey distroKey = <span class="keyword">new</span> DistroKey(client.getClientId(), TYPE);</span><br><span class="line">        distroProtocol.sync(distroKey, DataOperation.DELETE);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ClientEvent.ClientChangedEvent) &#123;</span><br><span class="line">      	<span class="comment">// 注解@4</span></span><br><span class="line">        DistroKey distroKey = <span class="keyword">new</span> DistroKey(client.getClientId(), TYPE);</span><br><span class="line">        distroProtocol.sync(distroKey, DataOperation.CHANGE);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@3</strong> 当客户端断开连接事件ClientDisconnectEvent时，向其他节点同步DELETE操作</p>
+<p><strong>注解@4</strong> 当客户端变更事件ClientChangedEvent时，向其他节点同步CHANGE操作</p>
+<p>接着看下不同操作类型的处理</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!(task <span class="keyword">instanceof</span> DistroDelayTask)) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    DistroDelayTask distroDelayTask = (DistroDelayTask) task;</span><br><span class="line">    DistroKey distroKey = distroDelayTask.getDistroKey();</span><br><span class="line">    <span class="keyword">switch</span> (distroDelayTask.getAction()) &#123;</span><br><span class="line">        <span class="keyword">case</span> DELETE: <span class="comment">// 删除操作</span></span><br><span class="line">            DistroSyncDeleteTask syncDeleteTask = <span class="keyword">new</span> DistroSyncDeleteTask(distroKey, distroComponentHolder);</span><br><span class="line">            distroTaskEngineHolder.getExecuteWorkersManager().addTask(distroKey, syncDeleteTask);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">case</span> CHANGE:</span><br><span class="line">        <span class="keyword">case</span> ADD: <span class="comment">// 更新和新增操作</span></span><br><span class="line">            DistroSyncChangeTask syncChangeTask = <span class="keyword">new</span> DistroSyncChangeTask(distroKey, distroComponentHolder);</span><br><span class="line">            distroTaskEngineHolder.getExecuteWorkersManager().addTask(distroKey, syncChangeTask);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>向指定的集群节点同步更新数据</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">syncData</span><span class="params">(DistroData data, String targetServer)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (isNoExistTarget(targetServer)) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 构造请求数据并设置数据类型</span></span><br><span class="line">    DistroDataRequest request = <span class="keyword">new</span> DistroDataRequest(data, data.getType());</span><br><span class="line">    <span class="comment">// 查找目标节点缓存数据</span></span><br><span class="line">    Member member = memberManager.find(targetServer);</span><br><span class="line">    <span class="comment">// 节点状态检查需UP状态，即：可通信状态</span></span><br><span class="line">    <span class="keyword">if</span> (checkTargetServerStatusUnhealthy(member)) &#123;</span><br><span class="line">        Loggers.DISTRO.warn(<span class="string">&quot;[DISTRO] Cancel distro sync caused by target server &#123;&#125; unhealthy&quot;</span>, targetServer);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 向目标节点发送数据</span></span><br><span class="line">        Response response = clusterRpcClientProxy.sendRequest(member, request);</span><br><span class="line">        <span class="keyword">return</span> checkResponse(response);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (NacosException e) &#123;</span><br><span class="line">        Loggers.DISTRO.error(<span class="string">&quot;[DISTRO-FAILED] Sync distro data failed! &quot;</span>, e);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>异步更新操作</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">syncData</span><span class="params">(DistroData data, String targetServer, DistroCallback callback)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (isNoExistTarget(targetServer)) &#123;</span><br><span class="line">        callback.onSuccess();</span><br><span class="line">    &#125;</span><br><span class="line">    DistroDataRequest request = <span class="keyword">new</span> DistroDataRequest(data, data.getType());</span><br><span class="line">    Member member = memberManager.find(targetServer);</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 异步更新操作</span></span><br><span class="line">        clusterRpcClientProxy.asyncRequest(member, request, <span class="keyword">new</span> DistroRpcCallbackWrapper(callback, member));</span><br><span class="line">    &#125; <span class="keyword">catch</span> (NacosException nacosException) &#123;</span><br><span class="line">        callback.onFailed(nacosException);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>节点收到这些操作请求如何处理呢？</strong> </p>
+<p>代码翻到DistroDataRequestHandler#handle()，集群中节点收到请求后处理逻辑在这里：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> DistroDataResponse <span class="title">handle</span><span class="params">(DistroDataRequest request, RequestMeta meta)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">switch</span> (request.getDataOperation()) &#123;</span><br><span class="line">            <span class="keyword">case</span> VERIFY:</span><br><span class="line">                <span class="keyword">return</span> handleVerify(request.getDistroData(), meta);</span><br><span class="line">            <span class="keyword">case</span> SNAPSHOT:</span><br><span class="line">                <span class="keyword">return</span> handleSnapshot();</span><br><span class="line">            <span class="keyword">case</span> ADD:</span><br><span class="line">            <span class="keyword">case</span> CHANGE:</span><br><span class="line">            <span class="keyword">case</span> DELETE:</span><br><span class="line">                <span class="keyword">return</span> handleSyncData(request.getDistroData());</span><br><span class="line">            <span class="keyword">case</span> QUERY:</span><br><span class="line">                <span class="keyword">return</span> handleQueryData(request.getDistroData());</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> DistroDataResponse();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        Loggers.DISTRO.error(<span class="string">&quot;[DISTRO-FAILED] distro handle with exception&quot;</span>, e);</span><br><span class="line">        DistroDataResponse result = <span class="keyword">new</span> DistroDataResponse();</span><br><span class="line">        result.setErrorCode(ResponseCode.FAIL.getCode());</span><br><span class="line">        result.setMessage(<span class="string">&quot;handle distro request with exception&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看出ADD、CHANGE和DELETE均由handleSyncData处理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> DistroDataResponse <span class="title">handleSyncData</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">    DistroDataResponse result = <span class="keyword">new</span> DistroDataResponse();</span><br><span class="line">    <span class="keyword">if</span> (!distroProtocol.onReceive(distroData)) &#123;</span><br><span class="line">        result.setErrorCode(ResponseCode.FAIL.getCode());</span><br><span class="line">        result.setMessage(<span class="string">&quot;[DISTRO-FAILED] distro data handle failed&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">processData</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">switch</span> (distroData.getType()) &#123;</span><br><span class="line">        <span class="keyword">case</span> ADD:</span><br><span class="line">        <span class="keyword">case</span> CHANGE:</span><br><span class="line">            ClientSyncData clientSyncData = ApplicationUtils.getBean(Serializer.class)</span><br><span class="line">                    .deserialize(distroData.getContent(), ClientSyncData.class);</span><br><span class="line">            handlerClientSyncData(clientSyncData); <span class="comment">// 注解@5</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">case</span> DELETE:</span><br><span class="line">            String deleteClientId = distroData.getDistroKey().getResourceKey();</span><br><span class="line">            Loggers.DISTRO.info(<span class="string">&quot;[Client-Delete] Received distro client sync data &#123;&#125;&quot;</span>, deleteClientId);</span><br><span class="line">            clientManager.clientDisconnected(deleteClientId); <span class="comment">// 注解@6</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5</strong> 将同步过来的Client信息进行缓存</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handlerClientSyncData</span><span class="params">(ClientSyncData clientSyncData)</span> </span>&#123;</span><br><span class="line">    Loggers.DISTRO.info(<span class="string">&quot;[Client-Add] Received distro client sync data &#123;&#125;&quot;</span>, clientSyncData.getClientId());</span><br><span class="line">    clientManager.syncClientConnected(clientSyncData.getClientId(), clientSyncData.getAttributes());</span><br><span class="line">    Client client = clientManager.getClient(clientSyncData.getClientId());</span><br><span class="line">  	<span class="comment">// 注解@5.1</span></span><br><span class="line">    upgradeClient(client, clientSyncData);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>需要的是从其他节点通过过来的Client信息，ConnectionBasedClient属性isNative为false表示该连接时从其他节点同步过来的；true表示该连接客户端直接连接的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">syncClientConnected</span><span class="params">(String clientId, ClientSyncAttributes attributes)</span> </span>&#123;</span><br><span class="line">    String type = attributes.getClientAttribute(ClientConstants.CONNECTION_TYPE);</span><br><span class="line">    ClientFactory clientFactory = ClientFactoryHolder.getInstance().findClientFactory(type);</span><br><span class="line">    <span class="keyword">return</span> clientConnected(clientFactory.newSyncedClient(clientId, attributes));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ConnectionBasedClient <span class="title">newSyncedClient</span><span class="params">(String clientId, ClientSyncAttributes attributes)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> ConnectionBasedClient(clientId, <span class="keyword">false</span>); <span class="comment">// false表示从其他节点同步过来的client</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">clientConnected</span><span class="params">(Client client)</span> </span>&#123;</span><br><span class="line">  Loggers.SRV_LOG.info(<span class="string">&quot;Client connection &#123;&#125; connect&quot;</span>, client.getClientId());</span><br><span class="line">  <span class="keyword">if</span> (!clients.containsKey(client.getClientId())) &#123;</span><br><span class="line">    clients.putIfAbsent(client.getClientId(), (ConnectionBasedClient) client); <span class="comment">// 缓存client</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@5.1</strong>  更新Client的Service以及Instance信息。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">upgradeClient</span><span class="params">(Client client, ClientSyncData clientSyncData)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    List&lt;String&gt; namespaces = clientSyncData.getNamespaces();</span><br><span class="line">    List&lt;String&gt; groupNames = clientSyncData.getGroupNames();</span><br><span class="line">    List&lt;String&gt; serviceNames = clientSyncData.getServiceNames();</span><br><span class="line">    List&lt;InstancePublishInfo&gt; instances = clientSyncData.getInstancePublishInfos();</span><br><span class="line">    Set&lt;Service&gt; syncedService = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; namespaces.size(); i++) &#123;</span><br><span class="line">        Service service = Service.newService(namespaces.get(i), groupNames.get(i), serviceNames.get(i));</span><br><span class="line">        Service singleton = ServiceManager.getInstance().getSingleton(service);</span><br><span class="line">        syncedService.add(singleton);</span><br><span class="line">        InstancePublishInfo instancePublishInfo = instances.get(i);</span><br><span class="line">        <span class="keyword">if</span> (!instancePublishInfo.equals(client.getInstancePublishInfo(singleton))) &#123;</span><br><span class="line">            client.addServiceInstance(singleton, instancePublishInfo);</span><br><span class="line">            NotifyCenter.publishEvent(</span><br><span class="line">                    <span class="keyword">new</span> ClientOperationEvent.ClientRegisterServiceEvent(singleton, client.getClientId()));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (Service each : client.getAllPublishedService()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!syncedService.contains(each)) &#123;</span><br><span class="line">            client.removeServiceInstance(each);</span><br><span class="line">            NotifyCenter.publishEvent(</span><br><span class="line">                    <span class="keyword">new</span> ClientOperationEvent.ClientDeregisterServiceEvent(each, client.getClientId()));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@6</strong> 响应删除操作，从clients缓存中移除。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">clientDisconnected</span><span class="params">(String clientId)</span> </span>&#123;</span><br><span class="line">    Loggers.SRV_LOG.info(<span class="string">&quot;Client connection &#123;&#125; disconnect, remove instances and subscribers&quot;</span>, clientId);</span><br><span class="line">    ConnectionBasedClient client = clients.remove(clientId);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == client) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    client.release();</span><br><span class="line">    NotifyCenter.publishEvent(<span class="keyword">new</span> ClientEvent.ClientDisconnectEvent(client));</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> 增量同步的逻辑如下：当本节点DistroClientDataProcessor收到ClientChangedEvent、ClientDisconnectEvent和ClientVerifyFailedEvent事件时，会向Nacos集群的其他节点同步Client信息；集群中其他节点收到同步信息后更新或者删除本地缓存的Client信息；通过增量同步的Client信息isNative为false表示不是由客户端直连的。</p>
+<h1 id="增量事件触发-1"><a href="#增量事件触发-1" class="headerlink" title="增量事件触发"></a>增量事件触发</h1><p>在Nacos server启动时从运行时内存信息可以看出，总共缓存了17个事件类型。当然也包括ClientChangedEvent、ClientDisconnectEvent和ClientVerifyFailedEvent。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210629174459.png"></p>
+<h3 id="ClientChangedEvent事件触发"><a href="#ClientChangedEvent事件触发" class="headerlink" title="ClientChangedEvent事件触发"></a>ClientChangedEvent事件触发</h3><p>当处理服务注册和注销事件时会触发ClientChangeEvent事件，详见InstanceRequestHandler#handle处理逻辑。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> InstanceResponse <span class="title">handle</span><span class="params">(InstanceRequest request, RequestMeta meta)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    Service service = Service</span><br><span class="line">            .newService(request.getNamespace(), request.getGroupName(), request.getServiceName(), <span class="keyword">true</span>);</span><br><span class="line">    <span class="keyword">switch</span> (request.getType()) &#123;</span><br><span class="line">        <span class="comment">// 注解@7</span></span><br><span class="line">        <span class="keyword">case</span> NamingRemoteConstants.REGISTER_INSTANCE:</span><br><span class="line">            <span class="keyword">return</span> registerInstance(service, request, meta);</span><br><span class="line">        <span class="comment">// 注解@8</span></span><br><span class="line">        <span class="keyword">case</span> NamingRemoteConstants.DE_REGISTER_INSTANCE:</span><br><span class="line">            <span class="keyword">return</span> deregisterInstance(service, request, meta);</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.INVALID_PARAM,</span><br><span class="line">                    String.format(<span class="string">&quot;Unsupported request type %s&quot;</span>, request.getType()));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@7</strong> 处理注册请求，会调用到addServiceInstance方法，该方法中发布了ClientEvent.ClientChangedEvent事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">addServiceInstance</span><span class="params">(Service service, InstancePublishInfo instancePublishInfo)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == publishers.put(service, instancePublishInfo)) &#123;</span><br><span class="line">        MetricsMonitor.incrementInstanceCount();</span><br><span class="line">    &#125;</span><br><span class="line">    NotifyCenter.publishEvent(<span class="keyword">new</span> ClientEvent.ClientChangedEvent(<span class="keyword">this</span>));</span><br><span class="line">    Loggers.SRV_LOG.info(<span class="string">&quot;Client change for service &#123;&#125;, &#123;&#125;&quot;</span>, service, getClientId());</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@8</strong> 处理注销请求，会调用到removeServiceInstance方法，该方法中发布了ClientEvent.ClientChangedEvent事件</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> InstancePublishInfo <span class="title">removeServiceInstance</span><span class="params">(Service service)</span> </span>&#123;</span><br><span class="line">        InstancePublishInfo result = publishers.remove(service);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != result) &#123;</span><br><span class="line">            MetricsMonitor.decrementInstanceCount();</span><br><span class="line">            NotifyCenter.publishEvent(<span class="keyword">new</span> ClientEvent.ClientChangedEvent(<span class="keyword">this</span>));</span><br><span class="line">        &#125;</span><br><span class="line">        Loggers.SRV_LOG.info(<span class="string">&quot;Client remove for service &#123;&#125;, &#123;&#125;&quot;</span>, service, getClientId());</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> 当有服务注册或者注销时会触发ClientEvent.ClientChangedEvent事件。</p>
+<h3 id="ClientDisconnectEvent事件触发"><a href="#ClientDisconnectEvent事件触发" class="headerlink" title="ClientDisconnectEvent事件触发"></a>ClientDisconnectEvent事件触发</h3><p>下面一段代码通过检测连接是否超过保鲜期，超过保鲜期的会被注销关闭，翻到代码ConnectionManager#start()。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PostConstruct</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 定时任务每3秒执行一次</span></span><br><span class="line">    RpcScheduledExecutor.COMMON_SERVER_EXECUTOR.scheduleWithFixedDelay(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 获取缓存连接</span></span><br><span class="line">                <span class="keyword">int</span> totalCount = connections.size();</span><br><span class="line">                Loggers.REMOTE_DIGEST.info(<span class="string">&quot;Connection check task start&quot;</span>);</span><br><span class="line">                MetricsMonitor.getLongConnectionMonitor().set(totalCount);</span><br><span class="line">                <span class="comment">// 所有连接集合</span></span><br><span class="line">                Set&lt;Map.Entry&lt;String, Connection&gt;&gt; entries = connections.entrySet();</span><br><span class="line">                <span class="comment">// 获取通过SDK连接的数量</span></span><br><span class="line">                <span class="keyword">int</span> currentSdkClientCount = currentSdkClientCount();</span><br><span class="line">                <span class="keyword">boolean</span> isLoaderClient = loadClient &gt;= <span class="number">0</span>;</span><br><span class="line">                <span class="keyword">int</span> currentMaxClient = isLoaderClient ? loadClient : connectionLimitRule.countLimit;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">int</span> expelCount = currentMaxClient &lt; <span class="number">0</span> ? <span class="number">0</span> : Math.max(currentSdkClientCount - currentMaxClient, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">                List&lt;String&gt; expelClient = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">                Map&lt;String, AtomicInteger&gt; expelForIp = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">16</span>);</span><br><span class="line"></span><br><span class="line">                <span class="comment">// 1. calculate expel count  of ip.</span></span><br><span class="line">                <span class="comment">// 加载Connection ConnectionLimitRule</span></span><br><span class="line">                <span class="comment">// 默认路径为 $&#123;usr.home&#125;/nacos/data/loader/limitRule</span></span><br><span class="line">                <span class="keyword">for</span> (Map.Entry&lt;String, Connection&gt; entry : entries) &#123;</span><br><span class="line"></span><br><span class="line">                    Connection client = entry.getValue();</span><br><span class="line">                    String appName = client.getMetaInfo().getAppName();</span><br><span class="line">                    String clientIp = client.getMetaInfo().getClientIp();</span><br><span class="line">                    <span class="keyword">if</span> (client.getMetaInfo().isSdkSource() &amp;&amp; !expelForIp.containsKey(clientIp)) &#123;</span><br><span class="line">                        <span class="comment">//get limit for current ip.</span></span><br><span class="line">                        <span class="comment">// 默认无limit限制</span></span><br><span class="line">                        <span class="keyword">int</span> countLimitOfIp = connectionLimitRule.getCountLimitOfIp(clientIp);</span><br><span class="line">                        <span class="comment">// 默认无limit限制</span></span><br><span class="line">                        <span class="keyword">if</span> (countLimitOfIp &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                            <span class="keyword">int</span> countLimitOfApp = connectionLimitRule.getCountLimitOfApp(appName);</span><br><span class="line">                            countLimitOfIp = countLimitOfApp &lt; <span class="number">0</span> ? countLimitOfIp : countLimitOfApp;</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">if</span> (countLimitOfIp &lt; <span class="number">0</span>) &#123; <span class="comment">// 默认无限制</span></span><br><span class="line">                            countLimitOfIp = connectionLimitRule.getCountLimitPerClientIpDefault();</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                        <span class="keyword">if</span> (countLimitOfIp &gt;= <span class="number">0</span> &amp;&amp; connectionForClientIp.containsKey(clientIp)) &#123;</span><br><span class="line">                            AtomicInteger currentCountIp = connectionForClientIp.get(clientIp);</span><br><span class="line">                            <span class="keyword">if</span> (currentCountIp != <span class="keyword">null</span> &amp;&amp; currentCountIp.get() &gt; countLimitOfIp) &#123;</span><br><span class="line">                                expelForIp.put(clientIp, <span class="keyword">new</span> AtomicInteger(currentCountIp.get() - countLimitOfIp));</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (expelForIp.size() &gt; <span class="number">0</span>) &#123; <span class="comment">// 默认等于0</span></span><br><span class="line">                    Loggers.REMOTE_DIGEST.info(<span class="string">&quot;Over limit ip expel info,&quot;</span>, expelForIp);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                Set&lt;String&gt; outDatedConnections = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">                <span class="keyword">long</span> now = System.currentTimeMillis();</span><br><span class="line">                <span class="comment">// 2.get expel connection for ip limit.</span></span><br><span class="line">                <span class="comment">//</span></span><br><span class="line">                <span class="keyword">for</span> (Map.Entry&lt;String, Connection&gt; entry : entries) &#123;</span><br><span class="line">                    Connection client = entry.getValue();</span><br><span class="line">                    String clientIp = client.getMetaInfo().getClientIp();</span><br><span class="line">                    AtomicInteger integer = expelForIp.get(clientIp);</span><br><span class="line">                    <span class="keyword">if</span> (integer != <span class="keyword">null</span> &amp;&amp; integer.intValue() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                        integer.decrementAndGet();</span><br><span class="line">                        expelClient.add(client.getMetaInfo().getConnectionId());</span><br><span class="line">                        expelCount--;</span><br><span class="line">                    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (now - client.getMetaInfo().getLastActiveTime() &gt;= KEEP_ALIVE_TIME) &#123; <span class="comment">// 保鲜时间超过20秒放入outDatedConnections集合</span></span><br><span class="line">                        outDatedConnections.add(client.getMetaInfo().getConnectionId());</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">// 3. if total count is still over limit.</span></span><br><span class="line">                <span class="comment">// expelCount 默认为0</span></span><br><span class="line">                <span class="keyword">if</span> (expelCount &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">for</span> (Map.Entry&lt;String, Connection&gt; entry : entries) &#123;</span><br><span class="line">                        Connection client = entry.getValue();</span><br><span class="line">                        <span class="keyword">if</span> (!expelForIp.containsKey(client.getMetaInfo().clientIp) &amp;&amp; client.getMetaInfo()</span><br><span class="line">                                .isSdkSource() &amp;&amp; expelCount &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                            expelClient.add(client.getMetaInfo().getConnectionId());</span><br><span class="line">                            expelCount--;</span><br><span class="line">                            outDatedConnections.remove(client.getMetaInfo().getConnectionId());</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                String serverIp = <span class="keyword">null</span>;</span><br><span class="line">                String serverPort = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">if</span> (StringUtils.isNotBlank(redirectAddress) &amp;&amp; redirectAddress.contains(Constants.COLON)) &#123;</span><br><span class="line">                    String[] split = redirectAddress.split(Constants.COLON);</span><br><span class="line">                    serverIp = split[<span class="number">0</span>];</span><br><span class="line">                    serverPort = split[<span class="number">1</span>];</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">for</span> (String expelledClientId : expelClient) &#123; <span class="comment">// 默认空集合</span></span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        Connection connection = getConnection(expelledClientId);</span><br><span class="line">                        <span class="keyword">if</span> (connection != <span class="keyword">null</span>) &#123;</span><br><span class="line">                            ConnectResetRequest connectResetRequest = <span class="keyword">new</span> ConnectResetRequest();</span><br><span class="line">                            connectResetRequest.setServerIp(serverIp);</span><br><span class="line">                            connectResetRequest.setServerPort(serverPort);</span><br><span class="line">                            connection.asyncRequest(connectResetRequest, <span class="keyword">null</span>);</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                    &#125; <span class="keyword">catch</span> (ConnectionAlreadyClosedException e) &#123;</span><br><span class="line">                        unregister(expelledClientId);</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                        Loggers.REMOTE_DIGEST.error(<span class="string">&quot;Error occurs when expel connection :&quot;</span>, expelledClientId, e);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//4.client active detection.</span></span><br><span class="line">                Loggers.REMOTE_DIGEST.info(<span class="string">&quot;Out dated connection ,size=&#123;&#125;&quot;</span>, outDatedConnections.size());</span><br><span class="line">                <span class="comment">// 超过保鲜期的链接集合</span></span><br><span class="line">                <span class="keyword">if</span> (CollectionUtils.isNotEmpty(outDatedConnections)) &#123;</span><br><span class="line">                    Set&lt;String&gt; successConnections = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">                    <span class="keyword">final</span> CountDownLatch latch = <span class="keyword">new</span> CountDownLatch(outDatedConnections.size());</span><br><span class="line">                    <span class="keyword">for</span> (String outDateConnectionId : outDatedConnections) &#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            Connection connection = getConnection(outDateConnectionId);</span><br><span class="line">                            <span class="keyword">if</span> (connection != <span class="keyword">null</span>) &#123;</span><br><span class="line">                                ClientDetectionRequest clientDetectionRequest = <span class="keyword">new</span> ClientDetectionRequest();</span><br><span class="line">                                <span class="comment">// 超过保鲜时间的连接，重新异步发起连接</span></span><br><span class="line">                                connection.asyncRequest(clientDetectionRequest, <span class="keyword">new</span> RequestCallBack() &#123;</span><br><span class="line">                                    <span class="meta">@Override</span></span><br><span class="line">                                    <span class="function"><span class="keyword">public</span> Executor <span class="title">getExecutor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                                        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                                    &#125;</span><br><span class="line"></span><br><span class="line">                                    <span class="meta">@Override</span></span><br><span class="line">                                    <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">getTimeout</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                                        <span class="keyword">return</span> <span class="number">1000L</span>;</span><br><span class="line">                                    &#125;</span><br><span class="line"></span><br><span class="line">                                    <span class="meta">@Override</span></span><br><span class="line">                                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onResponse</span><span class="params">(Response response)</span> </span>&#123;</span><br><span class="line">                                        latch.countDown();</span><br><span class="line">                                        <span class="keyword">if</span> (response != <span class="keyword">null</span> &amp;&amp; response.isSuccess()) &#123;</span><br><span class="line">                                            <span class="comment">// 刷新激活时间</span></span><br><span class="line">                                            connection.freshActiveTime();</span><br><span class="line">                                            successConnections.add(outDateConnectionId);</span><br><span class="line">                                        &#125;</span><br><span class="line">                                    &#125;</span><br><span class="line"></span><br><span class="line">                                    <span class="meta">@Override</span></span><br><span class="line">                                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onException</span><span class="params">(Throwable e)</span> </span>&#123;</span><br><span class="line">                                        latch.countDown();</span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;);</span><br><span class="line">							</span><br><span class="line">                            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                                latch.countDown();</span><br><span class="line">                            &#125;</span><br><span class="line"></span><br><span class="line">                        &#125; <span class="keyword">catch</span> (ConnectionAlreadyClosedException e) &#123;</span><br><span class="line">                            latch.countDown();</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                           	<span class="comment">// ... </span></span><br><span class="line">                            latch.countDown();</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    latch.await(<span class="number">3000L</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">                    Loggers.REMOTE_DIGEST</span><br><span class="line">                            .info(<span class="string">&quot;Out dated connection check successCount=&#123;&#125;&quot;</span>, successConnections.size());</span><br><span class="line"></span><br><span class="line">                    <span class="comment">// 无效连接集合</span></span><br><span class="line">                    <span class="keyword">for</span> (String outDateConnectionId : outDatedConnections) &#123;</span><br><span class="line">                        <span class="keyword">if</span> (!successConnections.contains(outDateConnectionId)) &#123;</span><br><span class="line">                            Loggers.REMOTE_DIGEST</span><br><span class="line">                                    .info(<span class="string">&quot;[&#123;&#125;]Unregister Out dated connection....&quot;</span>, outDateConnectionId);</span><br><span class="line">                            <span class="comment">// 注销关闭connection</span></span><br><span class="line">                            unregister(outDateConnectionId);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (isLoaderClient) &#123;  <span class="comment">// 重置</span></span><br><span class="line">                    loadClient = -<span class="number">1</span>;</span><br><span class="line">                    redirectAddress = <span class="keyword">null</span>;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">               </span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="number">1000L</span>, <span class="number">3000L</span>, TimeUnit.MILLISECONDS);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unregister</span><span class="params">(String connectionId)</span> </span>&#123;</span><br><span class="line">    Connection remove = <span class="keyword">this</span>.connections.remove(connectionId);</span><br><span class="line">    <span class="keyword">if</span> (remove != <span class="keyword">null</span>) &#123;</span><br><span class="line">        String clientIp = remove.getMetaInfo().clientIp;</span><br><span class="line">        AtomicInteger atomicInteger = connectionForClientIp.get(clientIp);</span><br><span class="line">        <span class="keyword">if</span> (atomicInteger != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> count = atomicInteger.decrementAndGet();</span><br><span class="line">            <span class="keyword">if</span> (count &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                connectionForClientIp.remove(clientIp);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        remove.close();</span><br><span class="line">        Loggers.REMOTE_DIGEST.info(<span class="string">&quot;[&#123;&#125;]Connection unregistered successfully. &quot;</span>, connectionId);</span><br><span class="line">        clientConnectionEventListenerRegistry.notifyClientDisConnected(remove); <span class="comment">// 异步</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">notifyClientDisConnected</span><span class="params">(<span class="keyword">final</span> Connection connection)</span> </span>&#123;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> (ClientConnectionEventListener clientConnectionEventListener : clientConnectionEventListeners) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                clientConnectionEventListener.clientDisConnected(connection);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable throwable) &#123;</span><br><span class="line">                Loggers.REMOTE.info(<span class="string">&quot;[NotifyClientDisConnected] failed for listener &#123;&#125;&quot;</span>,</span><br><span class="line">                        clientConnectionEventListener.getName(), throwable);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">clientDisconnected</span><span class="params">(String clientId)</span> </span>&#123;</span><br><span class="line">  Loggers.SRV_LOG.info(<span class="string">&quot;Client connection &#123;&#125; disconnect, remove instances and subscribers&quot;</span>, clientId);</span><br><span class="line">  ConnectionBasedClient client = clients.remove(clientId);</span><br><span class="line">  <span class="keyword">if</span> (<span class="keyword">null</span> == client) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  client.release();</span><br><span class="line">  NotifyCenter.publishEvent(<span class="keyword">new</span> ClientEvent.ClientDisconnectEvent(client)); <span class="comment">// 发布ClientDisconnectEvent事件</span></span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> 连接可以配置限制规则具体在${usr.home}/nacos/data/loader/limitRule文件配置，默认无限制；通过定时任务每隔3秒钟定时检查缓存中的所有连接包括通过来源sdk的连接和集群的连接；如果连接超过保鲜期20秒，并再次发起连接请求，未能连接成功则注销关闭该连接；注销关闭时发布ClientEvent.ClientDisconnectEvent事件。</p>
+<h3 id="ClientVerifyFailedEvent事件触发"><a href="#ClientVerifyFailedEvent事件触发" class="headerlink" title="ClientVerifyFailedEvent事件触发"></a>ClientVerifyFailedEvent事件触发</h3><p>上一篇文章中梳理了Nacos集群中，每个节点会对集群中其他节点每隔5秒发送校验数据，也就是心跳。当校验的结果会进行回调（gRPC为例），我们翻着看看这部分。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">syncVerifyData</span><span class="params">(DistroData verifyData, String targetServer, DistroCallback callback)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (isNoExistTarget(targetServer)) &#123;</span><br><span class="line">        callback.onSuccess();</span><br><span class="line">    &#125;</span><br><span class="line">    DistroDataRequest request = <span class="keyword">new</span> DistroDataRequest(verifyData, DataOperation.VERIFY);</span><br><span class="line">    Member member = memberManager.find(targetServer);</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        DistroVerifyCallbackWrapper wrapper = <span class="keyword">new</span> DistroVerifyCallbackWrapper(targetServer,</span><br><span class="line">                verifyData.getDistroKey().getResourceKey(), callback, member);</span><br><span class="line">        clusterRpcClientProxy.asyncRequest(member, request, wrapper); <span class="comment">// 向其他节点发送本节点负责的cleintId信息</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (NacosException nacosException) &#123;</span><br><span class="line">        callback.onFailed(nacosException);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>重点看下DistroVerifyCallbackWrapper部分，校验失败发布ClientVerifyFailedEvent事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onResponse</span><span class="params">(Response response)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (checkResponse(response)) &#123;</span><br><span class="line">        NamingTpsMonitor.distroVerifySuccess(member.getAddress(), member.getIp());</span><br><span class="line">        distroCallback.onSuccess();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        Loggers.DISTRO.info(<span class="string">&quot;Target &#123;&#125; verify client &#123;&#125; failed, sync new client&quot;</span>, targetServer, clientId);</span><br><span class="line">      	<span class="comment">// 校验失败发布ClientVerifyFailedEvent事件</span></span><br><span class="line">        NotifyCenter.publishEvent(<span class="keyword">new</span> ClientEvent.ClientVerifyFailedEvent(clientId, targetServer));</span><br><span class="line">        NamingTpsMonitor.distroVerifyFail(member.getAddress(), member.getIp());</span><br><span class="line">        distroCallback.onFailed(<span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后看下ClientVerifyFailedEvent这个类，关注下成员变量包含了clientId和targetServer。当收到ClientVerifyFailedEvent时用于向targetServer目标节点添加客户端clientId信息。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientVerifyFailedEvent</span> <span class="keyword">extends</span> <span class="title">ClientEvent</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">2023951686223780851L</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String clientId;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String targetServer;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClientVerifyFailedEvent</span><span class="params">(String clientId, String targetServer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">this</span>.clientId = clientId;</span><br><span class="line">        <span class="keyword">this</span>.targetServer = targetServer;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getClientId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> clientId;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getTargetServer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> targetServer;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> Nacos集群之间通过每5秒发送心跳校验数据请求（具体为本节点负责Client信息），其他节点接受到校验请求，如果缓存中存在该client表示校验成功，同时更新保鲜时间；否则校验失败，回调返回失败Response，请求节点收到失败的Response后会发布ClientVerifyFailedEvent事件。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/c1f9abd4/" rel="prev" title="Nacos6# Distro协议全量同步与校验">
+      <i class="fa fa-chevron-left"></i> Nacos6# Distro协议全量同步与校验
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/765f2ae1/" rel="next" title="Nacos8# 集群中节点之间健康检查">
+      Nacos8# 集群中节点之间健康检查 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A2%9E%E9%87%8F%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5"><span class="nav-number">2.0.1.</span> <span class="nav-text">增量数据同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A2%9E%E9%87%8F%E4%BA%8B%E4%BB%B6%E8%A7%A6%E5%8F%91"><span class="nav-number">2.0.2.</span> <span class="nav-text">增量事件触发</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A2%9E%E9%87%8F%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5-1"><span class="nav-number">3.</span> <span class="nav-text">增量数据同步</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A2%E9%98%85%E7%9A%84%E4%BA%8B%E4%BB%B6"><span class="nav-number">3.0.1.</span> <span class="nav-text">订阅的事件</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A2%9E%E9%87%8F%E4%BA%8B%E4%BB%B6%E8%A7%A6%E5%8F%91-1"><span class="nav-number">4.</span> <span class="nav-text">增量事件触发</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientChangedEvent%E4%BA%8B%E4%BB%B6%E8%A7%A6%E5%8F%91"><span class="nav-number">4.0.1.</span> <span class="nav-text">ClientChangedEvent事件触发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientDisconnectEvent%E4%BA%8B%E4%BB%B6%E8%A7%A6%E5%8F%91"><span class="nav-number">4.0.2.</span> <span class="nav-text">ClientDisconnectEvent事件触发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClientVerifyFailedEvent%E4%BA%8B%E4%BB%B6%E8%A7%A6%E5%8F%91"><span class="nav-number">4.0.3.</span> <span class="nav-text">ClientVerifyFailedEvent事件触发</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

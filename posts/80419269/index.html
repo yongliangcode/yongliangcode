@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="前言本文简要梳理为什么使用池化内存？Netty使用池化内存从哪些方面提升了效率？梳理了池化内存的核心组件大体含义以及内存分配流程，勾勒池化内存的整体框架。后面文章会详细拆解每个点是如何实现的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Netty12# 池化内存框架流程">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/80419269/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="前言本文简要梳理为什么使用池化内存？Netty使用池化内存从哪些方面提升了效率？梳理了池化内存的核心组件大体含义以及内存分配流程，勾勒池化内存的整体框架。后面文章会详细拆解每个点是如何实现的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-02-16T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.836Z">
+<meta property="article:tag" content="Netty">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/80419269/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Netty12# 池化内存框架流程 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/80419269/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Netty12# 池化内存框架流程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-02-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-02-16T11:55:01+08:00">2021-02-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文简要梳理为什么使用池化内存？Netty使用池化内存从哪些方面提升了效率？梳理了池化内存的核心组件大体含义以及内存分配流程，勾勒池化内存的整体框架。后面文章会详细拆解每个点是如何实现的。</p>
+<a id="more"></a>
+
+
+
+<h1 id="使用池化内存"><a href="#使用池化内存" class="headerlink" title="使用池化内存"></a>使用池化内存</h1><p><strong>为啥要使用池化内存呢？</strong> 主要以下两点：</p>
+<p>1.频繁申请释放堆外直接内存耗时严重影响效率</p>
+<p>2.减少小而不连续的空闲内存（也就是内存碎片）</p>
+<p><strong>Netty中又是如何体现内存池并提升效率的呢？</strong> </p>
+<p>1.将申请的大块内存划分为不同的尺寸</p>
+<p>2.不同尺寸的内存使用不同的分配算法，例如：Netty参考slab内存分配算法和Buddy（伙伴）分配算法</p>
+<p>3.将划分的不同尺寸缓存起来，使用的时候先从缓存中获取</p>
+<p>4.每个线程绑定了专属逻辑内存区域（PoolArena），减少资源竞争</p>
+<p>5.使用对象池减少频繁创建销毁性能损耗（ByteBuf对象池）</p>
+<p>6.内存用完后，按照特定算法重新合并到大块内存中，看起来像是内存池</p>
+<h1 id="内存池核心组件"><a href="#内存池核心组件" class="headerlink" title="内存池核心组件"></a>内存池核心组件</h1><p><strong>内存池尺寸划分</strong></p>
+<p>Netty内存池划分了四种类型尺寸，Netty以Chunk为单位申请内存。 内存池主要指16M（默认）以下的内存，大于16M的内存分配不做缓存。</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>范围</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tiny</td>
+<td>0~512Byte，内存分配参考了slab算法</td>
+</tr>
+<tr>
+<td>small</td>
+<td>512Byte~8KB，内存分配同tiny参考了slab算法</td>
+</tr>
+<tr>
+<td>normal</td>
+<td>8KB~16M，内存分配参考了</td>
+</tr>
+<tr>
+<td>huge</td>
+<td>大于16M</td>
+</tr>
+</tbody></table>
+<p><strong>内存池核心类</strong> </p>
+<table>
+<thead>
+<tr>
+<th>类名</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PooledByteBufAllocator</td>
+<td>内存池门面类，池化内存分配入口</td>
+</tr>
+<tr>
+<td>PoolArena</td>
+<td>逻辑上的一块内存区域，管理多个PoolChunk</td>
+</tr>
+<tr>
+<td>PoolChunk</td>
+<td>连续的内存区域，一个Chunk大小为16M。每个Chunk由Page组成，每个Page大小为8KB；包含nomal类型核心内存分配算法（参考了Buddy（伙伴）分配算法）</td>
+</tr>
+<tr>
+<td>PoolSubpage</td>
+<td>包含8KB以下tiny和small的核心分配算法（参考了slab分配算法）</td>
+</tr>
+<tr>
+<td>PoolThreadCache</td>
+<td>每个线程都有独立的PoolThreadCache，缓存了tiny类型、small类型、normal类型；分配时先从缓存中获取</td>
+</tr>
+<tr>
+<td>Recycler</td>
+<td>轻量级对象缓存池，避免频繁创建和消费性能损耗</td>
+</tr>
+<tr>
+<td>ResourceLeakDetector</td>
+<td>负责内存泄漏检测</td>
+</tr>
+</tbody></table>
+<h1 id="内存分配流程"><a href="#内存分配流程" class="headerlink" title="内存分配流程"></a>内存分配流程</h1><p>下面通过PooledByteBufAllocator#newDirectBuffer()方法，梳理内存分配的整体流程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"> <span class="meta">@Override</span></span><br><span class="line"> <span class="function"><span class="keyword">protected</span> ByteBuf <span class="title">newDirectBuffer</span><span class="params">(<span class="keyword">int</span> initialCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">   PoolThreadCache cache = threadCache.get(); <span class="comment">// 注解@1</span></span><br><span class="line">   PoolArena&lt;ByteBuffer&gt; directArena = cache.directArena;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> ByteBuf buf;</span><br><span class="line">  <span class="keyword">if</span> (directArena != <span class="keyword">null</span>) &#123;</span><br><span class="line">  	buf = directArena.allocate(cache, initialCapacity, maxCapacity); <span class="comment">// 注解@2</span></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    buf = PlatformDependent.hasUnsafe() ?</span><br><span class="line">    UnsafeByteBufUtil.newUnsafeDirectByteBuf(<span class="keyword">this</span>, initialCapacity, maxCapacity) :</span><br><span class="line">    <span class="keyword">new</span> UnpooledDirectByteBuf(<span class="keyword">this</span>, initialCapacity, maxCapacity);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> toLeakAwareBuffer(buf); <span class="comment">// 注解@3</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注解@1</strong>  从当前线程中获取PoolThreadCache，也就是每个线程都绑定了PoolThreadCache</p>
+<p><strong>注解@2</strong> 执行内存分配过程</p>
+<p><strong>注解@3</strong> 通过ResourceLeakDetector检测内存泄漏</p>
+<p>跟踪第二步，查看内存分配过程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function">PooledByteBuf&lt;T&gt; <span class="title">allocate</span><span class="params">(PoolThreadCache cache, <span class="keyword">int</span> reqCapacity, <span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">        PooledByteBuf&lt;T&gt; buf = newByteBuf(maxCapacity); </span><br><span class="line">        allocate(cache, buf, reqCapacity);</span><br><span class="line">        <span class="keyword">return</span> buf;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>PooledByteBuf从RECYCLER中获取（对象池）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> PooledUnsafeDirectByteBuf <span class="title">newInstance</span><span class="params">(<span class="keyword">int</span> maxCapacity)</span> </span>&#123;</span><br><span class="line">        PooledUnsafeDirectByteBuf buf = RECYCLER.get();</span><br><span class="line">        buf.reuse(maxCapacity);</span><br><span class="line">        <span class="keyword">return</span> buf;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>下面的内存分配过程，先关注主干代码框架，分配过程整体包含了三个部分： tiny&amp;small、small、huge。</p>
+<p>huge：大于16M，直接分配堆外直接内存。</p>
+<p>small：先从缓存中分配，缓存没有再从内存池分配（借鉴了buddy伙伴算法）</p>
+<p>tiny&amp;small：先从缓存中分配，缓存没有再从内存池分配（借鉴了slab算法）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">allocate</span><span class="params">(PoolThreadCache cache, PooledByteBuf&lt;T&gt; buf, <span class="keyword">final</span> <span class="keyword">int</span> reqCapacity)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> normCapacity = normalizeCapacity(reqCapacity);</span><br><span class="line">        <span class="keyword">if</span> (isTinyOrSmall(normCapacity)) &#123; <span class="comment">// capacity &lt; pageSize（8KB） tiny或者small粒度</span></span><br><span class="line">            <span class="keyword">int</span> tableIdx;</span><br><span class="line">            PoolSubpage&lt;T&gt;[] table;</span><br><span class="line">            <span class="keyword">boolean</span> tiny = isTiny(normCapacity);</span><br><span class="line">            <span class="keyword">if</span> (tiny) &#123; <span class="comment">// &lt; 512 tiny粒度</span></span><br><span class="line">                <span class="keyword">if</span> (cache.allocateTiny(<span class="keyword">this</span>, buf, reqCapacity, normCapacity)) &#123; <span class="comment">// 缓存分配</span></span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                tableIdx = tinyIdx(normCapacity);</span><br><span class="line">                table = tinySubpagePools;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// small 粒度</span></span><br><span class="line">                <span class="keyword">if</span> (cache.allocateSmall(<span class="keyword">this</span>, buf, reqCapacity, normCapacity)) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                tableIdx = smallIdx(normCapacity);</span><br><span class="line">                table = smallSubpagePools;</span><br><span class="line">            &#125;</span><br><span class="line">           </span><br><span class="line">            <span class="keyword">final</span> PoolSubpage&lt;T&gt; head = table[tableIdx];  <span class="comment">// 获取对应的节点</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">synchronized</span> (head) &#123;</span><br><span class="line">                <span class="keyword">final</span> PoolSubpage&lt;T&gt; s = head.next;</span><br><span class="line">                <span class="keyword">if</span> (s != head) &#123;</span><br><span class="line">                    <span class="keyword">assert</span> s.doNotDestroy &amp;&amp; s.elemSize == normCapacity;</span><br><span class="line">                    <span class="keyword">long</span> handle = s.allocate();</span><br><span class="line">                    <span class="keyword">assert</span> handle &gt;= <span class="number">0</span>;</span><br><span class="line">                    s.chunk.initBufWithSubpage(buf, <span class="keyword">null</span>, handle, reqCapacity);</span><br><span class="line">                    incTinySmallAllocation(tiny);</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">                allocateNormal(buf, reqCapacity, normCapacity);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            incTinySmallAllocation(tiny);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (normCapacity &lt;= chunkSize) &#123; <span class="comment">// Normal粒度（8K~16M） </span></span><br><span class="line">            <span class="keyword">if</span> (cache.allocateNormal(<span class="keyword">this</span>, buf, reqCapacity, normCapacity)) &#123; <span class="comment">// 尝试先从缓存分配</span></span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">                allocateNormal(buf, reqCapacity, normCapacity);</span><br><span class="line">                ++allocationsNormal;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            allocateHuge(buf, reqCapacity); <span class="comment">// 大于16M的huge内存分配</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结下内存分配的整体过程</strong> </p>
+<p>1.从RECYCLER对象池中复用PooledByteBuf</p>
+<p>2.每个线程绑定了缓存PoolThreadCache</p>
+<p>3.内存分配时，先从当前线程绑定的PoolThreadCache缓存分配；缓存没有再内存池分配，不同内存尺寸使用不同的分配算法</p>
+<p>4.每个分配的Buffer都会由ResourceLeakDetector检测内存泄漏</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Netty/" rel="tag"># Netty</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/f74d0239/" rel="prev" title="Netty11# 非池化内存分配">
+      <i class="fa fa-chevron-left"></i> Netty11# 非池化内存分配
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/bf0be4d0/" rel="next" title="Netty13# 池化内存分配器">
+      Netty13# 池化内存分配器 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E6%B1%A0%E5%8C%96%E5%86%85%E5%AD%98"><span class="nav-number">2.</span> <span class="nav-text">使用池化内存</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E6%B1%A0%E6%A0%B8%E5%BF%83%E7%BB%84%E4%BB%B6"><span class="nav-number">3.</span> <span class="nav-text">内存池核心组件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E6%B5%81%E7%A8%8B"><span class="nav-number">4.</span> <span class="nav-text">内存分配流程</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

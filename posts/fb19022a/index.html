@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言Nacos支持众多健康检查类型，心跳、HTTP、TCP、MySQL等类型，这些都作用于什么场景？他们又是如何事项的呢？本文就撸一撸这个。 内容提要临时节点续约 临时节点续约通过gRPC连接保鲜实现 执行频率5秒一次 检查结果健康刷新保鲜时间 检查结果不可用标记节点不健康 当节点不健康时重新连接时会从server列表选择下一个节点连接  持久节点心跳检测 心跳执行器通过每隔五秒中向Nacos S">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos10# 健康检查类型与场景">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/fb19022a/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言Nacos支持众多健康检查类型，心跳、HTTP、TCP、MySQL等类型，这些都作用于什么场景？他们又是如何事项的呢？本文就撸一撸这个。 内容提要临时节点续约 临时节点续约通过gRPC连接保鲜实现 执行频率5秒一次 检查结果健康刷新保鲜时间 检查结果不可用标记节点不健康 当节点不健康时重新连接时会从server列表选择下一个节点连接  持久节点心跳检测 心跳执行器通过每隔五秒中向Nacos S">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210714202054.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210714191750.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210715192801.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210715173009.png">
+<meta property="article:published_time" content="2021-07-08T03:55:01.000Z">
+<meta property="article:modified_time" content="2021-08-01T06:11:03.824Z">
+<meta property="article:tag" content="Nacos">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210714202054.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/fb19022a/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Nacos10# 健康检查类型与场景 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fb19022a/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos10# 健康检查类型与场景
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-08 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-08T11:55:01+08:00">2021-07-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos支持众多健康检查类型，心跳、HTTP、TCP、MySQL等类型，这些都作用于什么场景？他们又是如何事项的呢？本文就撸一撸这个。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="临时节点续约"><a href="#临时节点续约" class="headerlink" title="临时节点续约"></a>临时节点续约</h3><ul>
+<li>临时节点续约通过gRPC连接保鲜实现</li>
+<li>执行频率5秒一次</li>
+<li>检查结果健康刷新保鲜时间</li>
+<li>检查结果不可用标记节点不健康</li>
+<li>当节点不健康时重新连接时会从server列表选择下一个节点连接</li>
+</ul>
+<h3 id="持久节点心跳检测"><a href="#持久节点心跳检测" class="headerlink" title="持久节点心跳检测"></a>持久节点心跳检测</h3><ul>
+<li>心跳执行器通过每隔五秒中向Nacos Server发起HTTP请求</li>
+<li>如果返回的server not found会向Nacos Server发起注册请求重新注册</li>
+</ul>
+<h3 id="持久节点探活"><a href="#持久节点探活" class="headerlink" title="持久节点探活"></a>持久节点探活</h3><ul>
+<li>Nacos探活只有在持久节点注册时才会支持</li>
+<li>探活支持HTTP、TCP、Mysql三种探活类型</li>
+<li>HTTP通过检测返回200状态码标记是否健康</li>
+<li>TPC通过Channel连接方式标记是否健康</li>
+<li>Mysql则保证当前节点为主节点，可用于主从切换场景</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="临时节点续约-1"><a href="#临时节点续约-1" class="headerlink" title="临时节点续约"></a>临时节点续约</h1><p>在《Nacos2# 服务注册与发现客户端示例与源码解析（二）》分析gRPC Client启动逻辑时有分析连接健康检查逻辑。具体代码在RpcClient#start()中，下面再次聚焦下。</p>
+<h3 id="client连接心跳检查"><a href="#client连接心跳检查" class="headerlink" title="client连接心跳检查"></a>client连接心跳检查</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">clientEventExecutor.submit(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 获取重定向连接上下文，指重新连接到其他server节点</span></span><br><span class="line">                ReconnectContext reconnectContext = reconnectionSignal</span><br><span class="line">                        .poll(keepAliveTime, TimeUnit.MILLISECONDS);</span><br><span class="line">                <span class="keyword">if</span> (reconnectContext == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="comment">// check alive time.</span></span><br><span class="line">                    <span class="comment">// client活动时间超过5秒钟，向Nacos Server发起健康检测</span></span><br><span class="line">                    <span class="keyword">if</span> (System.currentTimeMillis() - lastActiveTimeStamp &gt;= keepAliveTime) &#123;</span><br><span class="line">                        <span class="comment">// 发送健康检查</span></span><br><span class="line">                        <span class="keyword">boolean</span> isHealthy = healthCheck();</span><br><span class="line">                        <span class="comment">// 非健康节点</span></span><br><span class="line">                        <span class="keyword">if</span> (!isHealthy) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (currentConnection == <span class="keyword">null</span>) &#123;</span><br><span class="line">                                <span class="keyword">continue</span>;</span><br><span class="line">                            &#125;</span><br><span class="line">                            LoggerUtils.printIfInfoEnabled(LOGGER,</span><br><span class="line">                                    <span class="string">&quot;[&#123;&#125;]Server healthy check fail,currentConnection=&#123;&#125;&quot;</span>, name,</span><br><span class="line">                                    currentConnection.getConnectionId());</span><br><span class="line">                            <span class="comment">// 标记客户端状态为unhealthy</span></span><br><span class="line">                            rpcClientStatus.set(RpcClientStatus.UNHEALTHY);</span><br><span class="line">                            <span class="comment">// 重置ReconnectContext移除serverInfo</span></span><br><span class="line">                            reconnectContext = <span class="keyword">new</span> ReconnectContext(<span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line"></span><br><span class="line">                            <span class="comment">// 健康连接更新时间戳</span></span><br><span class="line">                            lastActiveTimeStamp = System.currentTimeMillis();</span><br><span class="line">                            <span class="keyword">continue</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="comment">// 心跳保鲜未过期，跳过本次检测</span></span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">               <span class="comment">// ...</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable throwable) &#123;</span><br><span class="line">                <span class="comment">//Do nothing</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="服务端响应"><a href="#服务端响应" class="headerlink" title="服务端响应"></a>服务端响应</h3><p>代码翻到GrpcRequestAcceptor#request部分，执行RequestHandler逻辑。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Response response = requestHandler.handleRequest(request, requestMeta);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@TpsControl(pointName = &quot;HealthCheck&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> HealthCheckResponse <span class="title">handle</span><span class="params">(HealthCheckRequest request, RequestMeta meta)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> HealthCheckResponse();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当服务端收到健康检查请求时，通过HealthCheckRequestHandler#handle返回HealthCheckResponse。</p>
+<h3 id="节点选择"><a href="#节点选择" class="headerlink" title="节点选择"></a>节点选择</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (startUpRetryTimes &gt; <span class="number">0</span> &amp;&amp; connectToServer == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        startUpRetryTimes--;</span><br><span class="line">        ServerInfo serverInfo = nextRpcServer(); <span class="comment">// 需连接的节点</span></span><br><span class="line"></span><br><span class="line">        LoggerUtils.printIfInfoEnabled(LOGGER, <span class="string">&quot;[&#123;&#125;] Try to connect to server on start up, server: &#123;&#125;&quot;</span>, name,</span><br><span class="line">                serverInfo);</span><br><span class="line"></span><br><span class="line">        connectToServer = connectToServer(serverInfo); <span class="comment">// 发起rpc连接，连接到集群中其他节点</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">        LoggerUtils.printIfWarnEnabled(LOGGER,</span><br><span class="line">                <span class="string">&quot;[&#123;&#125;]Fail to connect to server on start up, error message=&#123;&#125;, start up retry times left: &#123;&#125;&quot;</span>,</span><br><span class="line">                name, e.getMessage(), startUpRetryTimes);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在选择节点时从server地址列表中自增选择下一个。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">genNextServer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> index = currentIndex.incrementAndGet() % getServerList().size(); <span class="comment">// 获取集群中下一个节点</span></span><br><span class="line">    <span class="keyword">return</span> getServerList().get(index);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="清理无效连接"><a href="#清理无效连接" class="headerlink" title="清理无效连接"></a>清理无效连接</h3><p>详见：RpcScheduledExecutor#start()；定时任务会清理无效连接</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 定时任务每3秒执行一次</span></span><br><span class="line">RpcScheduledExecutor.COMMON_SERVER_EXECUTOR.scheduleWithFixedDelay(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    	<span class="comment">// 超过保鲜时间的连接，重新异步发起连接</span></span><br><span class="line">        connection.asyncRequest(clientDetectionRequest, <span class="keyword">new</span> RequestCallBack() &#123;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 刷新激活时间</span></span><br><span class="line">        connection.freshActiveTime();</span><br><span class="line">        successConnections.add(outDateConnectionId);</span><br><span class="line">          </span><br><span class="line">        <span class="comment">//当失效时（保鲜时间超过20秒），注销关闭connection</span></span><br><span class="line">        unregister(outDateConnectionId);</span><br><span class="line">   	&#125;</span><br><span class="line"> &#125;, <span class="number">1000L</span>, <span class="number">3000L</span>, TimeUnit.MILLISECONDS);</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> 在临时节点注册时，客户端gRPC启动时会启动一个守护线程用户健康检查；健康检查的频率为5秒执行一次；当检查结果健康则刷新保鲜时间；检查结果不可用标记gRPC客户端状态为unhealthy；不健康节点在发起连接时会从server地址列表中选择下一个发起连接；</p>
+<p>服务端也会定时清理超过保鲜时间连接。</p>
+<h1 id="永久节点心跳检测"><a href="#永久节点心跳检测" class="headerlink" title="永久节点心跳检测"></a>永久节点心跳检测</h1><p>永久节点心跳检测在《Nacos2# 服务注册与发现客户端示例与源码解析（二）》HTTP心跳检测器有详细分析，这里把内容要点摘录如下：</p>
+<ul>
+<li>HTTP心跳检测只适用于注册的节点持久节点，临时节点会使用grpc代理</li>
+<li>心跳执行器通过每隔五秒中向Nacos Server发起HTTP请求</li>
+<li>如果返回的server not found会向Nacos Server发起注册请求重新注册</li>
+</ul>
+<h1 id="持久节点探活-1"><a href="#持久节点探活-1" class="headerlink" title="持久节点探活"></a>持久节点探活</h1><p>持久节点探活支持HTTP、TCP和Mysql几种类型，下面以HTTP为例分析其运行逻辑。</p>
+<h3 id="探活示例"><a href="#探活示例" class="headerlink" title="探活示例"></a>探活示例</h3><p>当注册时节点设置为不健康即Healthy设置为false，当服务端探活正常后将节点设置为健康即Healthy为true。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BootApplication</span> </span>&#123;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  SpringApplication.run(BootApplication.class, args);</span><br><span class="line">  System.setProperty(<span class="string">&quot;serverAddr&quot;</span>, <span class="string">&quot;127.0.0.1:8848&quot;</span>);</span><br><span class="line">  System.setProperty(<span class="string">&quot;namespace&quot;</span>, <span class="string">&quot;public&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">  properties.setProperty(<span class="string">&quot;serverAddr&quot;</span>, System.getProperty(<span class="string">&quot;serverAddr&quot;</span>));</span><br><span class="line">  properties.setProperty(<span class="string">&quot;namespace&quot;</span>, System.getProperty(<span class="string">&quot;namespace&quot;</span>));</span><br><span class="line"></span><br><span class="line">  Instance instance = <span class="keyword">new</span> Instance();</span><br><span class="line">  instance.setClusterName(<span class="string">&quot;clusterDemo3&quot;</span>);</span><br><span class="line">  instance.setHealthy(<span class="keyword">false</span>);<span class="comment">//默认健康检查通过后，才认为是真正的健康</span></span><br><span class="line">  instance.setIp(getIpAddress());</span><br><span class="line">  instance.setPort(<span class="number">8282</span>);</span><br><span class="line">  instance.setWeight(<span class="number">100</span>);</span><br><span class="line">  instance.setServiceName(<span class="string">&quot;AppNacosDemo3&quot;</span>);</span><br><span class="line">  instance.setEphemeral(<span class="keyword">false</span>);</span><br><span class="line"></span><br><span class="line">  Map&lt;String, String&gt; map = <span class="keyword">new</span> HashMap&lt;String, String&gt;();</span><br><span class="line">  map.put(<span class="string">&quot;unit&quot;</span>, <span class="string">&quot;shunit&quot;</span>);</span><br><span class="line">  instance.setMetadata(map);</span><br><span class="line"></span><br><span class="line">  NamingService naming = NamingFactory.createNamingService(properties);</span><br><span class="line">  naming.registerInstance(<span class="string">&quot;AppNacosDemo3&quot;</span>, instance);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">getIpAddress</span><span class="params">()</span> <span class="keyword">throws</span> SocketException </span>&#123;</span><br><span class="line">  Enumeration&lt;NetworkInterface&gt; allNetInterfaces = NetworkInterface.getNetworkInterfaces();</span><br><span class="line">  <span class="keyword">while</span> (allNetInterfaces.hasMoreElements()) &#123;</span><br><span class="line">    NetworkInterface netInterface = allNetInterfaces.nextElement();</span><br><span class="line">    <span class="keyword">if</span> (!netInterface.isLoopback() &amp;&amp; !netInterface.isVirtual() &amp;&amp; netInterface.isUp()) &#123;</span><br><span class="line">      Enumeration&lt;InetAddress&gt; addresses = netInterface.getInetAddresses();</span><br><span class="line">      <span class="keyword">while</span> (addresses.hasMoreElements()) &#123;</span><br><span class="line">        InetAddress ip = addresses.nextElement();</span><br><span class="line">        <span class="keyword">final</span> String hostAddress = ip.getHostAddress();</span><br><span class="line">        <span class="keyword">if</span> (ip <span class="keyword">instanceof</span> Inet4Address) &#123;</span><br><span class="line">          <span class="keyword">return</span> hostAddress;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="string">&quot;&quot;</span>;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@RequestMapping(value = &quot;/bike&quot;,method = RequestMethod.GET)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">hello</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;receive message from server.&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="探活地址设置"><a href="#探活地址设置" class="headerlink" title="探活地址设置"></a>探活地址设置</h3><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210714202054.png"></p>
+<p>探活输出</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">receive message from server.</span><br><span class="line">receive message from server.</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>小结：</strong> 启动时注册节点为非健康节点，Nacos通过检查路径请求返回200正确后将节点设置为健康状态。</p>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>当持久节点注册时，会请求到InstanceController#register方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerInstance</span><span class="params">(String namespaceId, String serviceName, Instance instance)</span></span>&#123;</span><br><span class="line">  <span class="keyword">boolean</span> ephemeral = instance.isEphemeral();</span><br><span class="line">  String clientId = IpPortBasedClient.getClientId(instance.toInetAddr(), ephemeral);</span><br><span class="line">  createIpPortClientIfAbsent(clientId, ephemeral); <span class="comment">// 创建IpPortClient</span></span><br><span class="line">  Service service = getService(namespaceId, serviceName, ephemeral);</span><br><span class="line">  clientOperationService.registerInstance(service, instance, clientId);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">IpPortBasedClient</span><span class="params">(String clientId, <span class="keyword">boolean</span> ephemeral)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.ephemeral = ephemeral;</span><br><span class="line">    <span class="keyword">this</span>.clientId = clientId;</span><br><span class="line">    <span class="keyword">this</span>.responsibleId = getResponsibleTagFromId();</span><br><span class="line">    <span class="keyword">if</span> (ephemeral) &#123;</span><br><span class="line">        beatCheckTask = <span class="keyword">new</span> ClientBeatCheckTaskV2(<span class="keyword">this</span>);</span><br><span class="line">        HealthCheckReactor.scheduleCheck(beatCheckTask);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      	<span class="comment">// 持久节点创建HealthCheckTaskV2并定时任务调度</span></span><br><span class="line">        healthCheckTaskV2 = <span class="keyword">new</span> HealthCheckTaskV2(<span class="keyword">this</span>);</span><br><span class="line">        HealthCheckReactor.scheduleCheck(healthCheckTaskV2);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doHealthCheck</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// 获取Client的service列表</span></span><br><span class="line">    <span class="keyword">for</span> (Service each : client.getAllPublishedService()) &#123;</span><br><span class="line">      <span class="comment">// 开启健康检查</span></span><br><span class="line">      <span class="keyword">if</span> (switchDomain.isHealthCheckEnabled(each.getGroupedServiceName())) &#123;</span><br><span class="line">        <span class="comment">// 注册节点信息</span></span><br><span class="line">        InstancePublishInfo instancePublishInfo = client.getInstancePublishInfo(each);</span><br><span class="line">        ClusterMetadata metadata = getClusterMetadata(each, instancePublishInfo);</span><br><span class="line">        <span class="comment">// 调用</span></span><br><span class="line">        ApplicationUtils.getBean(HealthCheckProcessorV2Delegate.class).process(<span class="keyword">this</span>, each, metadata);</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">   	</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (!cancelled) &#123;</span><br><span class="line">      <span class="comment">// 下一轮调度</span></span><br><span class="line">      HealthCheckReactor.scheduleCheck(<span class="keyword">this</span>);</span><br><span class="line">      <span class="keyword">if</span> (<span class="keyword">this</span>.getCheckRtWorst() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="comment">// ...</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>备注：定时任务调度，不断向服务的注册节点发送探活请求。</p>
+<p><strong>探活处理器选择</strong></p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210714191750.png"></p>
+<p>备注：由运行时缓存情况可以看出，支持TPC、HTTP、MYSQL三种类型探活处理。</p>
+<p><strong>HTTP探活</strong> </p>
+<p>代码坐标HttpHealthCheckProcessor#process</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(HealthCheckTaskV2 task, Service service, ClusterMetadata metadata)</span> </span>&#123;</span><br><span class="line">    HealthCheckInstancePublishInfo instance = (HealthCheckInstancePublishInfo) task.getClient()</span><br><span class="line">            .getInstancePublishInfo(service);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == instance) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// TODO handle marked(white list) logic like v1.x.</span></span><br><span class="line">        <span class="keyword">if</span> (!instance.tryStartCheck()) &#123;</span><br><span class="line">           	<span class="comment">// ...</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Http healthChecker = (Http) metadata.getHealthChecker();</span><br><span class="line">        <span class="comment">// 默认使用注册实例端口</span></span><br><span class="line">        <span class="keyword">int</span> ckPort = metadata.isUseInstancePortForCheck() ? instance.getPort() : metadata.getHealthyCheckPort();</span><br><span class="line">        <span class="comment">// 组织url请求</span></span><br><span class="line">        URL host = <span class="keyword">new</span> URL(<span class="string">&quot;http://&quot;</span> + instance.getIp() + <span class="string">&quot;:&quot;</span> + ckPort);</span><br><span class="line">        URL target = <span class="keyword">new</span> URL(host, healthChecker.getPath());</span><br><span class="line">        Map&lt;String, String&gt; customHeaders = healthChecker.getCustomHeaders();</span><br><span class="line">        Header header = Header.newInstance();</span><br><span class="line">        header.addAll(customHeaders);</span><br><span class="line">        <span class="comment">// 发送HTTP请求</span></span><br><span class="line">        ASYNC_REST_TEMPLATE.get(target.toString(), header, Query.EMPTY, String.class,</span><br><span class="line">                <span class="keyword">new</span> HttpHealthCheckCallback(instance, task, service));</span><br><span class="line">        MetricsMonitor.getHttpHealthCheckMonitor().incrementAndGet();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">        instance.setCheckRt(switchDomain.getHttpHealthParams().getMax());</span><br><span class="line">        healthCheckCommon.checkFail(task, service, <span class="string">&quot;http:error:&quot;</span> + e.getMessage());</span><br><span class="line">        healthCheckCommon.reEvaluateCheckRT(switchDomain.getHttpHealthParams().getMax(), task,</span><br><span class="line">                switchDomain.getHttpHealthParams());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceive</span><span class="params">(RestResult&lt;String&gt; result)</span> </span>&#123;</span><br><span class="line">    instance.setCheckRt(System.currentTimeMillis() - startTime);</span><br><span class="line">    <span class="keyword">int</span> httpCode = result.getCode();</span><br><span class="line">    <span class="comment">// 返回200</span></span><br><span class="line">    <span class="keyword">if</span> (HttpURLConnection.HTTP_OK == httpCode) &#123;</span><br><span class="line">        <span class="comment">// 将节点变更为健康</span></span><br><span class="line">        healthCheckCommon.checkOk(task, service, <span class="string">&quot;http:&quot;</span> + httpCode);</span><br><span class="line">        healthCheckCommon.reEvaluateCheckRT(System.currentTimeMillis() - startTime, task,</span><br><span class="line">                switchDomain.getHttpHealthParams());</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (HttpURLConnection.HTTP_UNAVAILABLE == httpCode</span><br><span class="line">            || HttpURLConnection.HTTP_MOVED_TEMP == httpCode) &#123;</span><br><span class="line">       </span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">checkOk</span><span class="params">(HealthCheckTaskV2 task, Service service, String msg)</span> </span>&#123;</span><br><span class="line">   <span class="comment">// 节点设置为健康状态</span></span><br><span class="line">   healthStatusSynchronizer.instanceHealthStatusChange(<span class="keyword">true</span>, task.getClient(), service, instance);</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>备注：向节点发起HTTP请求，返回状态码为200表示，将节点标志为健康状态；否则标记非健康状态。</p>
+<p><strong>TCP探活</strong></p>
+<p>TPC探活的代码详见TcpHealthCheckProcessor，不再详细分析。大体逻辑为通过与注册实例建立channel，不断ping 注册实例的端口是否可用，从而判断服务是否健康。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210715192801.png"></p>
+<h3 id="MYSQL探活"><a href="#MYSQL探活" class="headerlink" title="MYSQL探活"></a>MYSQL探活</h3><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210715173009.png"></p>
+<p>备注：主要检查当前节点为主库，不能访问到从库，可能在主从切换中使用。</p>
+<p><strong>总结：</strong> 本文就临时节点续约、持久节点心跳、持久节点的探活代码实现做了熟练。相信通过代码走查，对其使用场景和实现不再陌生。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Nacos/" rel="tag"># Nacos</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/4951a8cc/" rel="prev" title="SK9# 公司的军规">
+      <i class="fa fa-chevron-left"></i> SK9# 公司的军规
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/63d0eab2/" rel="next" title="Netty17# 实战|Young GC时间过长导致RPC超时">
+      Netty17# 实战|Young GC时间过长导致RPC超时 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AE%B9%E6%8F%90%E8%A6%81"><span class="nav-number">2.</span> <span class="nav-text">内容提要</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%B4%E6%97%B6%E8%8A%82%E7%82%B9%E7%BB%AD%E7%BA%A6"><span class="nav-number">2.0.1.</span> <span class="nav-text">临时节点续约</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%81%E4%B9%85%E8%8A%82%E7%82%B9%E5%BF%83%E8%B7%B3%E6%A3%80%E6%B5%8B"><span class="nav-number">2.0.2.</span> <span class="nav-text">持久节点心跳检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%81%E4%B9%85%E8%8A%82%E7%82%B9%E6%8E%A2%E6%B4%BB"><span class="nav-number">2.0.3.</span> <span class="nav-text">持久节点探活</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%B4%E6%97%B6%E8%8A%82%E7%82%B9%E7%BB%AD%E7%BA%A6-1"><span class="nav-number">3.</span> <span class="nav-text">临时节点续约</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#client%E8%BF%9E%E6%8E%A5%E5%BF%83%E8%B7%B3%E6%A3%80%E6%9F%A5"><span class="nav-number">3.0.1.</span> <span class="nav-text">client连接心跳检查</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%93%8D%E5%BA%94"><span class="nav-number">3.0.2.</span> <span class="nav-text">服务端响应</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8A%82%E7%82%B9%E9%80%89%E6%8B%A9"><span class="nav-number">3.0.3.</span> <span class="nav-text">节点选择</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B8%85%E7%90%86%E6%97%A0%E6%95%88%E8%BF%9E%E6%8E%A5"><span class="nav-number">3.0.4.</span> <span class="nav-text">清理无效连接</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B0%B8%E4%B9%85%E8%8A%82%E7%82%B9%E5%BF%83%E8%B7%B3%E6%A3%80%E6%B5%8B"><span class="nav-number">4.</span> <span class="nav-text">永久节点心跳检测</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8C%81%E4%B9%85%E8%8A%82%E7%82%B9%E6%8E%A2%E6%B4%BB-1"><span class="nav-number">5.</span> <span class="nav-text">持久节点探活</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%A2%E6%B4%BB%E7%A4%BA%E4%BE%8B"><span class="nav-number">5.0.1.</span> <span class="nav-text">探活示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%A2%E6%B4%BB%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE"><span class="nav-number">5.0.2.</span> <span class="nav-text">探活地址设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">5.0.3.</span> <span class="nav-text">源码分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MYSQL%E6%8E%A2%E6%B4%BB"><span class="nav-number">5.0.4.</span> <span class="nav-text">MYSQL探活</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

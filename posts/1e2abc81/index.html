@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="引言越来越多的公司开始研究Service Mesh，线上大批量应用的依旧很少，已经上线的很多问题解决的并不完美，为后面迭代和稳定性埋下隐患。目前来看整体开源生态成熟度还有需要完善，本文为笔者试水service mesh过程中发现的问题归纳整理。 一、目标与价值业务侧只需要引入轻量级SDK，其他基础能力下沉到网格SideCar代理中，一个美好的愿望 “接管所有非业务关心的能力”。 1.业务赋能价值">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FA9# Service Mesh上线需解决的问题整理">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/1e2abc81/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="引言越来越多的公司开始研究Service Mesh，线上大批量应用的依旧很少，已经上线的很多问题解决的并不完美，为后面迭代和稳定性埋下隐患。目前来看整体开源生态成熟度还有需要完善，本文为笔者试水service mesh过程中发现的问题归纳整理。 一、目标与价值业务侧只需要引入轻量级SDK，其他基础能力下沉到网格SideCar代理中，一个美好的愿望 “接管所有非业务关心的能力”。 1.业务赋能价值">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-01-21T03:55:01.000Z">
+<meta property="article:modified_time" content="2022-01-12T03:40:16.596Z">
+<meta property="article:tag" content="方案设计">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/1e2abc81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>FA9# Service Mesh上线需解决的问题整理 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/1e2abc81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FA9# Service Mesh上线需解决的问题整理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-01-21 11:55:01" itemprop="dateCreated datePublished" datetime="2022-01-21T11:55:01+08:00">2022-01-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-12 11:40:16" itemprop="dateModified" datetime="2022-01-12T11:40:16+08:00">2022-01-12</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>越来越多的公司开始研究Service Mesh，线上大批量应用的依旧很少，已经上线的很多问题解决的并不完美，为后面迭代和稳定性埋下隐患。目前来看整体开源生态成熟度还有需要完善，本文为笔者试水service mesh过程中发现的问题归纳整理。</p>
+<h1 id="一、目标与价值"><a href="#一、目标与价值" class="headerlink" title="一、目标与价值"></a>一、目标与价值</h1><p>业务侧只需要引入轻量级SDK，其他基础能力下沉到网格SideCar代理中，一个美好的愿望 “接管所有非业务关心的能力”。</p>
+<h3 id="1-业务赋能价值"><a href="#1-业务赋能价值" class="headerlink" title="1.业务赋能价值"></a>1.业务赋能价值</h3><ul>
+<li>提升开发效率：只需专注业务</li>
+<li>加速业务探索：快速迭代上线、快速验证</li>
+<li>代理升级无感知：不需要费力推动业务升级或者通过卡点升级引起的各类问题</li>
+</ul>
+<h3 id="2-运维提效价值"><a href="#2-运维提效价值" class="headerlink" title="2.运维提效价值"></a>2.运维提效价值</h3><ul>
+<li>治理体系统一：屏蔽不同语言体系治理的复杂性</li>
+<li>技术演进统一：不必关心版本碎片化问题，能力统一自住演进</li>
+</ul>
+<h1 id="二、组织形态整合"><a href="#二、组织形态整合" class="headerlink" title="二、组织形态整合"></a>二、组织形态整合</h1><p>如果将Service Mesh作为公司战略推动，Service Mesh依赖Kubernate底座，相关人员最好整合到一个部门，统一运维和开发。</p>
+<ul>
+<li> 将Service Mesh团队、Serverless团队、容器团队整合到一个部门负责云原生体系建设</li>
+<li> 其他部门配合改造和对接</li>
+</ul>
+<a id="more"></a>
+
+
+
+<h1 id="三、技术问题"><a href="#三、技术问题" class="headerlink" title="三、技术问题"></a>三、技术问题</h1><p>下面就使用最广泛的Istio和Envoy为例就其线上运行需要解决的技术问题归纳整理。</p>
+<h3 id="1-注册中心接入服务网格"><a href="#1-注册中心接入服务网格" class="headerlink" title="1.注册中心接入服务网格"></a>1.注册中心接入服务网格</h3><p><strong>实现目的：</strong> 公司已有的注册中心接入服务网格（Istio），完成服务注册与发现能力</p>
+<p><strong>基本原理：</strong> 通过Istio提供的ServiceEntry将网格外注册中心接入网格</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;4bTdmaQVKi8YHhBJCbrVKQ</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="2-RPC框架协议兼容问题"><a href="#2-RPC框架协议兼容问题" class="headerlink" title="2.RPC框架协议兼容问题"></a>2.RPC框架协议兼容问题</h4><p><strong>实现目的：</strong> 需要实现网格内外通信，那网格内的服务调用原有服务需要支持原有的RPC协议</p>
+<p><strong>基本原理：</strong> 与使用的RPC框架关联，如果使用gRPC自研由于Istio原生支持HTTP/2则改动极小，如果使用dubbo或者自研RPC框架，可以通过EnvoyFilter转换实现，可以参考腾讯开源框架 aeraki</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;aeraki-framework&#x2F;aeraki</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="3-网格流量治理问题"><a href="#3-网格流量治理问题" class="headerlink" title="3.网格流量治理问题"></a>3.网格流量治理问题</h3><p><strong>实现目的：</strong> 网格流量需要支持限流、熔断等治理能力并与现有治理平台融合</p>
+<p><strong>基本原理：</strong> 通过Envoy提供的Filter插件机制，将限流配置与EnvoyFilter规则映射完成限流，可以参考网易开源的slime框架</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;slime-io&#x2F;slime</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="4-网格流量监控问题"><a href="#4-网格流量监控问题" class="headerlink" title="4.网格流量监控问题"></a>4.网格流量监控问题</h3><p><strong>实现目的：</strong> 网格流量的监控指标和埋点需要与原有监控体系融合</p>
+<p><strong>实现原理：</strong> Istio提供了kiali、jaeger、grafana、prometheus相关监控体系，将这些这表对接到原有监控系统。另外一些自定义的监控指标可以通过wasm扩展。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;ZO7dZ3mddISFjB4NTJHdjQ</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="5-按需订阅配置（懒加载）问题"><a href="#5-按需订阅配置（懒加载）问题" class="headerlink" title="5.按需订阅配置（懒加载）问题"></a>5.按需订阅配置（懒加载）问题</h3><p>在默认情况下，Istio会全量下发注册中心配置信息，占用过多的内存严重影响性能。常见的方案有：</p>
+<ul>
+<li>社区SidecarScope的隔离</li>
+<li>全局代理方案第一跳先去代理拿服务依赖的配置，之后不再需要跟代理通信（参考Slime提供的懒加载功能）</li>
+<li>通过在SideCar中同时部署Agent的方式维护服务依赖关系</li>
+</ul>
+<h3 id="6-热部署和升级问题"><a href="#6-热部署和升级问题" class="headerlink" title="6.热部署和升级问题"></a>6.热部署和升级问题</h3><p>在对代理SideCar进行部署和升级时的处理，需要做到平滑先摘流量再部署升级。</p>
+<ul>
+<li>进程级别代理方式，对数据面进行监控、版本管理和升级</li>
+<li>双容器模式，一个容器运行，另外一个容器Standby；Standby容器完成升级后检测正常后再切换</li>
+<li>依赖应用发布升级数据面</li>
+</ul>
+<h3 id="7-性能和稳定性问题"><a href="#7-性能和稳定性问题" class="headerlink" title="7.性能和稳定性问题"></a>7.性能和稳定性问题</h3><ul>
+<li>数据面代理会增加耗时，据蚂蚁商业版本是数据面单跳延迟在0.5ms以内，平均为0.2~0.3ms</li>
+<li>稳定性指标的测试</li>
+</ul>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" rel="tag"># 方案设计</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/21dfde87/" rel="prev" title="FA7# 异地多活实践与设计思考点归纳">
+      <i class="fa fa-chevron-left"></i> FA7# 异地多活实践与设计思考点归纳
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E7%9B%AE%E6%A0%87%E4%B8%8E%E4%BB%B7%E5%80%BC"><span class="nav-number">2.</span> <span class="nav-text">一、目标与价值</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E4%B8%9A%E5%8A%A1%E8%B5%8B%E8%83%BD%E4%BB%B7%E5%80%BC"><span class="nav-number">2.0.1.</span> <span class="nav-text">1.业务赋能价值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E8%BF%90%E7%BB%B4%E6%8F%90%E6%95%88%E4%BB%B7%E5%80%BC"><span class="nav-number">2.0.2.</span> <span class="nav-text">2.运维提效价值</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E7%BB%84%E7%BB%87%E5%BD%A2%E6%80%81%E6%95%B4%E5%90%88"><span class="nav-number">3.</span> <span class="nav-text">二、组织形态整合</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%8A%80%E6%9C%AF%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">三、技术问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E6%B3%A8%E5%86%8C%E4%B8%AD%E5%BF%83%E6%8E%A5%E5%85%A5%E6%9C%8D%E5%8A%A1%E7%BD%91%E6%A0%BC"><span class="nav-number">4.0.1.</span> <span class="nav-text">1.注册中心接入服务网格</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-RPC%E6%A1%86%E6%9E%B6%E5%8D%8F%E8%AE%AE%E5%85%BC%E5%AE%B9%E9%97%AE%E9%A2%98"><span class="nav-number">4.0.1.1.</span> <span class="nav-text">2.RPC框架协议兼容问题</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E7%BD%91%E6%A0%BC%E6%B5%81%E9%87%8F%E6%B2%BB%E7%90%86%E9%97%AE%E9%A2%98"><span class="nav-number">4.0.2.</span> <span class="nav-text">3.网格流量治理问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E7%BD%91%E6%A0%BC%E6%B5%81%E9%87%8F%E7%9B%91%E6%8E%A7%E9%97%AE%E9%A2%98"><span class="nav-number">4.0.3.</span> <span class="nav-text">4.网格流量监控问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-%E6%8C%89%E9%9C%80%E8%AE%A2%E9%98%85%E9%85%8D%E7%BD%AE%EF%BC%88%E6%87%92%E5%8A%A0%E8%BD%BD%EF%BC%89%E9%97%AE%E9%A2%98"><span class="nav-number">4.0.4.</span> <span class="nav-text">5.按需订阅配置（懒加载）问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-%E7%83%AD%E9%83%A8%E7%BD%B2%E5%92%8C%E5%8D%87%E7%BA%A7%E9%97%AE%E9%A2%98"><span class="nav-number">4.0.5.</span> <span class="nav-text">6.热部署和升级问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-%E6%80%A7%E8%83%BD%E5%92%8C%E7%A8%B3%E5%AE%9A%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">4.0.6.</span> <span class="nav-text">7.性能和稳定性问题</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">120</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

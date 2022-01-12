@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/f74d0239/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ea86b72f/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/f74d0239/" class="post-title-link" itemprop="url">Netty11# 非池化内存分配</a>
+            <a href="/posts/ea86b72f/" class="post-title-link" itemprop="url">Nacos5# Distro协议寻址模式</a>
         </h2>
 
         <div class="post-meta">
@@ -207,17 +207,23 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2021-02-10 11:55:01 / 修改时间：09:53:21" itemprop="dateCreated datePublished" datetime="2021-02-10T11:55:01+08:00">2021-02-10</time>
+              <time title="创建时间：2021-06-20 11:55:01" itemprop="dateCreated datePublished" datetime="2021-06-20T11:55:01+08:00">2021-06-20</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
                 </span>
             </span>
 
@@ -232,11 +238,23 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>非池化内存的分配由UnpooledByteBufAllocator负责，本文梳理下由其负责分配的堆内存和堆外内存如何实现的 。</p>
-<p>Netty在非池化堆内存分配上Java9与Java8以下版本有啥不同呢？Netty堆外内存回收默认机制使用JDK提供的Cleaner吗？</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在Nacos服务端分析服务注册逻辑，就绕不开Distro协议。该协议为临时一致性协议，数据存储在缓存中。阿里专门为注册中心而设计的。后面文章逐步还原该协议承担的职责，本文先分析寻址模式。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="寻址概念"><a href="#寻址概念" class="headerlink" title="寻址概念"></a>寻址概念</h3><ul>
+<li>寻址是指如何发现Nacos集群中节点变化的，当检测到变化时能后及时更新节点信息。</li>
+</ul>
+<h3 id="寻址模式"><a href="#寻址模式" class="headerlink" title="寻址模式"></a>寻址模式</h3><ul>
+<li>Nacos支持两种寻址模式分别为「文件寻址」和「地址服务器寻址」</li>
+<li>默认为文件寻址，可以通过参数「nacos.core.member.lookup.type」设置取值为「file」或者「address-server」</li>
+<li>文件寻址路径默认为 「${user.home}/nacos/conf/cluster.conf」</li>
+<li>文件寻址cluster.conf配置文件的内容格式为「ip1:port,ip2:port」</li>
+<li>地址服务器寻址默认为：<a target="_blank" rel="noopener" href="http://jmenv.tbsite.net:8080/serverlist%EF%BC%9B%E5%85%B6%E4%B8%AD%E5%9F%9F%E5%90%8D%E3%80%81%E7%AB%AF%E5%8F%A3%E3%80%81url%E5%9D%87%E5%8F%AF%E8%87%AA%E5%AE%9A%E4%B9%89">http://jmenv.tbsite.net:8080/serverlist；其中域名、端口、url均可自定义</a></li>
+<li>检测到集群节点变更时会更新缓存并发布MembersChangeEvent事件</li>
+<li>为防止新节点没有初始化好，当检测到新节点加入时先设置该节点状态为DOWN，该节点不参与通信</li>
+<li>过几秒通过节点之间通信将已初始化的新节点状态由DOWN设置为UP，该节点正式参与通信</li>
+</ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/f74d0239/#more" rel="contents">
+              <a class="btn" href="/posts/ea86b72f/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -260,7 +278,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/821aaf66/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d65dffb2/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -274,7 +292,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/821aaf66/" class="post-title-link" itemprop="url">Netty10# 堆外内存底盘PlatformDependent</a>
+            <a href="/posts/d65dffb2/" class="post-title-link" itemprop="url">Nacos4# 服务端响应连接和注册源码分析（一）</a>
         </h2>
 
         <div class="post-meta">
@@ -284,14 +302,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-30 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-30T22:47:01+08:00">2021-01-30</time>
+              <time title="创建时间：2021-06-13 11:55:01" itemprop="dateCreated datePublished" datetime="2021-06-13T11:55:01+08:00">2021-06-13</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -299,7 +317,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
                 </span>
             </span>
 
@@ -314,11 +332,23 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>非池化/池化内存如何分配的？该撸这块了，奈何到处都在调用PlatformDependent类的方法，要不各种判断，要不分配堆外内存。反正到处都能看到它，得，索性先把这个撸一把。PlatformDependent又依赖了PlatformDependent0，那就一层一层剥好了。</p>
-<p>嗯，有点碎，大伙随便看看。</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>上篇文章分析了Nacos服务端启动的逻辑，本文分析启动时加载了哪些Handler，以及处理连接请求和注册请求的逻辑。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="加载RequestHandler"><a href="#加载RequestHandler" class="headerlink" title="加载RequestHandler"></a>加载RequestHandler</h3><ul>
+<li>容器启动时加载了13个RequestHandler由他们实际处理各种请求逻辑后面章节再细撸</li>
+<li>当然也加载了InstanceRequest-&gt;InstanceRequestHandler</li>
+</ul>
+<h3 id="服务端响应客户端连接"><a href="#服务端响应客户端连接" class="headerlink" title="服务端响应客户端连接"></a>服务端响应客户端连接</h3><ul>
+<li>处理客户端的连接请求由GrpcBiStreamRequestAcceptor#requestBiStream负责</li>
+<li>构建和缓存了GrpcConnection对象和Client对象</li>
+</ul>
+<h3 id="服务端处理注册请求"><a href="#服务端处理注册请求" class="headerlink" title="服务端处理注册请求"></a>服务端处理注册请求</h3><ul>
+<li> 处理注册请求的逻辑由InstanceRequestHandler执行</li>
+<li> 建立起了client与service、instance的关系</li>
+<li>发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent</li>
+</ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/821aaf66/#more" rel="contents">
+              <a class="btn" href="/posts/d65dffb2/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -342,7 +372,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/f75406c8/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/57538bcc/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -356,7 +386,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/f75406c8/" class="post-title-link" itemprop="url">MQ44# RocketMQ最近几个经常被问的问题</a>
+            <a href="/posts/57538bcc/" class="post-title-link" itemprop="url">Nacos3# 服务注册与发现服务端启动源码解析</a>
         </h2>
 
         <div class="post-meta">
@@ -366,14 +396,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-25 20:55:01" itemprop="dateCreated datePublished" datetime="2021-01-25T20:55:01+08:00">2021-01-25</time>
+              <time title="创建时间：2021-06-05 11:55:01" itemprop="dateCreated datePublished" datetime="2021-06-05T11:55:01+08:00">2021-06-05</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -381,7 +411,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
                 </span>
             </span>
 
@@ -396,11 +426,21 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="常见问题一"><a href="#常见问题一" class="headerlink" title="常见问题一"></a>常见问题一</h1><p><strong>问：</strong> RocketMQ消费者订阅了tag，但却收不到消息无法消费，并且根据 msgid 去查询，发现这条消息的状态为 CONSUMED_BUT_FILTERED，那这是为什么？</p>
-<p><strong>答：</strong> 在RocketMQ中，一个消费组能同时订阅多个 tag，但一个消费组的不同消费者不能分开订阅不同的tag，即同一个消费组的订阅关系必须保持一样。例如：常见错误使用方式同一个项目中，一段消费代码订阅tagA，然后拷贝到这段代码再更改为tagB。</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本文从gRPC的.proto文件解读其暴露的服务，由此生成gRPC的客户端/服务端存根。进而分析服务端加载启动过程。最近家里事情较多，本文短了点，大伙随便看看。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="gRPC-Service-proto解读"><a href="#gRPC-Service-proto解读" class="headerlink" title="gRPC Service.proto解读"></a>gRPC Service.proto解读</h3><ul>
+<li>暴露用于服务端到客户端流式RPC的服务RequestStream#requestStream</li>
+<li>暴露用于简单RPC调用的服务Request#request</li>
+<li>暴露用于双向流式RPC调用的服务BiRequestStream#requestBiStream</li>
+<li>三种方式入参均为Payload</li>
+</ul>
+<h3 id="Server启动流程"><a href="#Server启动流程" class="headerlink" title="Server启动流程"></a>Server启动流程</h3><ul>
+<li>定义了拦截器获取客户端的ip、port、connectId等</li>
+<li>装配了.proto定义的两种调用方式，用于接受客户端请求<br>简单调用方式Request#request和双向流调用方式BiRequestStream#biRequestStream</li>
+<li>设置了服务启动端口、线程、接受消息的限制、压缩/解压缩类型</li>
+</ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/f75406c8/#more" rel="contents">
+              <a class="btn" href="/posts/57538bcc/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -424,7 +464,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2e57625b/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9fe0a5df/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -438,7 +478,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/2e57625b/" class="post-title-link" itemprop="url">Netty9# Netty抽象内存分配器实现原理</a>
+            <a href="/posts/9fe0a5df/" class="post-title-link" itemprop="url">Nacos2# 服务注册与发现客户端示例与源码解析（二）</a>
         </h2>
 
         <div class="post-meta">
@@ -448,14 +488,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-16T11:55:01+08:00">2021-01-16</time>
+              <time title="创建时间：2021-05-23 11:55:01" itemprop="dateCreated datePublished" datetime="2021-05-23T11:55:01+08:00">2021-05-23</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -463,7 +503,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
                 </span>
             </span>
 
@@ -478,10 +518,40 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p> 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>上一篇客户端初始化没有撸完，这篇继续。Nacos从2.0以后增加了对grpc的支持，代码中HTTP的代理初始化还有保留，我们注册发现通常为临时节点，这部分已由gRPC接管。可以对比下新旧逻辑的实现差异。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="HTTP代理初始化"><a href="#HTTP代理初始化" class="headerlink" title="HTTP代理初始化"></a>HTTP代理初始化</h3><p><strong>HTTP心跳检测器</strong> </p>
+<ul>
+<li>HTTP心跳检测只适用于注册的节点持久节点，临时节点会使用grpc代理（HTTP的心跳检测默认废弃由grpc替代）</li>
+<li>在初始化时客户端注册代理NamingClientProxy时，初始化了一个HTTP心跳器用于向Nacos Server发起心跳</li>
+<li>在注册节点时通过向心跳执行器添加心跳任务addBeatInfo触发</li>
+<li>心跳执行器通过每隔五秒中向Nacos Server发起HTTP请求</li>
+<li>如果返回的server not found会向Nacos Server发起注册请求重新注册</li>
+</ul>
+<p><strong>UDP接受服务端推送</strong> </p>
+<ul>
+<li>Client通过UDP接受到nacos server推动的消息</li>
+<li>如果服务端推送的为服务信息通过processServiceInfo处理逻辑见上篇，主要实例变更时的通知机制</li>
+<li>如果dump类型，则客户端发送服务信息serviceInfoMap的ack信息到服务端</li>
+</ul>
+<h3 id="gRPC代理初始化"><a href="#gRPC代理初始化" class="headerlink" title="gRPC代理初始化"></a>gRPC代理初始化</h3><p><strong>gRPC初始化逻辑概览</strong> </p>
+<ul>
+<li> gRPC 客户端代理的初始化主要逻辑为创建gRPC Client并启动</li>
+<li>并注册ServerRequestHandler用于处理Nacos Server推送的NotifySubscriberRequest请求</li>
+<li>注册ConnectionListener用于处理gRPC建立和断开连接事件</li>
+<li>请求超时时间可以通过「namingRequestTimeout」设置，默认为3秒</li>
+</ul>
+<p><strong>gRPC Client启动逻辑</strong> </p>
+<ul>
+<li>gRPC Client启动逻辑主要在于建立与nacos server的grpc连接，其中两个守护线程一直在运行</li>
+<li>守护线程1用于处理grpc连接的建立和关闭事件</li>
+<li>守护线程2用于与nacos server的心跳保鲜，并负责异步建立grpc连接</li>
+<li>守护线程2同时负责当nacos server的地址信息发生变更时重新与新server建立连接</li>
+<li>nacos server的地址变更通过grpc通道由server推送ConnectResetRequest到client</li>
+<li>grpc client只与nacos server集群中一台建立grpc连接。</li>
+</ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/2e57625b/#more" rel="contents">
+              <a class="btn" href="/posts/9fe0a5df/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -505,7 +575,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9bf5e4df/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/5e23f663/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -519,7 +589,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/9bf5e4df/" class="post-title-link" itemprop="url">FA1# 微服务流控防护场景与应对措施</a>
+            <a href="/posts/5e23f663/" class="post-title-link" itemprop="url">Nacos1# 服务注册与发现客户端示例与源码解析（一）</a>
         </h2>
 
         <div class="post-meta">
@@ -529,14 +599,115 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-09 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-09T11:55:01+08:00">2021-01-09</time>
+              <time title="创建时间：2021-05-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-05-16T11:55:01+08:00">2021-05-16</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:04:40" itemprop="dateModified" datetime="2021-02-10T10:04:40+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos在业界注册中心的选型中举足轻重，值得去深入分析和研究。本文就注册和发现客户端的初始话逻辑从源码角度分析其做了什么事情，另外，其服务发现的设计架构可作为我们相似场景设计的模型作为参考。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="可配置参数"><a href="#可配置参数" class="headerlink" title="可配置参数"></a>可配置参数</h3><ul>
+<li>默认命名空间public，可通过System.setProperty(PropertyKeyConst.NAMESPACE, “”）设置</li>
+<li>默认web根目录为/nacos/v1/ns，可通过System.setProperty(PropertyKeyConst.CONTEXT_PATH, “”）设置</li>
+<li>默认日志文件名称为naming.log，可通过System.setProperty(UtilAndComs.NACOS_NAMING_LOG_NAME, “”）设置</li>
+<li>支持通过动态刷新EndPoint获取server地址列表，EndPoint地址可通过properties.setProperty(PropertyKeyConst.ENDPOINT,””)设置，EndPoint刷新的频率是30秒</li>
+<li>支持直接传入Server地址properties.setProperty(PropertyKeyConst.SERVER_ADD,””)</li>
+</ul>
+<h3 id="服务发现逻辑"><a href="#服务发现逻辑" class="headerlink" title="服务发现逻辑"></a>服务发现逻辑</h3><p>服务发现逻辑也就是当实例变更时通知给订阅者逻辑，详细逻辑如下：</p>
+<ul>
+<li>当我们开启订阅时subscribe时，会通过调度器生成一个UpdateTask；UpdateTask每个6秒钟（最长为1分钟）会从注册中心获取实例Instance列表，当检测到实例Instance列表有变更时会通过NotifyCenter.publishEvent发布实例变更事件</li>
+<li>NotifyCenter是个门面类，对DefaultPublisher的操作，以及DefaultPublisher与关联事件的映射，例如：会绑定ChangeEvent与EventPublisher的关系；上面发布的实例变更事件实际为添加到DefaultPublisher的阻塞队列</li>
+<li>DefaultPublisher中维护一个订阅者集合subscribers；DefaultPublisher中维护一个事件阻塞队列queue默认大小为16384；DefaultPublisher同时也是一个线程类初始化时通过for死循环从阻塞队列queue中获取Event，并循环回调订阅者subscribers执行该Event</li>
+<li>subscribers执行Event，具体回调到InstancesChangeNotifier#onEvent，进而回调到我们订阅时提供的AbstractEventListener#onEvent，从而实现我们的发现逻辑。</li>
+</ul>
+<h3 id="故障转移逻辑"><a href="#故障转移逻辑" class="headerlink" title="故障转移逻辑"></a>故障转移逻辑</h3><ul>
+<li>在ServiceInfoHolder初始化初始化时，会生成本地缓存目录 ${user.home}/nacos/naming</li>
+<li>每10秒钟将ServiceInfo备份到缓存文件中</li>
+<li>故障转移开启生效实例化延迟5秒钟会从本地文件将ServiceInfo读入缓存serviceMap</li>
+<li>如果配置参数「namingLoadCacheAtStart」设置为true启动时会从本地缓存文件读取ServiceInfo信息，默认为false</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/5e23f663/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/e67256f4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/e67256f4/" class="post-title-link" itemprop="url">FA4# 哈啰在分布式消息治理和微服务治理中的实践</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-05-04 11:55:01" itemprop="dateCreated datePublished" datetime="2021-05-04T11:55:01+08:00">2021-05-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -559,10 +730,20 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>微服务成了互联网架构的标配模式，对微服务之间的调用的流量治理和管控就尤为重要。哪些场景需要流量防控，针对这些场景又有哪些应对措施。有没有一个通用的措施来降低风险呢？这篇文章咱就聊聊这个。</p>
+          <h1 id="偶然"><a href="#偶然" class="headerlink" title="偶然"></a>偶然</h1><p>在今年3月初的时候敏捷教练陈文博应该是接到大领导指示让去召集人去投稿全球架构师大会（ArchSummit），目的在于提升公司的影响力和增进技术交流。</p>
+<p>文博发我一个大会议题链接说让投稿，老梁扫了一眼没发现没合适的主题。这家伙找益伟去了，益伟给了个列表，微服务架构方向让我试试看。领导说让试试，你还能说不？这个大会老梁以前作为听众参加过，被选中其实不太容易，不太确定的事花太多时间划不来，老梁花了十来分钟拟了个提纲发给了他。</p>
+<p>过了几天反馈说被选中了，让继续细化提纲、突出难点、听众受益点，就这么稀里糊涂的被选中去参加了这个大会。</p>
+<p>江湖很大，圈子很小，来去匆匆少了联系，再见依旧是故人。在这个过程中也跟业内优秀的专家们建立一些链接，特别感谢：</p>
+<ul>
+<li>感谢敏捷教练陈文博方方面面的支持和推动</li>
+<li>感谢组员李莹在PPT动画制作过程中的多次修改</li>
+<li>感谢领导鹏哥（杨鹏）、益伟在准备PPT过程中的指导和提点</li>
+<li>感谢大会主编薛梁和专题出品人蚂蚁资深技术专家黄挺（鲁直）的邀请</li>
+</ul>
+<p>老梁参加大会主要两部分，第一天是一个现场分享、第二天是一个视频录制。下面是参加大会分享的内容，其实也没啥，大伙随便看看。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/9bf5e4df/#more" rel="contents">
+              <a class="btn" href="/posts/e67256f4/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -586,7 +767,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/43fa99ab/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/27ee073a/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -600,7 +781,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/43fa99ab/" class="post-title-link" itemprop="url">SK4# 让心静下来</a>
+            <a href="/posts/27ee073a/" class="post-title-link" itemprop="url">Sentinel20# 针对调用来源限流的分析</a>
         </h2>
 
         <div class="post-meta">
@@ -610,14 +791,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-04 23:55:01" itemprop="dateCreated datePublished" datetime="2021-01-04T23:55:01+08:00">2021-01-04</time>
+              <time title="创建时间：2021-05-01 12:25:01" itemprop="dateCreated datePublished" datetime="2021-05-01T12:25:01+08:00">2021-05-01</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -625,7 +806,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
+                  <a href="/categories/Sentinel/" itemprop="url" rel="index"><span itemprop="name">Sentinel</span></a>
                 </span>
             </span>
 
@@ -640,18 +821,26 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点鸡尾酒，又到了一周中最放松的时候，咱接着聊聊天。</p>
-<p>上周文章《苍天绕过谁》，一个读者朋友看了发微信给老梁，问我那朋友怎么走出来的，他最近想太多，有些睡眠障碍。</p>
-<p>写着写着咋感觉有点像苦情文了，好在有读者朋友说虽然不是技术文章，但他受益匪浅。</p>
-<p>嗯嗯，有些帮助就好，老梁想着文章能有点思考、有点故事。</p>
-<p>除了积累点技术外，也积累些生活思考，在小故事中的一点思考。</p>
-<p>如何度过困难期呢？困难千千万万，每个人都不同？困难有大有小，多大的事算困难？</p>
-<p>这事老梁其实也不知道，可不是么？帮人度苦度难那是菩萨的事情呀。。。</p>
-<p>把天聊死了，还能聊不？老梁想了想，让我给讲两个故事吧。。。</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>当我们SOA的服务提供方S的某个资源（接口方法）想针不同的服务消费方（A与B）设置不同的限流阈值时，这时就需要用到针对调用来源的限流。那我们可以大规模去使用这种限流方式吗？</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><p><strong>1.应用场景</strong> </p>
+<p>示意图如下，针对A服务methodA1调用服务S的methodS1设置QPS限流300，针对B服务methodB1调用S服务的methodS1设置限流1000。也就是需要在S服务中对相同的资源（methodS1）针对不同的来源A与B设置不同的限流阈值。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E9%92%88%E5%AF%B9%E8%B0%83%E7%94%A8%E6%9D%A5%E6%BA%90%E9%99%90%E6%B5%81%E5%9C%BA%E6%99%AF.png"></p>
+<p><strong>2.实现原理</strong> </p>
+<ul>
+<li><p>Sentinel在统计请求流量时会为每个调用来源构建统计信息（StatisticNode）</p>
+</li>
+<li><p>在请求通过时获取调用来源origin对应的统计信息判决请求是否放行</p>
+</li>
+</ul>
+<p><strong>3.为什么不能大量使用针对调用来源的限流？</strong> </p>
+<p>备注：由于需要为每个调用来源origin的资源建立统计信息StatisticNode，大量使用会造成内存占用过多。这点官方faq中也给出了警示。**“注意 origin 数量不能太多，否则会导致内存暴涨，并且目前不支持模式匹配。” ** </p>
+<p>下面举例说明，下面的例子中针对来源限流是不针对来源限流内存占用的30倍。</p>
+<p>不针对来源限流：S服务有15个对外提供的服务接口，如果不针对来源限流，只需要15个统计StatisticNode即可</p>
+<p>针对来源限流：如果调用S服务的消费者有30个，那么需要统计的StatisticNode的数量=30 * 15 = 450个</p>
+<p>在实际中如果支持了其实难以控制数量是否是太多的，所以这是一个权衡的过程。首先针对调用来源的限流这个场景是不是很普遍，如果只是偶尔出现，这个功能应该考虑被禁用。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/43fa99ab/#more" rel="contents">
+              <a class="btn" href="/posts/27ee073a/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -675,7 +864,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bb2245d5/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/97466a5c/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -689,7 +878,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/bb2245d5/" class="post-title-link" itemprop="url">SK3# 苍天饶过谁</a>
+            <a href="/posts/97466a5c/" class="post-title-link" itemprop="url">Netty16# 池化内存Subpage类型内存分配</a>
         </h2>
 
         <div class="post-meta">
@@ -699,185 +888,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-03 23:55:01" itemprop="dateCreated datePublished" datetime="2021-01-03T23:55:01+08:00">2021-01-03</time>
+              <time title="创建时间：2021-04-10 18:25:01" itemprop="dateCreated datePublished" datetime="2021-04-10T18:25:01+08:00">2021-04-10</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="一"><a href="#一" class="headerlink" title="一"></a>一</h2><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点女儿红，又到了一周中最放松的时候，咱接着聊聊天。</p>
-<p>上周文章《仰望星空》，老梁说多看看历史和生活中的星星，让他们给咱照亮前进的路。</p>
-<p>有朋友怼老梁，管看星星有啥用，看就能解决问题了？该踩的坑还要踩，该流的泪还要流。</p>
-<p>老梁想了想，可不是么？该受的难还得受，苍天绕过谁。。。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/bb2245d5/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8a7728e3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/8a7728e3/" class="post-title-link" itemprop="url">SK1# 仰望星空</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-01-02 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-02T22:47:01+08:00">2021-01-02</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
-<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
-<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
-<p>嗯，不是谁都能当老板。</p>
-<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/8a7728e3/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/17c9a786/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/17c9a786/" class="post-title-link" itemprop="url">Netty8# Netty之ByteBuf初体验</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-01-02 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-02T11:55:01+08:00">2021-01-02</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -900,10 +918,27 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>前面聊了大于8KB的内存分配，那小于8KB的呢？上一篇的平衡二叉树第十一层的叶子节点最小也是8KB，那比如要分配128B的缓存，直接分给8KB显然是不合适的，Tiny是小于512Byte，Small介于512B~8KB，Tiny和Small统称Subpage，本文就聊聊他们的内存分配情况，这块应该是整个netty最为复杂的部分了。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><p>下面是以分配128B为例的整体流程架构图，下面大体叙述下其流程。</p>
+<ul>
+<li><p>先从平衡二叉树的第11层选一个未分配的叶子节点大小为8KB的一个Page<br>备注：本例中为memoryMap[2048]</p>
+</li>
+<li><p>对该Page进行切割，假如要分配128B，整体会切割为64块<br>备注：8192/128=64</p>
+</li>
+<li><p>通过long类型二进制64位来标记分割成各个块的分配状态</p>
+<p>备注：0:未分配，1:已分配</p>
+</li>
+<li><p>一个bitmap数组长度为8，每个元素都能对64块内存进行标记</p>
+</li>
+<li><p>建立了二叉树节点与切分块之间的映射关系<br>备注：memoryMapIdx ^ maxSubpageAllocs</p>
+</li>
+<li><p>分配后建立二叉树叶子节点与标记位之间的关系，可以指向内存一块区域<br>备注：0x4000000000000000L | (long) bitmapIdx &lt;&lt; 32 | memoryMapIdx</p>
+</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/subpages%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84.png"></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/17c9a786/#more" rel="contents">
+              <a class="btn" href="/posts/97466a5c/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -927,7 +962,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/4eda328d/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6531e1a8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -941,7 +976,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/4eda328d/" class="post-title-link" itemprop="url">SK1# 给老板画饼</a>
+            <a href="/posts/6531e1a8/" class="post-title-link" itemprop="url">FA3# ZK做注册中心不是最好的选择</a>
         </h2>
 
         <div class="post-meta">
@@ -951,14 +986,111 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-01 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-01T22:47:01+08:00">2021-01-01</time>
+              <time title="创建时间：2021-04-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-04-06T11:55:01+08:00">2021-04-06</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Zookeeper作为注册中心不是跑的好好的吗？为什么要替换，是不是闲的？在过去的一段时间替换它的优先级的确不高，然而腾出手来是要替换掉它的，只是因为Zookeeper不适合做注册中心。换句话说选择注册中心时有更好的选择。</p>
+<h1 id="CAP定理与举例"><a href="#CAP定理与举例" class="headerlink" title="CAP定理与举例"></a>CAP定理与举例</h1><h3 id="CAP定理"><a href="#CAP定理" class="headerlink" title="CAP定理"></a>CAP定理</h3><p>CAP定理已经深入每个开发者心里，我们一起回顾下，下面摘自维基百科定义。</p>
+<p>CAP定理（CAP theorem），又被称作布鲁尔定理（Brewer’s theorem），它指出对于一个分布式计算系统来说，不可能同时满足以下三点：</p>
+<ul>
+<li>一致性（Consistency）：等同于所有节点访问同一份最新的数据副本</li>
+<li>可用性（Availability）每次请求都能获取到非错的响应——但是不保证获取的数据为最新数据</li>
+<li>分区容错性（Partition tolerance）以实际效果而言，分区相当于对通信的时限要求。系统如果不能在时限内达成数据一致性，就意味着发生了分区的情况，必须就当前操作在C和A之间做出选择</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/CAP%E5%AE%9A%E7%90%86%E6%96%B02.png"></p>
+<h3 id="举例说明"><a href="#举例说明" class="headerlink" title="举例说明"></a>举例说明</h3><p>例如：有5个节点被网络分区，分区1有三个节点，分区2有两个节点。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%BD%91%E7%BB%9C%E5%88%86%E5%8C%BA%E7%A4%BA%E4%BE%8B.png"></p>
+<ul>
+<li>如果保证两个分区节点都可用（AP），由于网络不通，那么无法保证两个分区数据一致性（CP）</li>
+<li>如果保证两个分区数据一致性（CP），由于网络不通，那么会导致至少一个分区不可用</li>
+<li>如果既想保证所有节点一致性，还要保证节点都可用（CA），那么网络就必须是好的，不能出现网络分区，失去了分区容错性（P）</li>
+</ul>
+<p>因此，三者不可兼得。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/6531e1a8/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/cf517bd1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/cf517bd1/" class="post-title-link" itemprop="url">SK7# 大咖分享随记</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-19 22:55:01" itemprop="dateCreated datePublished" datetime="2021-03-19T22:55:01+08:00">2021-03-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -981,12 +1113,18 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大家分享点干活的家伙。</p>
-<p>今天周末，这上海的天也冷了，晚上喝了点羊汤，到了一周中最放松的时刻。</p>
-<p>今天不聊技术，咱聊聊给老板画饼。 </p>
+          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>到了一周中最放松的时刻，老梁回到家，家人往往都睡了。</p>
+<p>老梁就找点吃的喝的，今天喝了大半罐RIO强爽8°C白桃酒，有点晕晕乎乎的。</p>
+<p>老梁坐在沙发上抱着电脑跟大伙聊聊天，今天聊点啥呢？</p>
+<p>前些天公司请了头部公司研究员大咖来分享，大领导口干舌燥费了好大劲请来的。</p>
+<p>大咖抽出宝贵的时间来分享，听的人不少，听进去的不多，听了去实践就更少了，大部分过几天就忘的差不多了。</p>
+<p>这种情况领导们也知道，才要求组织者们去收集启发感受，沉淀下来点东西。</p>
+<p>老梁也被拉进去要求写一篇，组织者说已经跟领导吹出去了，不写凑不够数量。</p>
+<p>大咖分享的是质量和效能，下面是老梁瞎想的，不一点对，各位随便看看。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/4eda328d/#more" rel="contents">
+              <a class="btn" href="/posts/cf517bd1/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1009,7 +1147,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/3/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/5/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/3/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/5/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1075,7 +1213,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">120</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1120,7 +1258,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

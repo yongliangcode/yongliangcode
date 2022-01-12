@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="aFajlZ_qxnHSidfrI7ZwIC5dtkVavvKdk7iYyjMrG3c">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yongliangcode.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="现象反馈同事发现一个主题的某个分区卡主不再消费，如下图所示，通常这种情况是客户端消费线程阻塞造成的。而这次确不是，而且该现象还是头一次遇到，邪乎。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQ46# 实战|RocketMQ分区阻塞应急处理">
+<meta property="og:url" content="https://yongliangcode.github.io/posts/fc42a2a8/index.html">
+<meta property="og:site_name" content="瓜农老梁">
+<meta property="og:description" content="现象反馈同事发现一个主题的某个分区卡主不再消费，如下图所示，通常这种情况是客户端消费线程阻塞造成的。而这次确不是，而且该现象还是头一次遇到，邪乎。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211121212303.png">
+<meta property="og:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211110210858.png">
+<meta property="article:published_time" content="2021-11-21T12:55:01.000Z">
+<meta property="article:modified_time" content="2021-11-21T13:53:24.860Z">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211121212303.png">
+
+<link rel="canonical" href="https://yongliangcode.github.io/posts/fc42a2a8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MQ46# 实战|RocketMQ分区阻塞应急处理 | 瓜农老梁</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">瓜农老梁</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">一个想分享点干货的家伙，微信公众号「瓜农老梁」</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fc42a2a8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MQ46# 实战|RocketMQ分区阻塞应急处理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-11-21 20:55:01 / 修改时间：21:53:24" itemprop="dateCreated datePublished" datetime="2021-11-21T20:55:01+08:00">2021-11-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <div id="vip-container"><h1 id="现象反馈"><a href="#现象反馈" class="headerlink" title="现象反馈"></a>现象反馈</h1><p>同事发现一个主题的某个分区卡主不再消费，如下图所示，通常这种情况是客户端消费线程阻塞造成的。而这次确不是，而且该现象还是头一次遇到，邪乎。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211121212303.png"></p>
+<a id="more"></a>
+
+<h1 id="问题定位"><a href="#问题定位" class="headerlink" title="问题定位"></a>问题定位</h1><p><strong>1.日志分析</strong> </p>
+<p>在消费客户端发现了如下错误，显示着该消息不合法，超过了RocketMQ消息大小限制。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">org.apache.rocketmq.client.exception.MQBrokerException: CODE: 13  DESC: the message is illegal, maybe msg body or properties length not matched. msg body length limit 128k, msg properties length limit 32k.</span><br><span class="line">For more information, please visit the url, http:&#x2F;&#x2F;rocketmq.apache.org&#x2F;docs&#x2F;faq&#x2F;</span><br><span class="line">        at org.apache.rocketmq.client.impl.MQClientAPIImpl.processSendResponse(MQClientAPIImpl.java:711) ~[rocketmq-client-4.7.0.jar:4.7.0]</span><br><span class="line">        at org.apache.rocketmq.client.impl.MQClientAPIImpl.sendMessageSync(MQClientAPIImpl.java:505) ~[rocketmq-client-4.7.0.jar:4.7.0]</span><br><span class="line">        at org.apache.rocketmq.client.impl.MQClientAPIImpl.sendMessage(MQClientAPIImpl.java:487) ~[rocketmq-client-4.7.0.jar:4.7.0]</span><br><span class="line">        at org.apache.rocketmq.client.impl.MQClientAPIImpl.sendMessage(MQClientAPIImpl.java:431) ~[rocketmq-client-4.7.0.jar:4.7.0]</span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>2.源码跟踪</strong> </p>
+<p>跟踪RocketMQ报错的地方如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">handlePutMessageResult&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span> (putMessageResult.getPutMessageStatus()) &#123;</span><br><span class="line">	</span><br><span class="line">		<span class="keyword">case</span> PUT_OK:</span><br><span class="line">      sendOK = <span class="keyword">true</span>;</span><br><span class="line">      response.setCode(ResponseCode.SUCCESS);</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">      <span class="keyword">case</span> MESSAGE_ILLEGAL:</span><br><span class="line">            <span class="keyword">case</span> PROPERTIES_SIZE_EXCEEDED:</span><br><span class="line">                response.setCode(ResponseCode.MESSAGE_ILLEGAL);</span><br><span class="line">                response.setRemark(</span><br><span class="line">                    <span class="string">&quot;the message is illegal, maybe msg body or properties length not matched. msg body length limit 128k, msg properties length limit 32k.&quot;</span>);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>跟下去看到是消息属性过大造成的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> PutMessageStatus <span class="title">checkMessage</span><span class="params">(MessageExtBrokerInner msg)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (msg.getTopic().length() &gt; Byte.MAX_VALUE) &#123;</span><br><span class="line">    log.warn(<span class="string">&quot;putMessage message topic length too long &quot;</span> + msg.getTopic().length());</span><br><span class="line">    <span class="keyword">return</span> PutMessageStatus.MESSAGE_ILLEGAL;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (msg.getPropertiesString() != <span class="keyword">null</span> &amp;&amp; msg.getPropertiesString().length() &gt; Short.MAX_VALUE) &#123;</span><br><span class="line">    log.warn(<span class="string">&quot;putMessage message properties length too long &quot;</span> + msg.getPropertiesString().length());</span><br><span class="line">    <span class="keyword">return</span> PutMessageStatus.MESSAGE_ILLEGAL;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> PutMessageStatus.PUT_OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>3.消息确认</strong> </p>
+<p>既然消息不合法，那就捞出来看看它长啥样，通过检索命令查看：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin  queryMsgByOffset -n x.x.x.x:9876 -t delay_notify_level_04_topic -b latency_mq_a2 -i 1 -o 62565613</span><br></pre></td></tr></table></figure>
+
+<p><strong>消息内容</strong> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">RocketMQLog:WARN No appenders could be found for logger (io.netty.util.internal.PlatformDependent0).</span><br><span class="line">RocketMQLog:WARN Please initialize the logger system properly.</span><br><span class="line">OffsetID:            0A6F1AEE00002A9F0000070BD4CE3505</span><br><span class="line">Topic:               delay_notify_level_04_topic</span><br><span class="line">Tags:                [delayStrategy]</span><br><span class="line">Keys:                [2559003397109317634]</span><br><span class="line">Queue ID:            1</span><br><span class="line">Queue Offset:        62565613</span><br><span class="line">CommitLog Offset:    7747396318469</span><br><span class="line">Reconsume Times:     0</span><br><span class="line">Born Timestamp:      2021-11-09 00:00:01,721</span><br><span class="line">Store Timestamp:     2021-11-09 00:00:01,725</span><br><span class="line">Born Host:           x.x.x.x:40046</span><br><span class="line">Store Host:          x.x.x.x:10911</span><br><span class="line">System Flag:         0</span><br><span class="line">Properties:          &#123;uber-trace-id&#x3D;30863ccffc4785f65fcd844b53882621%3Aba4f3c364e11d4c2%3A75c3cab020852919%3A0, uberctx-us_app&#x3D;AppRcpOperatingService, clientAppId&#x3D;AppRcpOperatingService, reqId&#x3D;359a420f5e0644c4a24ce653fc1003b7, MIN_OFFSET&#x3D;62046858, MAX_OFFSET&#x3D;62576938, KEYS&#x3D;2559003397109317634, uberctx-us&#x3D;asyncSend%3Arcp_alert_delay_topic, rpcId&#x3D;1.1.1.3.1.1.1.1.1.1.1.1.1.1.1.1.3.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.3.1.1.1.1.1.1.1.1.1.1.1.1.3.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.3.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.3.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.</span><br><span class="line">&#x2F;&#x2F;.......</span><br><span class="line">11.1.3.1.1.3.7.41.9.5.1.1.11.1.27.1.1.5.3.4.2.2.2.20.9.1.7.1.1.15.3.1.7.1.1.1.1.1.5.7.1.1.1.1.1.1.1.3.1.3.1.3.1.1.3.1.1.1.3.1.1.1.1.3.1.1.1.1.3.5, UNIQ_KEY&#x3D;0A484BC80001764C12B62932E6B9247C, WAIT&#x3D;true, TAGS&#x3D;delayStrategy&#125;</span><br><span class="line">Message Body Path:   &#x2F;tmp&#x2F;rocketmq&#x2F;msgbodys&#x2F;0A484BC80001764C12B62932E6B9247C</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p>备注：消费体内容存储在/tmp/rocketmq/msgbodys/0A484BC80001764C12B62932E6B9247C，内容小于1KB，发现其Properties部分有个rpcId通过测算其长度长达33KB，问题就出在这里，RocketMQ最长为32KB。</p>
+<p><strong>4.阻塞根因</strong> </p>
+<ul>
+<li>使用场景为消费服务从某主题消费消息进行业务处理后再发送到其他主题</li>
+<li>消费服务在获取到这条大Properties消息后使用自定义封装的消息SDK发送</li>
+<li>自定义的SDK会在Properties增加一些属性，由于超过32KB导致该消息一直发不成功，从而造成阻塞</li>
+</ul>
+<h1 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h1><p>解决思路有两个：</p>
+<ul>
+<li>一个是消费服务让拿到消息后不要再发送了，把位点提交了就好了</li>
+<li>另外一个是通过在broker中手动修改消费组的消费位点consumerOffset.json，把这条大消息跳过去</li>
+</ul>
+<p>第一种需要修改SDK代码，测试升级周期较长，为快速解决该问题选择了第二种解决方式。</p>
+<p>将consumerOffset.json中的62565631修改为62565632，从而跳过问题消息。需要注意的是修改时需要把消费者下线并关闭broker，否则修改不成功，该位点会从消费服务的缓存中上报。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211110210858.png"></p>
+<p>还有就是追踪该巨无霸rpcId产生的不合理使用场景追踪，从而彻底规避该问题的产生。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/posts/7194d369/" rel="prev" title="gRPC11# 超时问题定位">
+      <i class="fa fa-chevron-left"></i> gRPC11# 超时问题定位
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/posts/dd2871a4/" rel="next" title="gRPC12# 协议错误问题定位">
+      gRPC12# 协议错误问题定位 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%8E%B0%E8%B1%A1%E5%8F%8D%E9%A6%88"><span class="nav-number">1.</span> <span class="nav-text">现象反馈</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E5%AE%9A%E4%BD%8D"><span class="nav-number">2.</span> <span class="nav-text">问题定位</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">3.</span> <span class="nav-text">解决方案</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">120</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://mp.weixin.qq.com/s/kPx7F1iD1lgvYiZ1_oymwQ" title="联系老梁 → https:&#x2F;&#x2F;mp.weixin.qq.com&#x2F;s&#x2F;kPx7F1iD1lgvYiZ1_oymwQ" rel="noopener" target="_blank"><i class="fa fa-weixin fa-fw"></i>联系老梁</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

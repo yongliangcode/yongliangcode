@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d1c2f69e/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/138ff78c/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/d1c2f69e/" class="post-title-link" itemprop="url">Kafka2# 堆内存不能正常回收问题分析（0.11.0.2版本）</a>
+            <a href="/posts/138ff78c/" class="post-title-link" itemprop="url">MQ5# RocketMQ Broker命令</a>
         </h2>
 
         <div class="post-meta">
@@ -208,14 +208,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2019-05-16 11:55:01" itemprop="dateCreated datePublished" datetime="2019-05-16T11:55:01+08:00">2019-05-16</time>
+              <time title="创建时间：2020-12-17 11:14:01" itemprop="dateCreated datePublished" datetime="2020-12-17T11:14:01+08:00">2020-12-17</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -223,7 +223,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Kafka/" itemprop="url" rel="index"><span itemprop="name">Kafka</span></a>
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
                 </span>
             </span>
 
@@ -238,12 +238,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>短信报警堆内存GC后依然超过4G内存，跟上篇文章所说情况相同。只是上次情况告警短信没发出来。这次介入前，dump了该节点的堆照，方便定位引起的问题。</p>
-<p>告警GC日志，回收后依然在4G内存，回收前后只减少了几百M。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">2019-05-26T20:41:52.086+0800: 12768164.084: [GC pause (G1 Evacuation Pause) (young), 0.0296753 secs]</span><br><span class="line">   [Parallel Time: 27.0 ms, GC Workers: 28]</span><br><span class="line">      [GC Worker Start (ms): Min: 12768164084.0, Avg: 12768164084.2, Max: 12768164084.5, Diff: 0.5]</span><br><span class="line">      [Ext Root Scanning (ms): Min: 18.1, Avg: 19.0, Max: 19.9, Diff: 1.8, Sum: 532.0]</span><br><span class="line">      [Update RS (ms): Min: 1.2, Avg: 1.7, Max: 2.3, Diff: 1.1, Sum: 47.6]</span><br><span class="line">         [Processed Buffers: Min: 1, Avg: 2.4, Max: 8, Diff: 7, Sum: 68]</span><br><span class="line">      [Scan RS (ms): Min: 1.2, Avg: 1.8, Max: 2.1, Diff: 0.9, Sum: 49.6]</span><br><span class="line">      [Code Root Scanning (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.0]</span><br><span class="line">      [Object Copy (ms): Min: 3.1, Avg: 3.9, Max: 4.6, Diff: 1.4, Sum: 110.6]</span><br><span class="line">      [Termination (ms): Min: 0.0, Avg: 0.0, Max: 0.0, Diff: 0.0, Sum: 0.4]</span><br><span class="line">         [Termination Attempts: Min: 1, Avg: 1.0, Max: 1, Diff: 0, Sum: 28]</span><br><span class="line">      [GC Worker Other (ms): Min: 0.0, Avg: 0.1, Max: 0.1, Diff: 0.1, Sum: 1.6]</span><br><span class="line">      [GC Worker Total (ms): Min: 26.2, Avg: 26.5, Max: 26.7, Diff: 0.5, Sum: 742.2]</span><br><span class="line">      [GC Worker End (ms): Min: 12768164110.7, Avg: 12768164110.7, Max: 12768164110.8, Diff: 0.1]</span><br><span class="line">   [Code Root Fixup: 0.1 ms]</span><br><span class="line">   [Code Root Purge: 0.0 ms]</span><br><span class="line">   [Clear CT: 0.7 ms]</span><br><span class="line">   [Other: 1.9 ms]</span><br><span class="line">      [Choose CSet: 0.0 ms]</span><br><span class="line">      [Ref Proc: 0.6 ms]</span><br><span class="line">      [Ref Enq: 0.0 ms]</span><br><span class="line">      [Redirty Cards: 0.3 ms]</span><br><span class="line">      [Humongous Register: 0.1 ms]</span><br><span class="line">      [Humongous Reclaim: 0.0 ms]</span><br><span class="line">      [Free CSet: 0.4 ms]</span><br><span class="line">   [Eden: 400.0M(400.0M)-&gt;0.0B(400.0M) Survivors: 8192.0K-&gt;8192.0K Heap: 4426.3M(8192.0M)-&gt;4024.2M(8192.0M)]</span><br><span class="line"> [Times: user&#x3D;0.75 sys&#x3D;0.00, real&#x3D;0.03 secs]</span><br></pre></td></tr></table></figure>
+          <h1 id="查看broker状态信息"><a href="#查看broker状态信息" class="headerlink" title="查看broker状态信息"></a>查看broker状态信息</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin brokerStatus -b 192.168.1.x:10911 -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">bootTimestamp : 1535597348792</span><br><span class="line"></span><br><span class="line">brokerVersion : 232</span><br><span class="line"></span><br><span class="line">brokerVersionDesc : V4_1_0_SNAPSHOT</span><br><span class="line"></span><br><span class="line">commitLogDirCapacity : Total : 8.7 TiB, Free : 7.7 TiB.</span><br><span class="line"></span><br><span class="line">commitLogDiskRatio : 0.11147464487710743</span><br><span class="line"></span><br><span class="line">commitLogMaxOffset : 6652182757965</span><br><span class="line"></span><br><span class="line">commitLogMinOffset : 5676873023488</span><br><span class="line"></span><br><span class="line">consumeQueueDiskRatio : 0.11147464487710743</span><br><span class="line"></span><br><span class="line">dispatchBehindBytes : 0</span><br><span class="line"></span><br><span class="line">dispatchMaxBuffer : 0</span><br><span class="line"></span><br><span class="line">earliestMessageTimeStamp : 1539290831130</span><br><span class="line"></span><br><span class="line">getFoundTps : 24229.27707229277 24670.716261707163 24323.07766631239</span><br><span class="line"></span><br><span class="line">getMessageEntireTimeMax : 4895</span><br><span class="line"></span><br><span class="line">getMissTps : 23384.56154384562 24047.195280471955 23735.196223133637</span><br><span class="line"></span><br><span class="line">getTotalTps : 47613.83861613839 48717.91154217912 48058.27388944603</span><br><span class="line"></span><br><span class="line">getTransferedTps : 28046.395360463954 28519.931340199313 28905.699949690646</span><br><span class="line"></span><br><span class="line">msgGetTotalTodayMorning : 30682264110</span><br><span class="line"></span><br><span class="line">msgGetTotalTodayNow : 31750490006</span><br><span class="line"></span><br><span class="line">msgGetTotalYesterdayMorning : 29219504313</span><br><span class="line"></span><br><span class="line">msgPutTotalTodayMorning : 7329767893</span><br><span class="line"></span><br><span class="line">msgPutTotalTodayNow : 7523090457</span><br><span class="line"></span><br><span class="line">msgPutTotalYesterdayMorning : 7031035625</span><br><span class="line"></span><br><span class="line">pageCacheLockTimeMills : 0</span><br><span class="line"></span><br><span class="line">pullThreadPoolQueueCapacity : 100000</span><br><span class="line"></span><br><span class="line">pullThreadPoolQueueHeadWaitTimeMills: 0</span><br><span class="line"></span><br><span class="line">pullThreadPoolQueueSize : 0</span><br><span class="line"></span><br><span class="line">putMessageAverageSize : 807.2943103360182</span><br><span class="line"></span><br><span class="line">putMessageDistributeTime : [&lt;&#x3D;0ms]:229497 [0~10ms]:1275 [10~50ms]:4 [50~100ms]:0 [100~200ms]:0 [200~500ms]:0 [500ms~1s]:0 [1~2s]:0 [2~3s]:0 [3~4s]:0 [4~5s]:0 [5~10s]:0 [10s~]:0</span><br><span class="line"></span><br><span class="line">putMessageEntireTimeMax : 10885</span><br><span class="line"></span><br><span class="line">putMessageSizeTotal : 6073348121272</span><br><span class="line"></span><br><span class="line">putMessageTimesTotal : 7523090456</span><br><span class="line"></span><br><span class="line">putTps : 4424.957504249575 4466.0700596607 4577.724617932119</span><br><span class="line"></span><br><span class="line">remainHowManyDataToCommit : 6.9 KiB</span><br><span class="line"></span><br><span class="line">remainHowManyDataToFlush : 0 B</span><br><span class="line"></span><br><span class="line">remainTransientStoreBufferNumbs : 3</span><br><span class="line"></span><br><span class="line">runtime : [ 48 days, 7 hours, 52 minutes, 34 seconds ]</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_1 : 5169358,5169358</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_10 : 8161108,8171531</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_11 : 7864781,7877885</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_12 : 7584977,7601110</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_13 : 7278660,7297334</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_14 : 7123700,7146082</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_15 : 7013493,7063463</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_16 : 6864847,6950753</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_17 : 6549491,6803414</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_18 : 12887811,12894744</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_3 : 13667462,13667752</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_4 : 9780224,9781009</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_5 : 63142105,63144981</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_6 : 9185173,9188251</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_7 : 9002046,9006727</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_8 : 8834782,8841531</span><br><span class="line"></span><br><span class="line">scheduleMessageOffset_9 : 1112865066,1112879874</span><br><span class="line"></span><br><span class="line">sendThreadPoolQueueCapacity : 10000</span><br><span class="line"></span><br><span class="line">sendThreadPoolQueueHeadWaitTimeMills: 0</span><br><span class="line"></span><br><span class="line">sendThreadPoolQueueSize : 0</span><br><span class="line"></span><br><span class="line">startAcceptSendRequestTimeStamp : 0</span><br><span class="line"></span><br><span class="line">You have mail in &#x2F;var&#x2F;spool&#x2F;mail&#x2F;root</span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/d1c2f69e/#more" rel="contents">
+              <a class="btn" href="/posts/138ff78c/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -267,7 +265,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9706ef5d/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ba08ed95/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -281,7 +279,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/9706ef5d/" class="post-title-link" itemprop="url">Kafka1# 异常复盘NotLeaderForPartitionException.md</a>
+            <a href="/posts/ba08ed95/" class="post-title-link" itemprop="url">MQ4# 查看RocketMQ Tps命令</a>
         </h2>
 
         <div class="post-meta">
@@ -291,14 +289,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2019-05-15 11:55:01" itemprop="dateCreated datePublished" datetime="2019-05-15T11:55:01+08:00">2019-05-15</time>
+              <time title="创建时间：2020-12-17 11:13:01" itemprop="dateCreated datePublished" datetime="2020-12-17T11:13:01+08:00">2020-12-17</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -306,7 +304,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Kafka/" itemprop="url" rel="index"><span itemprop="name">Kafka</span></a>
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
                 </span>
             </span>
 
@@ -321,12 +319,663 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="情况分析"><a href="#情况分析" class="headerlink" title="情况分析"></a>情况分析</h1><p><strong>客户端异常报警</strong> </p>
-<p>晚上10点20分接到使用方电话，日志持续报以下异常，持续时间已有10多分钟。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ERROR 2019-05-15 23:05:23,221 [kafka-producer-network-thread | producer-1] A failure occurred sending a message to Kafka.</span><br><span class="line">org.apache.kafka.common.errors.NotLeaderForPartitionException: This server is not the leader for that topic-partition.</span><br><span class="line">WARN 2019-05-15 23:05:23,237 [main] Error sending event to listener kafkahandler, status: ABEND, event: Commit transaction</span><br></pre></td></tr></table></figure>
+          <h1 id="查看所有Topic吞吐Tps"><a href="#查看所有Topic吞吐Tps" class="headerlink" title="查看所有Topic吞吐Tps"></a>查看所有Topic吞吐Tps</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin statsAll -n localhost:9876</span><br><span class="line"></span><br><span class="line">Topic Consumer Group InTPS OutTPS InMsg24Hour OutMsg24Hour</span><br><span class="line"></span><br><span class="line">T_SCANRECORD_NEW_groy 0.00 0 NO_CONSUMER</span><br><span class="line"></span><br><span class="line">T_SCANRECORD_NEW internationalScanRecordAll 5480.10 0.00 310165682 0</span><br><span class="line"></span><br><span class="line">T_SCANRECORD_NEW realnameConsumer 5480.10 79.98 310165682 29896917</span><br><span class="line"></span><br><span class="line">T_SCANRECORD_NEW AdpMqCluster_consumer2 5480.10 0.00 310165682 0</span><br><span class="line"></span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/9706ef5d/#more" rel="contents">
+              <a class="btn" href="/posts/ba08ed95/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a3779249/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/a3779249/" class="post-title-link" itemprop="url">MQ3# RocketMQ Cluster命令</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-17 11:12:01" itemprop="dateCreated datePublished" datetime="2020-12-17T11:12:01+08:00">2020-12-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="查看集群信息"><a href="#查看集群信息" class="headerlink" title="查看集群信息"></a>查看集群信息</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin clusterList -n localhost:9876</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Cluster Name Broker Name BID Addr Version InTPS OutTPS</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-a 0 192.168.1.x:10911 V3_4_6 2819.22 1077.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-b 0 192.168.1.x:10911 V3_4_6 2839.42 1070.89</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-c 0 192.168.1.x:10919 V3_4_6 2800.12 1058.39</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-d 0 192.168.1.x:10915 V3_4_6 2897.04 1126.04</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-e 0 192.168.1.x:10919 V3_4_6 2987.20 1181.88</span><br><span class="line"></span><br><span class="line">AdpMqCluster broker-f 0 192.168.1.x:10915 V3_4_6 3010.40 1187.08</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/a3779249/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/e790de00/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/e790de00/" class="post-title-link" itemprop="url">MQ2# RocketMQ Consumer命令</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-17 11:10:01" itemprop="dateCreated datePublished" datetime="2020-12-17T11:10:01+08:00">2020-12-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-10 10:35:08" itemprop="dateModified" datetime="2021-02-10T10:35:08+08:00">2021-02-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="创建订阅组"><a href="#创建订阅组" class="headerlink" title="创建订阅组"></a>创建订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin updateSubGroup -n localhost:9876 -c DefaultCluster -g zto-tst-consumer</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="删除订阅组"><a href="#删除订阅组" class="headerlink" title="删除订阅组"></a>删除订阅组</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin deleteSubGroup -n 192.168.1.x:9876 -c AdpMqCluster -g CODCANCELSIGN</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10911] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10915] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete subscription group [CODCANCELSIGN] from broker [192.168.1.x:10919] in cluster [AdpMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%RETRY%CODCANCELSIGN] from NameServer success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from cluster [xMqCluster] success.</span><br><span class="line"></span><br><span class="line">delete topic [%DLQ%CODCANCELSIGN] from NameServer success.</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/e790de00/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d7c49a97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/d7c49a97/" class="post-title-link" itemprop="url">Netty3# Netty组件之Channel注册</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-16 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-16T11:55:01+08:00">2020-12-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文将分析EventLoopGroup初始化、EventLoop的选择策略以及Channel是如何通过EventLoop注册到Selector上的。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/d7c49a97/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/7d3cb711/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/7d3cb711/" class="post-title-link" itemprop="url">Netty2# Netty组件之Channel初始化</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-15 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-15T11:55:01+08:00">2020-12-15</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>继上文分析Channel实例化流程后，本文通过分析Channel的初始化流程。旨在从整体上厘清DefaultChannelPipeline、ChannelHandlerContext、ChannelHandler的逻辑关系。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/7d3cb711/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6957c801/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/6957c801/" class="post-title-link" itemprop="url">MQ1# RocketMQ Connection命令</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-14 11:10:01" itemprop="dateCreated datePublished" datetime="2020-12-14T11:10:01+08:00">2020-12-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-12-17 23:38:15" itemprop="dateModified" datetime="2020-12-17T23:38:15+08:00">2020-12-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="消费端连接信息"><a href="#消费端连接信息" class="headerlink" title="消费端连接信息"></a>消费端连接信息</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">bin&#x2F;mqadmin consumerConnection -g T_SCANRECORD_NEW_GROUP -n 192.168.1.x:9876</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option PermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize&#x3D;128m; support was removed in 8.0</span><br><span class="line"></span><br><span class="line">001 127.0.0.1@60190 192.168.2.x:50104 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">002 127.0.0.1@7454 192.168.7.x:27692 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">003 127.0.0.1@31600 192.168.21.x:40243 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">004 127.0.0.1@21322 192.168.21.x:31416 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">005 127.0.0.1@39557 192.168.2.x:45959 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">006 127.0.0.1@24765 192.168.7.x:15166 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">007 127.0.0.1@26993 192.168.7.x:57864 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">008 127.0.0.1@652 192.168.21.x:59261 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">009 127.0.0.1@10388 192.168.21.x:1671 JAVA V3_2_6_SNAPSHOT</span><br><span class="line"></span><br><span class="line">Below is subscription:001 Topic: %RETRY%T_SCANRECORD_NEW_GROUP SubExpression: *</span><br><span class="line"></span><br><span class="line">002 Topic: T_SCANRECORD_NEW SubExpression: 1||2||3||4 || 5 || -5||7 || 45</span><br><span class="line"></span><br><span class="line">ConsumeType: CONSUME_PASSIVELY</span><br><span class="line"></span><br><span class="line">MessageModel: CLUSTERING</span><br><span class="line"></span><br><span class="line">ConsumeFromWhere: CONSUME_FROM_FIRST_OFFSET</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/6957c801/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8e76511e/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/8e76511e/" class="post-title-link" itemprop="url">Netty1# Netty组件之Channel实例化</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-11 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-11T11:55:01+08:00">2020-12-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="一、Channel概述"><a href="#一、Channel概述" class="headerlink" title="一、Channel概述"></a>一、Channel概述</h1><p>Channel提供了I/O的基本操作。从以下子接口中可以看出Netty对不同的底层协议提供了对应的channel来处理，例如：TCP/IP、UDP/IP、SCTP/IP、HTTP2等。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210202185721.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/8e76511e/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a4cd6a20/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/a4cd6a20/" class="post-title-link" itemprop="url">gRPC5# Reactor线程模型</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-08 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-08T11:55:01+08:00">2020-12-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/gRPC/" itemprop="url" rel="index"><span itemprop="name">gRPC</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Reactor模型是基于事件驱动的线程模型，可以分为Reactor单线程模型、Reactor多线程模型、主从Reactor多线程模型，通常基于在I/O多路复用实现。不同的角色职责有：Dispatcher负责事件分发、Acceptor负责处理客户端连接、Handler处理非连接事件（例如：读写事件）。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/a4cd6a20/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/4914cf75/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/4914cf75/" class="post-title-link" itemprop="url">gRPC4# HTTP/2协议之Stream</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-05 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-05T11:55:01+08:00">2020-12-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/gRPC/" itemprop="url" rel="index"><span itemprop="name">gRPC</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>前面三篇介绍了HPPT/2的“连接前言”、“二进制桢”、“头部压缩”。本文从“流及多路复用”、“流状态”、“流量控制”、“流优先级”、“HTTP/2扩展”介绍HTTP/2协议流相关知识。 </p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/4914cf75/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -349,7 +998,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/10/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/10/">10</a><span class="page-number current">11</span>
+    <a class="extend prev" rel="prev" href="/page/10/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/10/">10</a><span class="page-number current">11</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/12/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -415,7 +1064,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">120</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -460,7 +1109,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

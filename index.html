@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6e152957/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/1e2abc81/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/6e152957/" class="post-title-link" itemprop="url">Nacos14# 配置管理服务端流程</a>
+            <a href="/posts/1e2abc81/" class="post-title-link" itemprop="url">FA9# Service Mesh上线需解决的问题整理</a>
         </h2>
 
         <div class="post-meta">
@@ -208,14 +208,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-08-21 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-21T11:55:01+08:00">2021-08-21</time>
+              <time title="创建时间：2022-01-21 11:55:01" itemprop="dateCreated datePublished" datetime="2022-01-21T11:55:01+08:00">2022-01-21</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+                <time title="修改时间：2022-01-12 11:40:16" itemprop="dateModified" datetime="2022-01-12T11:40:16+08:00">2022-01-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -223,7 +223,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
                 </span>
             </span>
 
@@ -238,318 +238,25 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在上文分析中客户端会有长轮询，不断轮询阻塞队列「listenExecutebell」去比较客户端和服务端配置内容md5是否一致，不一致则通知我们注册的Listener完成回调。当阻塞队里有元素时会立即执行，没有元素等待5秒钟执行。那都在什么时候往队列中添加元素的从而触发立即执行。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="长轮询回顾"><a href="#长轮询回顾" class="headerlink" title="长轮询回顾"></a>长轮询回顾</h3><ul>
-<li>监听配置内容的变更通过长轮询实现</li>
-<li>具体实现为轮询阻塞队列</li>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>越来越多的公司开始研究Service Mesh，线上大批量应用的依旧很少，已经上线的很多问题解决的并不完美，为后面迭代和稳定性埋下隐患。目前来看整体开源生态成熟度还有需要完善，本文为笔者试水service mesh过程中发现的问题归纳整理。</p>
+<h1 id="一、目标与价值"><a href="#一、目标与价值" class="headerlink" title="一、目标与价值"></a>一、目标与价值</h1><p>业务侧只需要引入轻量级SDK，其他基础能力下沉到网格SideCar代理中，一个美好的愿望 “接管所有非业务关心的能力”。</p>
+<h3 id="1-业务赋能价值"><a href="#1-业务赋能价值" class="headerlink" title="1.业务赋能价值"></a>1.业务赋能价值</h3><ul>
+<li>提升开发效率：只需专注业务</li>
+<li>加速业务探索：快速迭代上线、快速验证</li>
+<li>代理升级无感知：不需要费力推动业务升级或者通过卡点升级引起的各类问题</li>
 </ul>
-<h3 id="阻塞队列添加时机"><a href="#阻塞队列添加时机" class="headerlink" title="阻塞队列添加时机"></a>阻塞队列添加时机</h3><ul>
-<li>客户端添加Listener时添加</li>
-<li>客户端删除Listener时添加</li>
-<li>服务端通知内容变更时添加</li>
-<li>建立gRPC连接时添加</li>
+<h3 id="2-运维提效价值"><a href="#2-运维提效价值" class="headerlink" title="2.运维提效价值"></a>2.运维提效价值</h3><ul>
+<li>治理体系统一：屏蔽不同语言体系治理的复杂性</li>
+<li>技术演进统一：不必关心版本碎片化问题，能力统一自住演进</li>
 </ul>
-<h3 id="服务端变更发布流程"><a href="#服务端变更发布流程" class="headerlink" title="服务端变更发布流程"></a>服务端变更发布流程</h3><ul>
-<li>通过配置中心发起变更请求</li>
-<li>配置变更内容被写入数据库</li>
-<li>向本节点连接的Client发送变更通知</li>
-<li>向集群中的其他节点发送变更通知</li>
-</ul>
-<h3 id="向Client发送变更通知"><a href="#向Client发送变更通知" class="headerlink" title="向Client发送变更通知"></a>向Client发送变更通知</h3><ul>
-<li>首先构建DumpTask</li>
-<li>处理DumpTask时发布ConfigDumpEvent事件</li>
-<li>处理ConfigDumpEvent时发布LocalDataChangeEvent事件</li>
-<li>处理LocalDataChangeEvent事件：@1 先从缓存中拿出注册Client列表 @2 根据client从缓存获取gRPC连接 @3 构建ConfigChangeNotifyRequest @4 通过gRPC向客户端发送变更通知</li>
-<li>客户端处理变更通知，客户端接到请求后向阻塞队列添加new Object元素，详细客户端的长轮询流程见上篇</li>
-</ul>
-<h3 id="向其他节点发送变更通知"><a href="#向其他节点发送变更通知" class="headerlink" title="向其他节点发送变更通知"></a>向其他节点发送变更通知</h3><ul>
-<li>通过gRPC向集群中其他节点发送变更通知</li>
-<li>集群节点收到变更通知后再下发给连接自己的Client</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/6e152957/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/11be6e51/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/11be6e51/" class="post-title-link" itemprop="url">Nacos13# 配置管理客户端流程</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-08-15 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-15T11:55:01+08:00">2021-08-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos注册中心的主要流程基本上撸完了，下面开始撸配置中心。本文从示例入手走查了客户端的初始化流程，Listener的注册逻辑和执行逻辑。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><ul>
-<li>通过示例构建ConfigService、注册了Listener分析其流程</li>
-</ul>
-<h3 id="Client初始化概览"><a href="#Client初始化概览" class="headerlink" title="Client初始化概览"></a>Client初始化概览</h3><ul>
-<li>支持多种获取server地址方式（本地、endpoint）</li>
-<li>支持多种namespace设置（本地、阿里云）</li>
-<li>支持超时时间、重试时间等参数设置</li>
-<li>支持用户名和密码验证</li>
-<li>长轮询会从BlockingQueue中获取元素，队列有元素立即执行executeConfigListen，队列无元素阻塞5秒钟执行executeConfigListen()</li>
-</ul>
-<h3 id="Listener注册逻辑"><a href="#Listener注册逻辑" class="headerlink" title="Listener注册逻辑"></a>Listener注册逻辑</h3><ul>
-<li>client添加Listener后会在cacheMap中缓存CacheData</li>
-<li>cacheMap中key由「dataId+group+tenant」拼接而成</li>
-<li>每个CacheData会绑定注册的Listener列表</li>
-<li>每个CacheData会绑定taskId，3000个不同的CacheData对应一个taskId</li>
-<li>设置isSyncWithServer=false表示 cache md5 data不是来自server同步</li>
-<li>BlockingQueue中添加new Object() 供长轮询判断立即执行使用</li>
-</ul>
-<h3 id="配置变更执行逻辑"><a href="#配置变更执行逻辑" class="headerlink" title="配置变更执行逻辑"></a>配置变更执行逻辑</h3><ul>
-<li>执行逻辑由executeConfigListen方法实现</li>
-<li>当CacheData从Server同步后，会校验md5是否变更了，变更则回调注册的Listener完成通知</li>
-<li>注册Listener后会构建与server的RPC通道rpcClient</li>
-<li>向server发起变更查询请求configChangeListenRequest</li>
-<li>Server端通过比较缓存的md5值，返回client变更的key列表</li>
-<li>Client通过变更的key列表向server发起配置查询请求ConfigQueryRequest</li>
-<li>获取变更内容，并回调注册的Listener完成通知</li>
-<li>回调注册的Listener是通过线程池异步执行Runnble Job实现的</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/11be6e51/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bef6941/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/bef6941/" class="post-title-link" itemprop="url">Nacos12# 随机权重负载均衡算法</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-08-10 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-10T11:55:01+08:00">2021-08-10</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos在Client选择节点时提供了一种基于权重的随机算法，通过源码分析掌握其实现原理，方便实战中加以运用。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><p>下面以图示的方式贯穿下随机权重负载均衡算法的流程：</p>
-<p><strong>节点列表</strong> </p>
-<p>假设注册了5个节点，每个节点的权重如下。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%A4%BA%E4%BE%8B%E6%B3%A8%E5%86%8C%E8%8A%82%E7%82%B9%E5%88%97%E8%A1%A8.png"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/bef6941/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/183278ff/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/183278ff/" class="post-title-link" itemprop="url">Nacos11# 图解|注册发现核心原理提点</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-28 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-28T11:55:01+08:00">2021-07-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>通过对Nacos注册与发现源码阅读，将其核心原理归纳提炼。包含：注册、发现、节点之间通信、健康检查类型。</p>
-<h1 id="服务注册原理"><a href="#服务注册原理" class="headerlink" title="服务注册原理"></a>服务注册原理</h1><p>当客户端发起注册时，注册原理逻辑见下图，进一步简化主要有：</p>
+<h1 id="二、组织形态整合"><a href="#二、组织形态整合" class="headerlink" title="二、组织形态整合"></a>二、组织形态整合</h1><p>如果将Service Mesh作为公司战略推动，Service Mesh依赖Kubernate底座，相关人员最好整合到一个部门，统一运维和开发。</p>
 <ul>
-<li>将新注册的实例信息推送给订阅该服务的订阅者</li>
-<li>将新注册的实例信息增量同步给集群中的其他节点</li>
+<li> 将Service Mesh团队、Serverless团队、容器团队整合到一个部门负责云原生体系建设</li>
+<li> 其他部门配合改造和对接</li>
 </ul>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210716135220.png"></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/183278ff/#more" rel="contents">
+              <a class="btn" href="/posts/1e2abc81/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -573,7 +280,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/63d0eab2/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/21dfde87/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -587,7 +294,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/63d0eab2/" class="post-title-link" itemprop="url">Netty17# 实战|Young GC时间过长导致RPC超时</a>
+            <a href="/posts/21dfde87/" class="post-title-link" itemprop="url">FA7# 异地多活实践与设计思考点归纳</a>
         </h2>
 
         <div class="post-meta">
@@ -597,14 +304,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-07-17 18:25:01" itemprop="dateCreated datePublished" datetime="2021-07-17T18:25:01+08:00">2021-07-17</time>
+              <time title="创建时间：2022-01-14 11:55:01" itemprop="dateCreated datePublished" datetime="2022-01-14T11:55:01+08:00">2022-01-14</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+                <time title="修改时间：2022-01-12 11:39:51" itemprop="dateModified" datetime="2022-01-12T11:39:51+08:00">2022-01-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -612,7 +319,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
                 </span>
             </span>
 
@@ -627,21 +334,76 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="背景介绍"><a href="#背景介绍" class="headerlink" title="背景介绍"></a>背景介绍</h1><p>前几天一个业务负责的同事找老梁，说每次发布SOA拉入时就有少量报错。</p>
-<p>报错的集中在RPC设置超时时间比较短的上游服务，比如设置300ms，发布完就好了。</p>
-<p>我说最近没有发布新版本，应该不是中间件变更引起的。</p>
-<p>同事说这问题存在好几个月了，他们一直想抓原因，一直没找到。</p>
-<p>你咋早点不反馈到我这呢？就自己这么琢磨了几个月，够执着的。</p>
-<p>老梁让他组织个会议，拉了小组两个同事一起参与下，聚焦复盘下问题。</p>
-<p>忘了说了，我们SOA框架使用gRPC通信，gRPC底层使用Netty。</p>
-<h1 id="问题复盘"><a href="#问题复盘" class="headerlink" title="问题复盘"></a>问题复盘</h1><p><strong>GC 日志</strong> </p>
-<p>从GC日志现象来看，在第4次和第5次Young GC的时间过长，线上达到了900ms。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/netty%E5%A4%8D%E7%9B%9801.jpg"></p>
-<p>在测试环境复现，第4次Young GC的时间也超过500ms。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/netty%E5%A4%8D%E7%9B%9802.jpg"></p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在异地多活项目整体推过程中的一些注意事项和设计点归纳和整理，抛砖引玉，其中一些点还有待深入探讨和优化。</p>
+<h1 id="一、指导事项归纳"><a href="#一、指导事项归纳" class="headerlink" title="一、指导事项归纳"></a>一、指导事项归纳</h1><h4 id="1-多活原因归纳"><a href="#1-多活原因归纳" class="headerlink" title="1.多活原因归纳"></a>1.多活原因归纳</h4><p>推动多活的原因大体可归纳为以下三种。</p>
+<ul>
+<li>高可用架构部署</li>
+<li>业务整体的容灾</li>
+<li>单机房容量限制</li>
+</ul>
+<h4 id="2-多活指导归纳"><a href="#2-多活指导归纳" class="headerlink" title="2.多活指导归纳"></a>2.多活指导归纳</h4><p>多活牵扯公司业务方方面面，整体来讲业务改造和基础设施中间件改造两大块。</p>
+<ul>
+<li>核心链路自包含可逻辑分片</li>
+<li>调用尽可能收敛在本单元</li>
+<li>流量分片逻辑尽可能均衡</li>
+<li>中间件多活架构改造升级</li>
+<li>业务改造支持多活方案</li>
+<li>业务场景验证中间件能力</li>
+</ul>
+<h4 id="3-推动事项归纳"><a href="#3-推动事项归纳" class="headerlink" title="3.推动事项归纳"></a>3.推动事项归纳</h4><p>顺利推进多活事项是公司重要战略，需要统一思想，将多活项目当成最高优先级推进。</p>
+<ul>
+<li><p>统一思想认识自觉对齐到公司级战略项目</p>
+</li>
+<li><p>设置总架构师级别建议对齐部门负责人，对整体架构方案和结果负责</p>
+<p>例如：总架构师拥有对各个部门牵头同学拥有不低于60%的绩效考核权</p>
+</li>
+<li><p>部门负责人作为该部门领导需要全力推动</p>
+</li>
+<li><p>每个业务线设置接口人并负责该业务线所有对接和推动事务，对本业务线或者部门的推动结果负责</p>
+<p>例如：业务线接口人拥本业务参与多活事项同学不低于60%的绩效考核权</p>
+</li>
+<li><p>项目架构师与各业务负责人周会例会及时跟进问题和进度</p>
+</li>
+<li><p>各个牵头人梳理的问题对外沟通前，先部门内部对齐，提升沟通效率</p>
+</li>
+</ul>
+<h4 id="4-抓核心链路"><a href="#4-抓核心链路" class="headerlink" title="4.抓核心链路"></a>4.抓核心链路</h4><p>先保证核心链路的多活，避免面面俱到严重拖累进度，例如：</p>
+<ul>
+<li>优惠券库存类扣减先中心机房统一扣减</li>
+<li>管理运营类等无实时要求的先不做多活</li>
+<li>流量切换过程中容忍分钟级不可用，切换结束后恢复</li>
+</ul>
+<h1 id="二、多活规则与流量选择"><a href="#二、多活规则与流量选择" class="headerlink" title="二、多活规则与流量选择"></a>二、多活规则与流量选择</h1><h3 id="1-路由因子选择与映射"><a href="#1-路由因子选择与映射" class="headerlink" title="1.路由因子选择与映射"></a>1.路由因子选择与映射</h3><p><strong>路由因子选择：</strong> 需要根据公司业务场景选择，常见的路由因子有地域、用户ID。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211228101124.png"></p>
+<p><strong>路由因子与机房映射：</strong></p>
+<p>地域因子：将地域编号与机房建立映射，例如：001-&gt;unit-a</p>
+<p>用户因子：将UID与机房建立映射，例如：123456与机房编号哈希后映射到unit-a</p>
+<h3 id="2-请求分配正确机房"><a href="#2-请求分配正确机房" class="headerlink" title="2.请求分配正确机房"></a>2.请求分配正确机房</h3><p>一个请求有了多活规则后如何将请求路由到正确机房，归纳了以下几种方式：</p>
+<ul>
+<li>终端服务通过多域名切换：将请求直接路由到正确机房</li>
+<li>在反向代理层转发：转发属于异地机房流量</li>
+<li>在网关层转发：转发属于异地机房流量</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%A4%9A%E6%B4%BB%E8%A7%84%E5%88%99%E7%AE%A1%E6%8E%A7.png"></p>
+<h3 id="3-多活管控中心服务"><a href="#3-多活管控中心服务" class="headerlink" title="3.多活管控中心服务"></a>3.多活管控中心服务</h3><ul>
+<li>多活部署通过双向同步或者双写方式保证数据的一致性</li>
+<li>提供SDK和服务接口供中间件或者服务服务映射规则</li>
+<li>提供流量切换的整个闭环流程</li>
+</ul>
+<h1 id="三、RPC跨机房调用能力"><a href="#三、RPC跨机房调用能力" class="headerlink" title="三、RPC跨机房调用能力"></a>三、RPC跨机房调用能力</h1><h3 id="1-注册中心架构图"><a href="#1-注册中心架构图" class="headerlink" title="1.注册中心架构图"></a>1.注册中心架构图</h3><ul>
+<li>节点注册时需要将机房信息一并注册</li>
+<li>注册中心提供跨机房双向同步能力</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%B3%A8%E5%86%8C%E6%95%B0%E6%8D%AE%E5%8F%8C%E5%90%91%E5%90%8C%E6%AD%A52.png"></p>
+<h3 id="2-RPC框架跨机房调用"><a href="#2-RPC框架跨机房调用" class="headerlink" title="2.RPC框架跨机房调用"></a>2.RPC框架跨机房调用</h3><ul>
+<li>默认本机房调用策略</li>
+<li>提供自定义路由功能供业务选择是否跨机房调用</li>
+<li>需要注意新老版本以及发布时是否存在流量倾斜问题</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/RPC%E8%B7%A8%E6%9C%BA%E6%88%BF%E8%B0%83%E7%94%A8%E6%89%A9%E5%B1%95.png"></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/63d0eab2/#more" rel="contents">
+              <a class="btn" href="/posts/21dfde87/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -665,7 +427,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fb19022a/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9bc9bb5b/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -679,7 +441,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/fb19022a/" class="post-title-link" itemprop="url">Nacos10# 健康检查类型与场景</a>
+            <a href="/posts/9bc9bb5b/" class="post-title-link" itemprop="url">FA8# 流量录制回放功能设计点归纳</a>
         </h2>
 
         <div class="post-meta">
@@ -689,14 +451,626 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-07-08 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-08T11:55:01+08:00">2021-07-08</time>
+              <time title="创建时间：2022-01-14 11:55:01" itemprop="dateCreated datePublished" datetime="2022-01-14T11:55:01+08:00">2022-01-14</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+                <time title="修改时间：2022-01-12 11:40:05" itemprop="dateModified" datetime="2022-01-12T11:40:05+08:00">2022-01-12</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本文对流量录制和回放常见的方案、用途以及设计原理做个归纳整理。</p>
+<h1 id="一、解决的问题"><a href="#一、解决的问题" class="headerlink" title="一、解决的问题"></a>一、解决的问题</h1><h3 id="1-回归测试覆盖率"><a href="#1-回归测试覆盖率" class="headerlink" title="1.回归测试覆盖率"></a>1.回归测试覆盖率</h3><p> 测试用例不足或者遗漏难以覆盖所有场景，导致回归测试费时费力，线上稳定存在隐患，通过真实流量录制在回归测试时进行覆盖。</p>
+<ul>
+<li>回归特定接口和链路</li>
+<li>回归特定业务场景</li>
+<li>全量回归特定业务线</li>
+</ul>
+<h3 id="2-与全链路压测闭环"><a href="#2-与全链路压测闭环" class="headerlink" title="2.与全链路压测闭环"></a>2.与全链路压测闭环</h3><p> 解决全链路压测的数据准备问题，通过流量录制和回放系统与压测系统打通，形成从流量录制到压测闭环。</p>
+<ul>
+<li>定向录制某个链路接口线上流量</li>
+<li>对录制流量进行压测打标</li>
+<li>增压发起全链路压测</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%BD%95%E5%88%B6%E6%B5%81%E9%87%8F%E4%B8%8E%E5%8E%8B%E6%B5%8B%E6%B5%81%E9%87%8F%E9%97%AD%E7%8E%AF.png"></p>
+<h3 id="3-数据的其他用处"><a href="#3-数据的其他用处" class="headerlink" title="3.数据的其他用处"></a>3.数据的其他用处</h3><ul>
+<li>抽取线上流量测试环境调试复现</li>
+<li>其他用到线上请求数据的地方</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/9bc9bb5b/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/632ae67a/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/632ae67a/" class="post-title-link" itemprop="url">FA6# 全链路观测平台设计点归纳</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-12-26 11:55:01" itemprop="dateCreated datePublished" datetime="2021-12-26T11:55:01+08:00">2021-12-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-12 11:39:37" itemprop="dateModified" datetime="2022-01-12T11:39:37+08:00">2022-01-12</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>全链路观测平台设计离不开基础数据的采集、提炼和呈现。本文就基础数据日志、指标、链路的采集原理进行梳理，如何将其关联最终提供辅助决策价值提点归纳。</p>
+<h1 id="一、数据采集"><a href="#一、数据采集" class="headerlink" title="一、数据采集"></a>一、数据采集</h1><h3 id="1-日志架构简图"><a href="#1-日志架构简图" class="headerlink" title="1.日志架构简图"></a>1.日志架构简图</h3><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84.png"></p>
+<p><strong>统一日志：</strong> 标准化日志格式、链路ID透传、自定义检索标识</p>
+<p><strong>日志类型：</strong> 应用日志、中间件日志（RPC框架、消息、缓存、存储等）、网关日志、终端日志</p>
+<p><strong>收集策略：</strong> 例如根据IP、APP、文件等灵活管控，不同日志分类管理</p>
+<p><strong>数据清洗：</strong> 清洗重复非标准数据、重复数据、聚合高质量数据</p>
+<p><strong>存储数据：</strong> 区分哪些数据适合ES、哪些数据适合ClickHouse、哪些数据适合时序库</p>
+<p><strong>性能成本：</strong> 延迟问题、查询性能、存储成本</p>
+<p><strong>小结：</strong> 通过标准化的日志格式，多样化的收集策略，清洗成高质量数据为根因定位提供基础保障。</p>
+<h3 id="2-链路架构简图"><a href="#2-链路架构简图" class="headerlink" title="2.链路架构简图"></a>2.链路架构简图</h3><p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E9%93%BE%E8%B7%AF%E6%9E%B6%E6%9E%84%E7%AE%80%E5%9B%BE.png"></p>
+<p><strong>采样策略</strong> </p>
+<ul>
+<li>固定采样率：保持固定采样的频率</li>
+<li>最低采样率：过低流量保证最低的采样率</li>
+<li>自适应采样率：根据流量自动适应采样率</li>
+<li>全部采样率：对应特高优先流量100%采样</li>
+<li>染色采样：对于染色打标的请求100%采样</li>
+<li>应急采样：请求传递过程中检测到错误或者异常，强制将该请求采样</li>
+</ul>
+<p><strong>动态设置</strong> </p>
+<ul>
+<li>采样率采样策略动态调整</li>
+<li>自杀熔断保护 不允许过度占用资源影响业务</li>
+</ul>
+<p><strong>小结：</strong> 链路采集和分析关键的点在于如何提供灵活的采样策略，将核心链路、异常链路能实现高质量采集。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/632ae67a/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6e3c49d4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/6e3c49d4/" class="post-title-link" itemprop="url">FA5# 网关拓扑结构与功能设计归纳</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-12-26 11:55:01" itemprop="dateCreated datePublished" datetime="2021-12-26T11:55:01+08:00">2021-12-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-12-21 14:06:13" itemprop="dateModified" datetime="2021-12-21T14:06:13+08:00">2021-12-21</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="一、网络拓扑与流量走向"><a href="#一、网络拓扑与流量走向" class="headerlink" title="一、网络拓扑与流量走向"></a>一、网络拓扑与流量走向</h1><h3 id="1-网络拓扑架构"><a href="#1-网络拓扑架构" class="headerlink" title="1.网络拓扑架构"></a>1.网络拓扑架构</h3><p>下面是一个比较通用的南北流量网关部署架构，各个层次如下：</p>
+<ul>
+<li>终端服务层：公司提供的各种设备、APP等</li>
+<li>四层负载均衡集群：SLB/LVS等</li>
+<li>七层负载均衡集群：Nginx等，在这一层可以植入安全插件WAF等</li>
+<li>网关层：负责终端与内部服务通信协议转换、通知推送等</li>
+<li>后端服务：业务微服务应用</li>
+</ul>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%BD%91%E5%85%B3%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84%E5%9B%BE.png"></p>
+<h3 id="2-流量走向"><a href="#2-流量走向" class="headerlink" title="2.流量走向"></a>2.流量走向</h3><p><strong>从北向南</strong> </p>
+<ul>
+<li>终端通过HTTP/TPC/WebSocket等协议发送请求，网关接受请求解析数据包</li>
+<li>解析数据包通常会使用秘钥或者秘钥池</li>
+<li>解密后组装数据格式抽取映射标识（指令码或者action）</li>
+<li>根据业务配置的映射关系通过标识查询对应的后端服务接口与协议</li>
+<li>向后端微服务发起调用</li>
+</ul>
+<p><strong>从南到北</strong> </p>
+<ul>
+<li>业务处理完逻辑后向网关发起回调</li>
+<li>网关先查找该请求的长连接在哪台网关机器上</li>
+<li>找到与终端的长连接将回调的内容完成推送</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/6e3c49d4/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd2871a4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/dd2871a4/" class="post-title-link" itemprop="url">gRPC12# 协议错误问题定位</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-12-05 11:55:01 / 修改时间：20:52:11" itemprop="dateCreated datePublished" datetime="2021-12-05T11:55:01+08:00">2021-12-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/gRPC/" itemprop="url" rel="index"><span itemprop="name">gRPC</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <div id="vip-container"><h1 id="错误日志一"><a href="#错误日志一" class="headerlink" title="错误日志一"></a>错误日志一</h1><h3 id="日志分析"><a href="#日志分析" class="headerlink" title="日志分析"></a>日志分析</h3><p>收到业务同学反馈发现有SOA错误，但是对业务没有什么影响，错误内容如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">io.grpc.StatusRuntimeException: INTERNAL: HTTP&#x2F;2 error code: PROTOCOL_ERROR</span><br><span class="line">Received Goaway</span><br><span class="line">Stream 99 does not exist</span><br><span class="line">  at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)</span><br><span class="line">  at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)</span><br><span class="line">  at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)</span><br><span class="line">  at com.hellobike.soa.protobuf.internal.SoaInvokerServiceGrpc$SoaInvokerServiceBlockingStub.call(SoaInvokerServiceGrpc.java:222)</span><br><span class="line">  at com.hellobike.soa.rpc.invoker.v1.block.BlockingGrpcClientInvoker.invokeInternal(BlockingGrpcClientInvoker.java:31)</span><br><span class="line">  at com.hellobike.soa.rpc.invoker.v1.block.AbstractBlockingGrpcClientInvoker.doInvoke(AbstractBlockingGrpcClientInvoker.java:42)</span><br><span class="line">  at com.hellobike.soa.core.client.invoke.ClientInvoker.lambda$invoke$0(ClientInvoker.java:37)</span><br><span class="line">  at com.hellobike.otter.context.Context.supplier(Context.java:623)</span><br><span class="line">  at com.hellobike.soa.core.client.invoke.ClientInvoker.invoke(ClientInvoker.java:37)</span><br><span class="line">  at com.hellobike.soa.core.invoke.filter.FilterInvoker.invoke(FilterInvoker.java:42)</span><br><span class="line">  at com.hellobike.soa.core.client.filter.RouteFilter.invoke(RouteFilter.java:32)</span><br><span class="line">  at com.hellobike.soa.core.invoke.filter.FilterInvoker.invoke(FilterInvoker.java:43)</span><br><span class="line">  at com.hellobike.soa.core.client.filter.RateLimitExceptionFilter.invoke(RateLimitExceptionFilter.java:26)</span><br><span class="line">  at com.hellobike.soa.core.invoke.filter.FilterInvoker.invoke(FilterInvoker.java:43)</span><br><span class="line">  at com.hellobike.soa.core.client.filter.SentinelFilter.invoke(SentinelFilter.java:49)</span><br><span class="line">  at com.hellobike.soa.core.invoke.filter.FilterInvoker.invoke(FilterInvoker.java:43)</span><br><span class="line">  at com.hellobike.soa.core.client.filter.ServiceDowngradeFilter.invoke(ServiceDowngradeFilter.java:31)</span><br><span class="line">  at com.hellobike.soa.core.invoke.filter.FilterInvoker.invoke(FilterInvoker.java:43)</span><br><span class="line">  at com.hellobike.soa.core.invoke.filter.FilterChain.invoke(FilterChain.java:64)</span><br><span class="line">  at com.hellobike.soa.core.proxy.jdk.JDKProxyHandler.invokeInternal(JDKProxyHandler.java:73)</span><br><span class="line">  at com.hellobike.soa.core.proxy.jdk.JDKProxyHandler.invoke(JDKProxyHandler.java:44)</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Goaway帧含义</strong> </p>
+<p>先看下这个帧的含义：用于关闭连接或者发出错误， 端点必须将带有0x0以外的流标识符的GOAWAY帧视为类型为PROTOCOL_ERROR的连接错误</p>
+<p>Goway帧抓包格式如下图所示：</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211126195234.png"></p>
+<p>小结：现象分析，该服务未客户端收到的HTTP/2二进制帧为Goaway，并抛出协议错误PROTOCOL_ERROR以及Stream 99 does not exist。</p>
+<h3 id="源码跟踪"><a href="#源码跟踪" class="headerlink" title="源码跟踪"></a>源码跟踪</h3><p>先跟踪Stream 99 does not exist，在netty包DefaultHttp2ConnectionDecoder类中找到：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">verifyStreamMayHaveExisted</span><span class="params">(<span class="keyword">int</span> streamId)</span> <span class="keyword">throws</span> Http2Exception </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!connection.streamMayHaveExisted(streamId)) &#123;</span><br><span class="line">    <span class="keyword">throw</span> connectionError(PROTOCOL_ERROR, <span class="string">&quot;Stream %d does not exist&quot;</span>, streamId);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>跟下streamMayHaveExisted方法逻辑：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">streamMayHaveExisted</span><span class="params">(<span class="keyword">int</span> streamId)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> remoteEndpoint.mayHaveCreatedStream(streamId) || localEndpoint.mayHaveCreatedStream(streamId);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 判断服务端帧是否为合法帧：1.是否大于0 2.是否为服务端帧（2的倍数）3.是否为合法区间的帧 </span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">mayHaveCreatedStream</span><span class="params">(<span class="keyword">int</span> streamId)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> isValidStreamId(streamId) &amp;&amp; streamId &lt;= lastStreamCreated();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在HTTP/2中客户端发起的StreamID必须是奇数，服务器发起的StreamID必须是偶数</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isValidStreamId</span><span class="params">(<span class="keyword">int</span> streamId)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> streamId &gt; <span class="number">0</span> &amp;&amp; server == ((streamId &amp; <span class="number">1</span>) == <span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 计算服务端合法帧区间</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">lastStreamCreated</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> nextStreamIdToCreate &gt; <span class="number">1</span> ? nextStreamIdToCreate - <span class="number">2</span> : <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>看下哪里调用了streamMayHaveExisted方法，在shouldIgnoreHeadersOrDataFrame方法进行调用。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">shouldIgnoreHeadersOrDataFrame</span><span class="params">(ChannelHandlerContext ctx, <span class="keyword">int</span> streamId, Http2Stream stream,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                String frameName)</span> <span class="keyword">throws</span> Http2Exception </span>&#123;</span><br><span class="line">   <span class="keyword">if</span> (stream == <span class="keyword">null</span>) &#123;</span><br><span class="line">     <span class="keyword">if</span> (streamCreatedAfterGoAwaySent(streamId)) &#123;</span><br><span class="line">       logger.info(<span class="string">&quot;&#123;&#125; ignoring &#123;&#125; frame for stream &#123;&#125;. Stream sent after GOAWAY sent&quot;</span>,</span><br><span class="line">                   ctx.channel(), frameName, streamId);</span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     <span class="comment">// Make sure it&#x27;s not an out-of-order frame, like a rogue DATA frame, for a stream that could</span></span><br><span class="line">     <span class="comment">// never have existed.</span></span><br><span class="line">     verifyStreamMayHaveExisted(streamId);</span><br><span class="line">		<span class="comment">// ...</span></span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<p>调用shouldIgnoreHeadersOrDataFrame的地方有onDataRead和onHeadersRead方法，分别解析请求的header和Data部分。</p>
+<p><strong>Data解析</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Handles all inbound frames from the network.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FrameReadListener</span> <span class="keyword">implements</span> <span class="title">Http2FrameListener</span> </span>&#123;</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">onDataRead</span><span class="params">(<span class="keyword">final</span> ChannelHandlerContext ctx, <span class="keyword">int</span> streamId, ByteBuf data, <span class="keyword">int</span> padding,</span></span></span><br><span class="line"><span class="function"><span class="params">                        <span class="keyword">boolean</span> endOfStream)</span> <span class="keyword">throws</span> Http2Exception </span>&#123;</span><br><span class="line">    Http2Stream stream = connection.stream(streamId);</span><br><span class="line">    Http2LocalFlowController flowController = flowController();</span><br><span class="line">    <span class="keyword">int</span> bytesToReturn = data.readableBytes() + padding;</span><br><span class="line">		</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">boolean</span> shouldIgnore;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">// 调用点</span></span><br><span class="line">      shouldIgnore = shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, <span class="string">&quot;DATA&quot;</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Http2Exception e) &#123;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">   <span class="comment">// ...  </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Header解析</strong> </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onHeadersRead</span><span class="params">(ChannelHandlerContext ctx, <span class="keyword">int</span> streamId, Http2Headers headers, <span class="keyword">int</span> streamDependency,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">short</span> weight, <span class="keyword">boolean</span> exclusive, <span class="keyword">int</span> padding, <span class="keyword">boolean</span> endOfStream)</span> <span class="keyword">throws</span> Http2Exception </span>&#123;</span><br><span class="line">  Http2Stream stream = connection.stream(streamId);</span><br><span class="line">  <span class="keyword">boolean</span> allowHalfClosedRemote = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">if</span> (stream == <span class="keyword">null</span> &amp;&amp; !connection.streamMayHaveExisted(streamId)) &#123;</span><br><span class="line">    <span class="comment">// 创建服务端Stream</span></span><br><span class="line">    stream = connection.remote().createStream(streamId, endOfStream);</span><br><span class="line">    <span class="comment">// Allow the state to be HALF_CLOSE_REMOTE if we&#x27;re creating it in that state.</span></span><br><span class="line">    allowHalfClosedRemote = stream.state() == HALF_CLOSED_REMOTE;</span><br><span class="line">  &#125;</span><br><span class="line">	<span class="comment">// 调用点</span></span><br><span class="line">  <span class="keyword">if</span> (shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, <span class="string">&quot;HEADERS&quot;</span>)) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">incrementExpectedStreamId</span><span class="params">(<span class="keyword">int</span> streamId)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">if</span> (streamId &gt; nextReservationStreamId &amp;&amp; nextReservationStreamId &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">     nextReservationStreamId = streamId;</span><br><span class="line">   &#125;</span><br><span class="line">   nextStreamIdToCreate = streamId + <span class="number">2</span>; <span class="comment">// 服务端帧偶数递增数</span></span><br><span class="line">   ++numStreams;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong></p>
+<p>1.代码调用链条如下<br>  onHeadersRead/onDataRead-&gt;shouldIgnoreHeadersOrDataFrame-&gt;streamMayHaveExisted-&gt;mayHaveCreatedStream-&gt;lastStreamCreated</p>
+<p>2.从代码来看，在解析Header或者Data部分出现帧乱序，当前帧ID超过下一个帧预期的大小</p>
+<p>3.疑问到底是解析header出现问题还是解析data？</p>
+<h1 id="错误日志二"><a href="#错误日志二" class="headerlink" title="错误日志二"></a>错误日志二</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">Caused by: io.grpc.netty.shaded.io.netty.handler.codec.http2.Http2Exception$HeaderListSizeException: Header size exceeded max allowed size (8192)</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.Http2Exception.headerListSizeError(Http2Exception.java:189) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded(Http2CodecUtil.java:233) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.HpackEncoder.encodeHeadersEnforceMaxHeaderListSize(HpackEncoder.java:133) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.HpackEncoder.encodeHeaders(HpackEncoder.java:117) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.DefaultHttp2HeadersEncoder.encodeHeaders(DefaultHttp2HeadersEncoder.java:74) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.DefaultHttp2FrameWriter.writeHeadersInternal(DefaultHttp2FrameWriter.java:501) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.DefaultHttp2FrameWriter.writeHeaders(DefaultHttp2FrameWriter.java:268) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.Http2OutboundFrameLogger.writeHeaders(Http2OutboundFrameLogger.java:60) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.DecoratingHttp2FrameWriter.writeHeaders(DecoratingHttp2FrameWriter.java:53) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.grpc.netty.NettyClientHandler$PingCountingFrameWriter.writeHeaders(NettyClientHandler.java:966) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br><span class="line">at io.grpc.netty.shaded.io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder.sendHeaders(DefaultHttp2ConnectionEncoder.java:180) ~[grpc-netty-shaded-1.33.1.jar:1.33.1]</span><br></pre></td></tr></table></figure>
+
+<p>这个错误日志很明显，Header大小超过8KB，Header size exceeded max allowed size (8192)，这个大小时gPRC设定的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">private int maxHeaderListSize &#x3D; GrpcUtil.DEFAULT_MAX_HEADER_LIST_SIZE;</span><br><span class="line">public static final int DEFAULT_MAX_HEADER_LIST_SIZE &#x3D; 8192;</span><br></pre></td></tr></table></figure>
+
+<p><strong>小结：</strong> 该错误为gRPC设置了Header大小为8KB，超过该大小具体错误是Netty抛出的。</p>
+<h3 id="源码跟踪-1"><a href="#源码跟踪-1" class="headerlink" title="源码跟踪"></a>源码跟踪</h3><p>下面是报错的地方</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">headerListSizeExceeded</span><span class="params">(<span class="keyword">int</span> streamId, <span class="keyword">long</span> maxHeaderListSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                                              <span class="keyword">boolean</span> onDecode)</span> <span class="keyword">throws</span> Http2Exception </span>&#123;</span><br><span class="line">        <span class="keyword">throw</span> headerListSizeError(streamId, PROTOCOL_ERROR, onDecode, <span class="string">&quot;Header size exceeded max &quot;</span> +</span><br><span class="line">                                  <span class="string">&quot;allowed size (%d)&quot;</span>, maxHeaderListSize);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后跟踪写入header时进行的校验</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function"><span class="keyword">public</span> ChannelFuture <span class="title">writeHeaders</span><span class="params">(ChannelHandlerContext ctx, <span class="keyword">int</span> streamId, Http2Headers headers, <span class="keyword">int</span> padding,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">boolean</span> endStream, ChannelPromise promise)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> delegate.writeHeaders(ctx, streamId, headers, padding, endStream, promise);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="根因截图"><a href="#根因截图" class="headerlink" title="根因截图"></a>根因截图</h1><p>通过解析内容发现在gRPC header部分传入了大的链路ID导致，需要重构该链路生产方案。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211129201438.png"></p>
+<p><strong>总结：</strong> 在gRPC通信时由于前面一条消息header头过大抛出异常Header size exceeded max allowed size (8192)，导致后续帧发生乱序。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fc42a2a8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/fc42a2a8/" class="post-title-link" itemprop="url">MQ46# 实战|RocketMQ分区阻塞应急处理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-11-21 20:55:01 / 修改时间：21:53:24" itemprop="dateCreated datePublished" datetime="2021-11-21T20:55:01+08:00">2021-11-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="现象反馈"><a href="#现象反馈" class="headerlink" title="现象反馈"></a>现象反馈</h1><p>同事发现一个主题的某个分区卡主不再消费，如下图所示，通常这种情况是客户端消费线程阻塞造成的。而这次确不是，而且该现象还是头一次遇到，邪乎。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211121212303.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/fc42a2a8/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/7194d369/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/7194d369/" class="post-title-link" itemprop="url">gRPC11# 超时问题定位</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-11-14 11:55:01 / 修改时间：21:21:04" itemprop="dateCreated datePublished" datetime="2021-11-14T11:55:01+08:00">2021-11-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/gRPC/" itemprop="url" rel="index"><span itemprop="name">gRPC</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <div id="vip-container"><p>客户端AppTaxiNormalService调用服务Appxxx发生超时，长达50秒。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104110315.png"></p>
+<p>客户端等待中取消请求，发生调用时间为：2021-11-02 22:11:59.148</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104110454.png"></p>
+<p>该服务基本上在同一时间段发起向下游的服务均发生超时。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104113927.png"></p>
+<p>队列显示瞬间增加很多任务</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104114455.png"></p>
+<p>磁盘IO和CPU都有上升</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104145733.png"></p>
+<p>线程dump情况，通信线程调用到了SynchronizationContext，底层的work通信线程怎么调用到了获取节点的业务方法去了。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104161804.png"></p>
+<p>代码中有使用SynchronizationContext</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104163317.png"></p>
+<p>SynchronizationContext使用的queue是ConcurrentLinkedQueue队列，被单线程串行执行。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20211104172746.png"></p>
+<p>再回到上面的线程栈，业务节点发现事件和gRPC底层通信共用了SynchronizationContext造成阻塞，和线程错乱执行。</p>
+</div>
+
+			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
+			<script>
+			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
+			if (!isMobile) {
+			    var btw = new BTWPlugin();
+			    btw.init({
+			        "id": "vip-container",
+			        "blogId": "19728-1607829271089-768",
+			        "name": "瓜农老梁",
+			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
+			        "keyword": "more"
+			    });
+			}
+			</script>
+		
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bb504acf/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/bb504acf/" class="post-title-link" itemprop="url">Nacos17# NacosSync双向复制源码分析</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-09-02 11:55:01" itemprop="dateCreated datePublished" datetime="2021-09-02T11:55:01+08:00">2021-09-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-12 11:47:20" itemprop="dateModified" datetime="2022-01-12T11:47:20+08:00">2022-01-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -719,28 +1093,28 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos支持众多健康检查类型，心跳、HTTP、TCP、MySQL等类型，这些都作用于什么场景？他们又是如何事项的呢？本文就撸一撸这个。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="临时节点续约"><a href="#临时节点续约" class="headerlink" title="临时节点续约"></a>临时节点续约</h3><ul>
-<li>临时节点续约通过gRPC连接保鲜实现</li>
-<li>执行频率5秒一次</li>
-<li>检查结果健康刷新保鲜时间</li>
-<li>检查结果不可用标记节点不健康</li>
-<li>当节点不健康时重新连接时会从server列表选择下一个节点连接</li>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>通过开源同步工具NacosSync的分析，对我们实现自定义的同步工具提供参考。文本就同步任务分发与Nacos集群之间、从zk到Nacos的同步源码做个分析。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="任务和配置入库"><a href="#任务和配置入库" class="headerlink" title="任务和配置入库"></a>任务和配置入库</h3><ul>
+<li>集群配置入库</li>
+<li>同步任务入库</li>
 </ul>
-<h3 id="持久节点心跳检测"><a href="#持久节点心跳检测" class="headerlink" title="持久节点心跳检测"></a>持久节点心跳检测</h3><ul>
-<li>心跳执行器通过每隔五秒中向Nacos Server发起HTTP请求</li>
-<li>如果返回的server not found会向Nacos Server发起注册请求重新注册</li>
+<h3 id="同步任务分发"><a href="#同步任务分发" class="headerlink" title="同步任务分发"></a>同步任务分发</h3><ul>
+<li>每三秒调度一次任务列表</li>
+<li>新增任务发布同步任务事件SyncTaskEvent并由listenerSyncTaskEvent处理</li>
+<li>删除任务发布删除任务事件DeleteTaskEvent并由listenerDeleteTaskEvent处理</li>
+<li>任务的发布和订阅使用Guava的EventBus</li>
 </ul>
-<h3 id="持久节点探活"><a href="#持久节点探活" class="headerlink" title="持久节点探活"></a>持久节点探活</h3><ul>
-<li>Nacos探活只有在持久节点注册时才会支持</li>
-<li>探活支持HTTP、TCP、Mysql三种探活类型</li>
-<li>HTTP通过检测返回200状态码标记是否健康</li>
-<li>TPC通过Channel连接方式标记是否健康</li>
-<li>Mysql则保证当前节点为主节点，可用于主从切换场景</li>
+<h3 id="Nacos集群之间同步逻辑"><a href="#Nacos集群之间同步逻辑" class="headerlink" title="Nacos集群之间同步逻辑"></a>Nacos集群之间同步逻辑</h3><ul>
+<li>两个Nacos集群之间进行同步，同步任务在Service维度（AppId）建立</li>
+<li>对源集群注册监听获取注册节点列表，通过剔除无效节点后，将新的节点注册到目标集群</li>
+</ul>
+<h3 id="从zk集群同步到Nacos集群"><a href="#从zk集群同步到Nacos集群" class="headerlink" title="从zk集群同步到Nacos集群"></a>从zk集群同步到Nacos集群</h3><ul>
+<li>NacosSync从zk集群同步到Nacos只支持dubbo路径</li>
+<li>第一次先同步所有节点过去，再监听源集群路径变化，同步到目标集群</li>
 </ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/fb19022a/#more" rel="contents">
+              <a class="btn" href="/posts/bb504acf/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -764,7 +1138,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/4951a8cc/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/38b1b5b0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -778,7 +1152,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/4951a8cc/" class="post-title-link" itemprop="url">SK9# 公司的军规</a>
+            <a href="/posts/38b1b5b0/" class="post-title-link" itemprop="url">Nacos16# NacosSync双向复制使用指南</a>
         </h2>
 
         <div class="post-meta">
@@ -788,116 +1162,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-07-04 22:55:01" itemprop="dateCreated datePublished" datetime="2021-07-04T22:55:01+08:00">2021-07-04</time>
+              <time title="创建时间：2021-08-26 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-26T11:55:01+08:00">2021-08-26</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>大家好，我是老梁，一个想分享点干货的家伙。</p>
-<p>最近天天喝花枸杞决明子茶，有用没用的权当白开水喝着。</p>
-<p>老梁坐电脑前跟大伙聊聊天，聊聊公司军规，各位随便看看。</p>
-<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><h3 id="初期"><a href="#初期" class="headerlink" title="初期"></a>初期</h3><p>组织发展初期人不多物资也不丰富，人就这么点，要做的东西很多。</p>
-<p>开发从前端到后端，从网关到存储，从公共组件到业务，最好都能顶上去干。</p>
-<p>自然规矩也没那么多，很多时候自测上线的，线上有问题难避免。</p>
-<p>生产环境有问题，上去干两把，直接替换包，先修复了再说。</p>
-<p>没办法，就这点人，先充分调动大伙积极性先把事干了。</p>
-<p>就像《亮剑》李云龙说的：</p>
-<p>“我说旅长啊，我好歹也是堂堂正规军的团长，我不能连县大队都不如吧？”</p>
-<p>“这不是砸咱们师的牌子嘛？你猜旅长怎么说？”</p>
-<p>“旅长说，我有装备我要你干什么？你既然能当团长，就有能耐去搞枪，要不然你就回家抱孩子去！你别在这给我丢人显眼！”</p>
-<p>“得鳓，我等的就是这句话！让我搞枪，没问题啊！可是你不能给我戴紧箍咒啊，对不对？”</p>
-<p>“你总得给我点自主权吧，不能什么事都让你大旅长占了啊！又想让我搞枪，又想让我当乖孩子，这叫不讲理！ ”</p>
-<p>就像改革开发初期，需要努力抓住发展机遇，避免无效争论。</p>
-<p>需要先解决国家经济薄弱和老百姓普遍贫困问题。</p>
-<p> “不管黑猫白猫，捉到老鼠就是好猫”。</p>
-<p>回顾下《秦孝公的招贤令》：</p>
-<p>“…诸侯卑秦，丑莫大焉…寡人思念先君之意，常痛于心”。</p>
-<p>“宾客群臣有能出奇计强秦者，吾且尊官，与之分土”。</p>
-<p>秦孝公要强秦之策，至于儒家、法家、道家哪家学说不重要。</p>
-<p>嗯，发展初期的首要问题是抓住机遇发展壮大。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/4951a8cc/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ec5551b4/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/ec5551b4/" class="post-title-link" itemprop="url">Nacos9# 服务端响应连接和注册源码分析（二）</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+                <time title="修改时间：2022-01-12 11:47:07" itemprop="dateModified" datetime="2022-01-12T11:47:07+08:00">2022-01-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -920,219 +1192,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在《Nacos4# 服务端响应连接和注册源码分析（一）》在服务注册后发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent。这三个事件后来都干了点啥还没撸。</p>
-<p>Nacos的CP协议使用Distro，中间穿插了几篇关于该协议的主要逻辑，本文接着撸服务端响应。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="ClientRegisterServiceEvent事件"><a href="#ClientRegisterServiceEvent事件" class="headerlink" title="ClientRegisterServiceEvent事件"></a>ClientRegisterServiceEvent事件</h3><ul>
-<li><p>当注册请求到服务端时，服务端会给订阅该服务的Clients发送推送请求，通知实例变了</p>
-</li>
-<li><p>当注册请求到服务端时，服务端发布了客户端注册事件ClientRegisterServiceEvent</p>
-</li>
-<li><p>ClientRegisterServiceEvent事件被ClientServiceIndexesManager订阅后发布服务变更事件ServiceChangedEvent</p>
-</li>
-<li><p>ServiceChangedEvent被NamingSubscriberServiceV2Impl订阅，创建PushDelayTask被PushExecuteTask执行，负责向订阅该服务的订阅者发起推送serviceInfo请求</p>
-</li>
-<li><p>推送的请求被NamingPushRequestHandler处理并发布InstancesChangeEvent，最终回调到我们的代码逻辑AbstractEventListener</p>
-</li>
-</ul>
-<h3 id="ClientChangedEvent-事件"><a href="#ClientChangedEvent-事件" class="headerlink" title="ClientChangedEvent 事件"></a>ClientChangedEvent 事件</h3><ul>
-<li><p>当注册请求到服务端时，该节点会向集群中其他节点增量同步新增的Client信息</p>
-</li>
-<li><p>当注册请求到服务端时，发布ClientChangedEvent事件</p>
-</li>
-<li><p>该事件被DistroClientDataProcessor订阅发起与其他节点的增量同步</p>
-</li>
-</ul>
-<h3 id="InstanceMetadataEvent事件"><a href="#InstanceMetadataEvent事件" class="headerlink" title="InstanceMetadataEvent事件"></a>InstanceMetadataEvent事件</h3><ul>
-<li>当注册请求到服务端时，发布ClientChangedEvent事件，属性expired为false</li>
-<li>NamingMetadataManager订阅了该事件主要判断元数据是否过期</li>
-</ul>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos的注册发现和配置中心的源码基本录完了，还有一块是不同集群之间的同步。zk同步到Nacos集群，nacos集群之间做多活需要数据复制等。那本文就先看下如何使用它，进而后面文章分析如何实现。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/ec5551b4/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/765f2ae1/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/765f2ae1/" class="post-title-link" itemprop="url">Nacos8# 集群中节点之间健康检查</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>当新的节点加入集群或者集群中有节点下线了，集群之间可以通过健康检查发现。健康检查的频率是怎么样的？节点的状态又是如何变动的？状态的变动又会触发什么动作。带着这些问题本文捋一捋。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="健康检查"><a href="#健康检查" class="headerlink" title="健康检查"></a>健康检查</h3><ul>
-<li>Nacos节点会向集群其他节点发送健康检查心跳，每一轮频率为2秒</li>
-<li>当健康检查异常时设置为不信任「SUSPICIOUS」状态，超过失败最大次数3次设置为下线「DOWN」状态</li>
-<li>健康检查成功设置该节点为科通信「UP」状态</li>
-<li>无论成功还是失败当节点状态变更时均发布MembersChangeEvent事件</li>
-</ul>
-<h3 id="成员变更事件"><a href="#成员变更事件" class="headerlink" title="成员变更事件"></a>成员变更事件</h3><ul>
-<li>当集群节点成员变更时，MemberChangeListener会收到该事件</li>
-<li>例如回调ClusterRpcClientProxy#onEvent触发refresh</li>
-<li>刷新本节点与集群中其他节点的RPC状态，关闭无效的或者增加新的RPC连接</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/765f2ae1/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/67c008b5/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/67c008b5/" class="post-title-link" itemprop="url">Nacos7# Distro协议增量同步</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本文接着撸Distro协议，上文中分析了在Nacos server启动时会进行全量数据同步和数据校验，具体数据即客户端注册节点信息含命名空间、分组名称、服务名称、节点Instance信息等。什么时候会触发增量同步？增量同步都干了些啥，下文接着撸撸增量数据同步。</p>
-<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="增量数据同步"><a href="#增量数据同步" class="headerlink" title="增量数据同步"></a>增量数据同步</h3><ul>
-<li>在Nacos节点启动时通过事件驱动模式订阅了ClientChangedEvent、ClientDisconnectEvent和ClientVerifyFailedEvent事件</li>
-<li>当节点收到ClientChangedEvent事件时，会向集群中其他节点发送更新Client信息请求，其他节点收到后更新缓存</li>
-<li>当节点收到ClientVerifyFailedEvent事件时，向该Event指定的目标节点发起新增该Event指定的Client信息请求，目标节点收到后更新到自己缓存中</li>
-<li>当节点收到ClientDisconnectEvent事件时，会向集群中其他节点发送删除Client信息请求，其他节点收到后将该Client缓存删除</li>
-</ul>
-<h3 id="增量事件触发"><a href="#增量事件触发" class="headerlink" title="增量事件触发"></a>增量事件触发</h3><ul>
-<li>当有服务注册或者注销时会触发ClientEvent.ClientChangedEvent事件，即客户端调用naming.registerInstance或者naming.deregisterInstance</li>
-<li>定时任务每隔3秒钟定时检查缓存中的所有连接，如果超过保鲜期20秒则再次发起连接请求，连接未成功则注销关闭该连接并发布ClientEvent.ClientDisconnectEvent事件</li>
-<li>Nacos集群之间通过每5秒发送心跳校验数据请求（具体为本节点负责Client信息），其他节点接受到校验请求，如果缓存中存在该client表示校验成功，同时更新保鲜时间；否则校验失败，回调返回失败Response，请求节点收到失败的Response后会发布ClientVerifyFailedEvent事件</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/67c008b5/#more" rel="contents">
+              <a class="btn" href="/posts/38b1b5b0/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1155,7 +1218,7 @@
 
   
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1221,7 +1284,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">120</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1266,7 +1329,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

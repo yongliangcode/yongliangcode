@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9adc03fa/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ea80cc10/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/9adc03fa/" class="post-title-link" itemprop="url">MQ24# RocketMQ存储--日志文件创建与映射流程</a>
+            <a href="/posts/ea80cc10/" class="post-title-link" itemprop="url">MQ42# RocketMQ消息轨迹</a>
         </h2>
 
         <div class="post-meta">
@@ -208,7 +208,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:40:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:40:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:45:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:45:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -238,14 +238,18 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>日志目录(可配置)/data/rocketmq/store/commitlog会有20位长度的日志文件。</p>
-<p>1.日志文件什么时候创建的？</p>
-<p>2.日志文件创建流程是什么？</p>
-<p>3.日志文件和内存映射是怎么样的？</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:50 00000117290188144640</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:52 00000117291261886464</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:54 00000117292335628288</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:56 00000117293409370112</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:57 00000117294483111936</span><br><span class="line"></span><br><span class="line">-rw-rw-r-- 1 baseuser baseuser 1073741824 Jun 27 22:56 00000117295556853760</span><br></pre></td></tr></table></figure>
+          <h1 id="Broker配置"><a href="#Broker配置" class="headerlink" title="Broker配置"></a>Broker配置</h1><p>首先看下broker.conf配置的两个属性</p>
+<p>| 属性 |默认值 |</p>
+<p>| — | — |</p>
+<p>|traceTopicEnable |false |</p>
+<p>| msgTraceTopicName | RMQ_SYS_TRACE_TOPIC |</p>
+<p>在一个集群中可以配置一台机器专门负责消息轨迹的收集工作，该台机器上配置traceTopicEnable = true,</p>
+<p>borker启动的时候自动创建默认轨迹topic</p>
+<p>TopicConfigManager.java构造方法，BrokerController在启动的时候，会初始化TopicConfigManager实现trace topic的创建工作</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.brokerController.getBrokerConfig().isTraceTopicEnable()) &#123;</span><br><span class="line"></span><br><span class="line">String topic = <span class="keyword">this</span>.brokerController.getBrokerConfig().getMsgTraceTopicName();</span><br><span class="line"></span><br><span class="line">TopicConfig topicConfig = <span class="keyword">new</span> TopicConfig(topic);</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.systemTopicList.add(topic);</span><br><span class="line"></span><br><span class="line">topicConfig.setReadQueueNums(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">topicConfig.setWriteQueueNums(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">this</span>.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/9adc03fa/#more" rel="contents">
+              <a class="btn" href="/posts/ea80cc10/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -269,7 +273,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/96e2eb1a/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2f29fd72/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -283,7 +287,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/96e2eb1a/" class="post-title-link" itemprop="url">MQ23# RocketMQ消息存储概览</a>
+            <a href="/posts/2f29fd72/" class="post-title-link" itemprop="url">MQ41# RocketMQ特性--事物消息</a>
         </h2>
 
         <div class="post-meta">
@@ -293,7 +297,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:39:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:39:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:43:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:43:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -323,12 +327,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>先梳理消息存储主干流程。本分切分为两部分，第一部分消息存储流程概览，主要为校验流程；第二部分CommitLog存储概览，即消息存储流程。</p>
-<h1 id="消息存储流程概览"><a href="#消息存储流程概览" class="headerlink" title="消息存储流程概览"></a>消息存储流程概览</h1><p>调用链</p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">@1 SendMessageProcessor#sendMessage</span><br><span class="line"></span><br><span class="line"><span class="comment">//消息存储</span></span><br><span class="line"></span><br><span class="line">PutMessageResult putMessageResult = <span class="keyword">this</span>.brokerController.getMessageStore().putMessage(msgInner);</span><br><span class="line"></span><br><span class="line">@2 DefaultMessageStore#putMessage</span><br></pre></td></tr></table></figure>
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>从官方给的例子入手，代码如下:</p>
+<p>示例类：org.apache.rocketmq.example.transaction.TransactionProducer.java</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line">public static void main(String[] args) throws MQClientException, InterruptedException &#123;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@1 定义TransactionListener</span><br><span class="line"></span><br><span class="line">TransactionListener transactionListener &#x3D; new TransactionListenerImpl();</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@2 使用事务发送Producer</span><br><span class="line"></span><br><span class="line">TransactionMQProducer producer &#x3D; new TransactionMQProducer(&quot;please_rename_unique_group_name&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@3 定义线程池</span><br><span class="line"></span><br><span class="line">ExecutorService executorService &#x3D; new ThreadPoolExecutor(2, 5, 100, TimeUnit.SECONDS, new ArrayBlockingQueue&lt;Runnable&gt;(2000), new ThreadFactory() &#123;</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line"></span><br><span class="line">public Thread newThread(Runnable r) &#123;</span><br><span class="line"></span><br><span class="line">Thread thread &#x3D; new Thread(r);</span><br><span class="line"></span><br><span class="line">thread.setName(&quot;client-transaction-msg-check-thread&quot;);</span><br><span class="line"></span><br><span class="line">return thread;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置线程池</span><br><span class="line"></span><br><span class="line">producer.setExecutorService(executorService);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;设置监听器</span><br><span class="line"></span><br><span class="line">producer.setTransactionListener(transactionListener);</span><br><span class="line"></span><br><span class="line">producer.setNamesrvAddr(&quot;127.0.0.1:9876&quot;);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@4 发送者启动</span><br><span class="line"></span><br><span class="line">producer.start();</span><br><span class="line"></span><br><span class="line">String[] tags &#x3D; new String[] &#123;&quot;TagA&quot;, &quot;TagB&quot;, &quot;TagC&quot;, &quot;TagD&quot;, &quot;TagE&quot;&#125;;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 10; i++) &#123;</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line"></span><br><span class="line">Message msg &#x3D;</span><br><span class="line"></span><br><span class="line">new Message(&quot;TopicTest1234&quot;, tags[i % tags.length], &quot;KEY&quot; + i,</span><br><span class="line"></span><br><span class="line">(&quot;Hello RocketMQ &quot; + i).getBytes(RemotingHelper.DEFAULT_CHARSET));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;@5 消息发送</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; producer.sendMessageInTransaction(msg, null);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;%s%n&quot;, sendResult);</span><br><span class="line"></span><br><span class="line">Thread.sleep(10);</span><br><span class="line"></span><br><span class="line">&#125; catch (MQClientException | UnsupportedEncodingException e) &#123;</span><br><span class="line"></span><br><span class="line">e.printStackTrace();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">for (int i &#x3D; 0; i &lt; 100000; i++) &#123;</span><br><span class="line"></span><br><span class="line">Thread.sleep(1000);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;发送者关闭</span><br><span class="line"></span><br><span class="line">producer.shutdown();</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/96e2eb1a/#more" rel="contents">
+              <a class="btn" href="/posts/2f29fd72/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -352,7 +356,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fe0b8776/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/302db5ac/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -366,7 +370,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/fe0b8776/" class="post-title-link" itemprop="url">MQ22# RocketMQ内存传输及4.7消费线程参数设置</a>
+            <a href="/posts/302db5ac/" class="post-title-link" itemprop="url">MQ40# RocketMQ一次消费性能问题排查</a>
         </h2>
 
         <div class="post-meta">
@@ -376,7 +380,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:19:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:41:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:41:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -406,10 +410,11 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>RocketMQ配置中有一个设置项为transferMsgByHeap，即是否通过堆内存传输数据。在文章“RocketMQ存储–同步刷盘和异步刷盘”中对其进行过梳理。那transferMsgByHeap是开启好呢？还是关闭好！第二个问题是可以设置消费的线程数，由于无界队列所以只需要设置最小线程数consumeThreadMin即可，那在rocket-client4.7版本中还能这么用吗？</p>
+          <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>在容器推广中，为了测试容器的性能，需要消息SDK与ECS上在发送和消费的性能对比；在对比消费性能时，发现容器中的消费性能居然是ECS的2倍。容器并发消费的20个线程TPS在3万左右，ECS中20个消费线程TPS在1.5万左右。</p>
+<p>问题：配置均采用8C16G，容器中的性能几乎是ECS的两倍，这不科学，事出反常必有妖。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/fe0b8776/#more" rel="contents">
+              <a class="btn" href="/posts/302db5ac/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -433,7 +438,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a46a67ee/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9126d179/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -447,7 +452,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/a46a67ee/" class="post-title-link" itemprop="url">MQ21# 为何建议关闭RocketMQ预热配置</a>
+            <a href="/posts/9126d179/" class="post-title-link" itemprop="url">MQ39# RocketMQ消息发送Broker端流程处理</a>
         </h2>
 
         <div class="post-meta">
@@ -457,7 +462,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:19:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:39:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:39:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -487,10 +492,13 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>RocketMQ提供了一个预热配置项warmMapedFileEnable默认为关闭状态。曾在文章RocketMQ存储–映射文件预热【源码笔记】分析过文件预热流程。在预热文件时会填充1个G的假值0作为占位符，提前分配物理内存，防止消息写入时发生缺页异常。如此特性正如文章标题所说，为何建议关闭RocketMQ预热配置呢？</p>
+          <h1 id="Broker处理消息的入口类SendMessageProcessor"><a href="#Broker处理消息的入口类SendMessageProcessor" class="headerlink" title="Broker处理消息的入口类SendMessageProcessor"></a>Broker处理消息的入口类SendMessageProcessor</h1><p>processRequest方法主要三件事情：</p>
+<p>1.处理consumer发回broker的消息重试</p>
+<p>2.处理批量发送</p>
+<p>3.处理单条消息发送</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/a46a67ee/#more" rel="contents">
+              <a class="btn" href="/posts/9126d179/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -514,7 +522,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/69ff2739/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bfe41dca/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -528,7 +536,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/69ff2739/" class="post-title-link" itemprop="url">MQ20# RocketMQ集群实现平滑扩缩容</a>
+            <a href="/posts/bfe41dca/" class="post-title-link" itemprop="url">MQ38# RocketMQ消息发送（二）</a>
         </h2>
 
         <div class="post-meta">
@@ -538,7 +546,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:18:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:18:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:29:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:29:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -568,11 +576,34 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="运维需求"><a href="#运维需求" class="headerlink" title="运维需求"></a>运维需求</h1><p>在RocketMQ集群的实践中，对集群扩容、缩容、节点下线等运维做到平滑、业务无感知、数据无丢失，这个对于集群运维的同学来说非常重要。</p>
-<p>比如前些日子出现的问题，由于线上集群频繁出现CPU毛刺甚至直接挂掉并伴随着集群抖动，对内核参数的调整只能减缓毛刺却不能消除抖动。集群抖动业务使用会伴随着发送延迟告警，始终是个必须处理的隐患。最终决定更换操作系统即更换内核。</p>
+          <h1 id="发送接口分类"><a href="#发送接口分类" class="headerlink" title="发送接口分类"></a>发送接口分类</h1><p>* 按照发送方式分类</p>
+<ol>
+<li><p>同步发送：等待返回结果</p>
+</li>
+<li><p>异步发送：异步回调发送结果</p>
+</li>
+<li><p>一次发送：无结果返回</p>
+</li>
+</ol>
+<p>* 按一次发送消息数量分类</p>
+<ol>
+<li><p>单条消息发送</p>
+</li>
+<li><p>批量消息发送</p>
+</li>
+</ol>
+<p>* 按照是否指定MessageQueue分类</p>
+<ol>
+<li><p>随机选择发送</p>
+</li>
+<li><p>指定特定MessageQueue</p>
+</li>
+<li><p>自定义MessageQueue选择器</p>
+</li>
+</ol>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/69ff2739/#more" rel="contents">
+              <a class="btn" href="/posts/bfe41dca/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -596,7 +627,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/7cbb1243/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d473d7d3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -610,7 +641,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/7cbb1243/" class="post-title-link" itemprop="url">MQ17# RocketMQ/Kafka监控项整理</a>
+            <a href="/posts/d473d7d3/" class="post-title-link" itemprop="url">MQ37# RocketMQ消息发送（一）</a>
         </h2>
 
         <div class="post-meta">
@@ -620,7 +651,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:17:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:17:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:19:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:19:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -650,13 +681,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="系统监控项"><a href="#系统监控项" class="headerlink" title="系统监控项"></a>系统监控项</h1><h2 id="CPU"><a href="#CPU" class="headerlink" title="CPU"></a>CPU</h2><p>CPU使用率、CPU Load、</p>
-<h2 id="内存"><a href="#内存" class="headerlink" title="内存"></a>内存</h2><p>内存使用率</p>
-<h2 id="磁盘"><a href="#磁盘" class="headerlink" title="磁盘"></a>磁盘</h2><p>磁盘使用率、磁盘IO、磁盘IOWAIT</p>
-<h2 id="带宽"><a href="#带宽" class="headerlink" title="带宽"></a>带宽</h2><p>带宽检测</p>
+          <h1 id="消息发送代码"><a href="#消息发送代码" class="headerlink" title="消息发送代码"></a>消息发送代码</h1><p>* 需要设置produerGroup</p>
+<p>* 需要设置NameServer地址</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">DefaultMQProducer producer &#x3D; new DefaultMQProducer(&quot;melon-tst&quot;);</span><br><span class="line"></span><br><span class="line">producer.setNamesrvAddr(&quot;localhost:9876&quot;);</span><br><span class="line"></span><br><span class="line">producer.setVipChannelEnabled(false);</span><br><span class="line"></span><br><span class="line">producer.start();</span><br><span class="line"></span><br><span class="line">for(int i&#x3D;0;i&lt;100;i++)&#123;</span><br><span class="line"></span><br><span class="line">Message msg &#x3D; new Message(&quot;topic_online_test&quot;,(&quot;Hello RocketMQ&quot; + i).getBytes(RemotingHelper.DEFAULT_CHARSET));</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;msg.setDelayTimeLevel(10);</span><br><span class="line"></span><br><span class="line">SendResult sendResult &#x3D; producer.send(msg);</span><br><span class="line"></span><br><span class="line">System.out.printf(&quot;%s%n&quot;,sendResult);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">producer.shutdown();</span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/7cbb1243/#more" rel="contents">
+              <a class="btn" href="/posts/d473d7d3/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -680,7 +710,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/89ef1054/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ee41af7f/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -694,7 +724,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/89ef1054/" class="post-title-link" itemprop="url">MQ18# RocketMQ关于Broker闪断故障排查</a>
+            <a href="/posts/ee41af7f/" class="post-title-link" itemprop="url">MQ36# RocketMQ Topic创建</a>
         </h2>
 
         <div class="post-meta">
@@ -704,7 +734,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:17:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:17:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 22:59:01" itemprop="dateCreated datePublished" datetime="2020-12-20T22:59:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -734,10 +764,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>在2020-03-16 18:00左右收到告警，业务出现发送RocketMQ失败，在约1分钟左右后自动恢复。RocketMQ运行向来稳定，为何也抖动了？</p>
+          <h1 id="Topic创建的方式"><a href="#Topic创建的方式" class="headerlink" title="Topic创建的方式"></a>Topic创建的方式</h1><p>Topic的创建分为自动创建和通过命令行创建两种。通过broker配置参数autoCreateTopicEnable设置。 通常可以在非生产环境开启自动创建，生产环境待审批后再进行创建。</p>
+<p>* 命令行创建</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sh bin&#x2F;mqadmin updateTopic -c DefaultCluster -n localhost:9876 -t threezto-test -r 12 -w 12</span><br></pre></td></tr></table></figure>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/89ef1054/#more" rel="contents">
+              <a class="btn" href="/posts/ee41af7f/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -761,7 +793,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/649ec9da/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a0b01b06/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -775,7 +807,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/649ec9da/" class="post-title-link" itemprop="url">MQ19# RocketMQ集群CPU毛刺问题复盘</a>
+            <a href="/posts/a0b01b06/" class="post-title-link" itemprop="url">MQ35# RocketMQ NameServe</a>
         </h2>
 
         <div class="post-meta">
@@ -785,7 +817,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:17:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:17:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 22:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T22:58:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -815,12 +847,16 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>RocketMQ从节点、主节点频繁CPU飙高，很明显的毛刺，很多次从节点直接挂掉了。</p>
-<p>详情截图如下：</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219075750.png"></p>
+          <h1 id="NameServer启动"><a href="#NameServer启动" class="headerlink" title="NameServer启动"></a>NameServer启动</h1><p>* 从生产环境实践来看，NameServer启动使用默认配置即可，运行良好。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">启动命令：nohup sh bin&#x2F;mqnamesrv &amp;</span><br></pre></td></tr></table></figure>
+
+<p>* NamesrvStartup.java 启动入口类，NameServer 启动默认端口9876</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nettyServerConfig.setListenPort(9876)</span><br></pre></td></tr></table></figure>
+
+<p>* 每10秒钟扫描一次，移除失效的broker，同时移除缓存元数据</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/649ec9da/#more" rel="contents">
+              <a class="btn" href="/posts/a0b01b06/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -844,7 +880,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/258cdfc5/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/c4a1b302/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -858,7 +894,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/258cdfc5/" class="post-title-link" itemprop="url">MQ16# RocketMQ一次延迟消息故障排查</a>
+            <a href="/posts/c4a1b302/" class="post-title-link" itemprop="url">MQ34# RocketMQ--ConsumeQueue文件与Index文件</a>
         </h2>
 
         <div class="post-meta">
@@ -868,7 +904,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:16:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:16:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 20:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:58:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -898,11 +934,14 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>RocketMQ社区版本支持18个延迟级别，每个级别在设定的时间都被会消费者准确消费到。为此也专门测试过消费的间隔是不是准确，测试结果显示很准确。</p>
-<p>然而，如此准确的特性居然出问题了，接到业务同学报告线上某个集群延迟消息消费不到，开发环境、测试环境都没问题。各个环境的版本都是统一的RocketMQ 4.5.2。诡异！</p>
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题：</p>
+<p>1.ConsumeQueue构建流程是怎样的？</p>
+<p>2.ConsumeQueue数据结构是怎样的？</p>
+<p>3.Index索引文件构建流程怎样的？</p>
+<p>4.Index数据结构时怎么样的？</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/258cdfc5/#more" rel="contents">
+              <a class="btn" href="/posts/c4a1b302/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -926,7 +965,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/50d4ff7d/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9c431d59/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -940,7 +979,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/50d4ff7d/" class="post-title-link" itemprop="url">MQ15# RocketMQ生产环境配置</a>
+            <a href="/posts/9c431d59/" class="post-title-link" itemprop="url">MQ33# RocketMQ消费--Broker端处理逻辑</a>
         </h2>
 
         <div class="post-meta">
@@ -950,7 +989,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:15:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:15:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 20:56:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:56:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -980,26 +1019,17 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <div id="vip-container"><p>一份RocketMQ生产环境的配置文件，供参考，集群架构为异步刷盘异步复制。另外有补充的欢迎后台留言给我。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line">#请修改</span><br><span class="line"></span><br><span class="line">brokerClusterName&#x3D;XXXCluster</span><br><span class="line"></span><br><span class="line">brokerName&#x3D;broker-a</span><br><span class="line"></span><br><span class="line">brokerId&#x3D;0</span><br><span class="line"></span><br><span class="line">listenPort&#x3D;10911</span><br><span class="line"></span><br><span class="line">#请修改</span><br><span class="line"></span><br><span class="line">namesrvAddr&#x3D;x.x.x.x:9876;x.x.x.x::9876</span><br><span class="line"></span><br><span class="line">defaultTopicQueueNums&#x3D;4</span><br><span class="line"></span><br><span class="line">autoCreateTopicEnable&#x3D;false</span><br><span class="line"></span><br><span class="line">autoCreateSubscriptionGroup&#x3D;false</span><br><span class="line"></span><br><span class="line">deleteWhen&#x3D;04</span><br><span class="line"></span><br><span class="line">fileReservedTime&#x3D;48</span><br><span class="line"></span><br><span class="line">mapedFileSizeCommitLog&#x3D;1073741824</span><br><span class="line"></span><br><span class="line">mapedFileSizeConsumeQueue&#x3D;50000000</span><br><span class="line"></span><br><span class="line">destroyMapedFileIntervalForcibly&#x3D;120000</span><br><span class="line"></span><br><span class="line">redeleteHangedFileInterval&#x3D;120000</span><br><span class="line"></span><br><span class="line">diskMaxUsedSpaceRatio&#x3D;88</span><br><span class="line"></span><br><span class="line">#存储路径</span><br><span class="line"></span><br><span class="line">storePathRootDir&#x3D;&#x2F;data&#x2F;rocketmq&#x2F;store</span><br><span class="line"></span><br><span class="line">#commitLog存储路径</span><br><span class="line"></span><br><span class="line">storePathCommitLog&#x3D;&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;commitlog</span><br><span class="line"></span><br><span class="line">#消费队列存储路径</span><br><span class="line"></span><br><span class="line">storePathConsumeQueue&#x3D;&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;consumequeue</span><br><span class="line"></span><br><span class="line"># 消息索引存储路径</span><br><span class="line"></span><br><span class="line">storePathIndex&#x3D;&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;index</span><br><span class="line"></span><br><span class="line"># checkpoint 文件存储路径</span><br><span class="line"></span><br><span class="line">storeCheckpoint&#x3D;&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;checkpoint</span><br><span class="line"></span><br><span class="line">#abort 文件存储路径</span><br><span class="line"></span><br><span class="line">abortFile&#x3D;&#x2F;data&#x2F;rocketmq&#x2F;store&#x2F;abort</span><br><span class="line"></span><br><span class="line">maxMessageSize&#x3D;65536</span><br><span class="line"></span><br><span class="line">flushCommitLogLeastPages&#x3D;4</span><br><span class="line"></span><br><span class="line">flushConsumeQueueLeastPages&#x3D;2</span><br><span class="line"></span><br><span class="line">flushCommitLogThoroughInterval&#x3D;10000</span><br><span class="line"></span><br><span class="line">flushConsumeQueueThoroughInterval&#x3D;60000</span><br><span class="line"></span><br><span class="line">brokerRole&#x3D;SYNC_MASTER</span><br><span class="line"></span><br><span class="line">flushDiskType&#x3D;ASYNC_FLUSH</span><br><span class="line"></span><br><span class="line">checkTransactionMessageEnable&#x3D;false</span><br><span class="line"></span><br><span class="line">maxTransferCountOnMessageInMemory&#x3D;1000</span><br><span class="line"></span><br><span class="line">transientStorePoolEnable&#x3D;true</span><br><span class="line"></span><br><span class="line">warmMapedFileEnable&#x3D;true</span><br><span class="line"></span><br><span class="line">pullMessageThreadPoolNums&#x3D;128</span><br><span class="line"></span><br><span class="line">slaveReadEnable&#x3D;true</span><br><span class="line"></span><br><span class="line">transferMsgByHeap&#x3D;false</span><br><span class="line"></span><br><span class="line">waitTimeMillsInSendQueue&#x3D;1000</span><br></pre></td></tr></table></figure>
-
-</div>
-
-			<script src="https://my.openwrite.cn/js/readmore.js" type="text/javascript"></script>
-			<script>
-			var isMobile = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i);
-			if (!isMobile) {
-			    var btw = new BTWPlugin();
-			    btw.init({
-			        "id": "vip-container",
-			        "blogId": "19728-1607829271089-768",
-			        "name": "瓜农老梁",
-			        "qrcode": "https://img-blog.csdnimg.cn/2020121311123065.jpg",
-			        "keyword": "more"
-			    });
-			}
-			</script>
-		
+          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.Broker是如何处理消费流程的？</p>
+<p>2.消费进度是如何流转的？</p>
+<p>说明：本文分析均为PUSH消费模式</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/9c431d59/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1017,7 +1047,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/6/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/8/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/6/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/8/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1083,7 +1113,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">120</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1128,7 +1158,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/6531e1a8/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bef6941/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/6531e1a8/" class="post-title-link" itemprop="url">FA3# ZK做注册中心不是最好的选择</a>
+            <a href="/posts/bef6941/" class="post-title-link" itemprop="url">Nacos12# 随机权重负载均衡算法</a>
         </h2>
 
         <div class="post-meta">
@@ -208,7 +208,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-04-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-04-06T11:55:01+08:00">2021-04-06</time>
+              <time title="创建时间：2021-08-10 11:55:01" itemprop="dateCreated datePublished" datetime="2021-08-10T11:55:01+08:00">2021-08-10</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -223,7 +223,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
                 </span>
             </span>
 
@@ -238,26 +238,292 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Zookeeper作为注册中心不是跑的好好的吗？为什么要替换，是不是闲的？在过去的一段时间替换它的优先级的确不高，然而腾出手来是要替换掉它的，只是因为Zookeeper不适合做注册中心。换句话说选择注册中心时有更好的选择。</p>
-<h1 id="CAP定理与举例"><a href="#CAP定理与举例" class="headerlink" title="CAP定理与举例"></a>CAP定理与举例</h1><h3 id="CAP定理"><a href="#CAP定理" class="headerlink" title="CAP定理"></a>CAP定理</h3><p>CAP定理已经深入每个开发者心里，我们一起回顾下，下面摘自维基百科定义。</p>
-<p>CAP定理（CAP theorem），又被称作布鲁尔定理（Brewer’s theorem），它指出对于一个分布式计算系统来说，不可能同时满足以下三点：</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos在Client选择节点时提供了一种基于权重的随机算法，通过源码分析掌握其实现原理，方便实战中加以运用。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><p>下面以图示的方式贯穿下随机权重负载均衡算法的流程：</p>
+<p><strong>节点列表</strong> </p>
+<p>假设注册了5个节点，每个节点的权重如下。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%A4%BA%E4%BE%8B%E6%B3%A8%E5%86%8C%E8%8A%82%E7%82%B9%E5%88%97%E8%A1%A8.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/bef6941/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/183278ff/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/183278ff/" class="post-title-link" itemprop="url">Nacos11# 图解|注册发现核心原理提点</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-28 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-28T11:55:01+08:00">2021-07-28</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>通过对Nacos注册与发现源码阅读，将其核心原理归纳提炼。包含：注册、发现、节点之间通信、健康检查类型。</p>
+<h1 id="服务注册原理"><a href="#服务注册原理" class="headerlink" title="服务注册原理"></a>服务注册原理</h1><p>当客户端发起注册时，注册原理逻辑见下图，进一步简化主要有：</p>
 <ul>
-<li>一致性（Consistency）：等同于所有节点访问同一份最新的数据副本</li>
-<li>可用性（Availability）每次请求都能获取到非错的响应——但是不保证获取的数据为最新数据</li>
-<li>分区容错性（Partition tolerance）以实际效果而言，分区相当于对通信的时限要求。系统如果不能在时限内达成数据一致性，就意味着发生了分区的情况，必须就当前操作在C和A之间做出选择</li>
+<li>将新注册的实例信息推送给订阅该服务的订阅者</li>
+<li>将新注册的实例信息增量同步给集群中的其他节点</li>
 </ul>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/CAP%E5%AE%9A%E7%90%86%E6%96%B02.png"></p>
-<h3 id="举例说明"><a href="#举例说明" class="headerlink" title="举例说明"></a>举例说明</h3><p>例如：有5个节点被网络分区，分区1有三个节点，分区2有两个节点。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E7%BD%91%E7%BB%9C%E5%88%86%E5%8C%BA%E7%A4%BA%E4%BE%8B.png"></p>
-<ul>
-<li>如果保证两个分区节点都可用（AP），由于网络不通，那么无法保证两个分区数据一致性（CP）</li>
-<li>如果保证两个分区数据一致性（CP），由于网络不通，那么会导致至少一个分区不可用</li>
-<li>如果既想保证所有节点一致性，还要保证节点都可用（CA），那么网络就必须是好的，不能出现网络分区，失去了分区容错性（P）</li>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210716135220.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/183278ff/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/63d0eab2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/63d0eab2/" class="post-title-link" itemprop="url">Netty17# 实战|Young GC时间过长导致RPC超时</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-17 18:25:01" itemprop="dateCreated datePublished" datetime="2021-07-17T18:25:01+08:00">2021-07-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="背景介绍"><a href="#背景介绍" class="headerlink" title="背景介绍"></a>背景介绍</h1><p>前几天一个业务负责的同事找老梁，说每次发布SOA拉入时就有少量报错。</p>
+<p>报错的集中在RPC设置超时时间比较短的上游服务，比如设置300ms，发布完就好了。</p>
+<p>我说最近没有发布新版本，应该不是中间件变更引起的。</p>
+<p>同事说这问题存在好几个月了，他们一直想抓原因，一直没找到。</p>
+<p>你咋早点不反馈到我这呢？就自己这么琢磨了几个月，够执着的。</p>
+<p>老梁让他组织个会议，拉了小组两个同事一起参与下，聚焦复盘下问题。</p>
+<p>忘了说了，我们SOA框架使用gRPC通信，gRPC底层使用Netty。</p>
+<h1 id="问题复盘"><a href="#问题复盘" class="headerlink" title="问题复盘"></a>问题复盘</h1><p><strong>GC 日志</strong> </p>
+<p>从GC日志现象来看，在第4次和第5次Young GC的时间过长，线上达到了900ms。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/netty%E5%A4%8D%E7%9B%9801.jpg"></p>
+<p>在测试环境复现，第4次Young GC的时间也超过500ms。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/netty%E5%A4%8D%E7%9B%9802.jpg"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/63d0eab2/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/fb19022a/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/fb19022a/" class="post-title-link" itemprop="url">Nacos10# 健康检查类型与场景</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-08 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-08T11:55:01+08:00">2021-07-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Nacos支持众多健康检查类型，心跳、HTTP、TCP、MySQL等类型，这些都作用于什么场景？他们又是如何事项的呢？本文就撸一撸这个。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="临时节点续约"><a href="#临时节点续约" class="headerlink" title="临时节点续约"></a>临时节点续约</h3><ul>
+<li>临时节点续约通过gRPC连接保鲜实现</li>
+<li>执行频率5秒一次</li>
+<li>检查结果健康刷新保鲜时间</li>
+<li>检查结果不可用标记节点不健康</li>
+<li>当节点不健康时重新连接时会从server列表选择下一个节点连接</li>
 </ul>
-<p>因此，三者不可兼得。</p>
+<h3 id="持久节点心跳检测"><a href="#持久节点心跳检测" class="headerlink" title="持久节点心跳检测"></a>持久节点心跳检测</h3><ul>
+<li>心跳执行器通过每隔五秒中向Nacos Server发起HTTP请求</li>
+<li>如果返回的server not found会向Nacos Server发起注册请求重新注册</li>
+</ul>
+<h3 id="持久节点探活"><a href="#持久节点探活" class="headerlink" title="持久节点探活"></a>持久节点探活</h3><ul>
+<li>Nacos探活只有在持久节点注册时才会支持</li>
+<li>探活支持HTTP、TCP、Mysql三种探活类型</li>
+<li>HTTP通过检测返回200状态码标记是否健康</li>
+<li>TPC通过Channel连接方式标记是否健康</li>
+<li>Mysql则保证当前节点为主节点，可用于主从切换场景</li>
+</ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/6531e1a8/#more" rel="contents">
+              <a class="btn" href="/posts/fb19022a/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -281,7 +547,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/cf517bd1/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/4951a8cc/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -295,7 +561,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/cf517bd1/" class="post-title-link" itemprop="url">SK7# 大咖分享随记</a>
+            <a href="/posts/4951a8cc/" class="post-title-link" itemprop="url">SK9# 公司的军规</a>
         </h2>
 
         <div class="post-meta">
@@ -305,7 +571,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-03-19 22:55:01" itemprop="dateCreated datePublished" datetime="2021-03-19T22:55:01+08:00">2021-03-19</time>
+              <time title="创建时间：2021-07-04 22:55:01" itemprop="dateCreated datePublished" datetime="2021-07-04T22:55:01+08:00">2021-07-04</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -335,18 +601,31 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>到了一周中最放松的时刻，老梁回到家，家人往往都睡了。</p>
-<p>老梁就找点吃的喝的，今天喝了大半罐RIO强爽8°C白桃酒，有点晕晕乎乎的。</p>
-<p>老梁坐在沙发上抱着电脑跟大伙聊聊天，今天聊点啥呢？</p>
-<p>前些天公司请了头部公司研究员大咖来分享，大领导口干舌燥费了好大劲请来的。</p>
-<p>大咖抽出宝贵的时间来分享，听的人不少，听进去的不多，听了去实践就更少了，大部分过几天就忘的差不多了。</p>
-<p>这种情况领导们也知道，才要求组织者们去收集启发感受，沉淀下来点东西。</p>
-<p>老梁也被拉进去要求写一篇，组织者说已经跟领导吹出去了，不写凑不够数量。</p>
-<p>大咖分享的是质量和效能，下面是老梁瞎想的，不一点对，各位随便看看。</p>
+          <p>大家好，我是老梁，一个想分享点干货的家伙。</p>
+<p>最近天天喝花枸杞决明子茶，有用没用的权当白开水喝着。</p>
+<p>老梁坐电脑前跟大伙聊聊天，聊聊公司军规，各位随便看看。</p>
+<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><h3 id="初期"><a href="#初期" class="headerlink" title="初期"></a>初期</h3><p>组织发展初期人不多物资也不丰富，人就这么点，要做的东西很多。</p>
+<p>开发从前端到后端，从网关到存储，从公共组件到业务，最好都能顶上去干。</p>
+<p>自然规矩也没那么多，很多时候自测上线的，线上有问题难避免。</p>
+<p>生产环境有问题，上去干两把，直接替换包，先修复了再说。</p>
+<p>没办法，就这点人，先充分调动大伙积极性先把事干了。</p>
+<p>就像《亮剑》李云龙说的：</p>
+<p>“我说旅长啊，我好歹也是堂堂正规军的团长，我不能连县大队都不如吧？”</p>
+<p>“这不是砸咱们师的牌子嘛？你猜旅长怎么说？”</p>
+<p>“旅长说，我有装备我要你干什么？你既然能当团长，就有能耐去搞枪，要不然你就回家抱孩子去！你别在这给我丢人显眼！”</p>
+<p>“得鳓，我等的就是这句话！让我搞枪，没问题啊！可是你不能给我戴紧箍咒啊，对不对？”</p>
+<p>“你总得给我点自主权吧，不能什么事都让你大旅长占了啊！又想让我搞枪，又想让我当乖孩子，这叫不讲理！ ”</p>
+<p>就像改革开发初期，需要努力抓住发展机遇，避免无效争论。</p>
+<p>需要先解决国家经济薄弱和老百姓普遍贫困问题。</p>
+<p> “不管黑猫白猫，捉到老鼠就是好猫”。</p>
+<p>回顾下《秦孝公的招贤令》：</p>
+<p>“…诸侯卑秦，丑莫大焉…寡人思念先君之意，常痛于心”。</p>
+<p>“宾客群臣有能出奇计强秦者，吾且尊官，与之分土”。</p>
+<p>秦孝公要强秦之策，至于儒家、法家、道家哪家学说不重要。</p>
+<p>嗯，发展初期的首要问题是抓住机遇发展壮大。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/cf517bd1/#more" rel="contents">
+              <a class="btn" href="/posts/4951a8cc/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -370,7 +649,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/d12e9a09/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/67c008b5/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -384,7 +663,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/d12e9a09/" class="post-title-link" itemprop="url">Netty15# 池化内存Normal类型内存分配</a>
+            <a href="/posts/67c008b5/" class="post-title-link" itemprop="url">Nacos7# Distro协议增量同步</a>
         </h2>
 
         <div class="post-meta">
@@ -394,7 +673,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-03-13 18:25:01" itemprop="dateCreated datePublished" datetime="2021-03-13T18:25:01+08:00">2021-03-13</time>
+              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -409,7 +688,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
                 </span>
             </span>
 
@@ -424,12 +703,21 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Netty所谓的池化就是先申请了一块大内存，后面需要分配的时候就来我这里分就完了。以堆外直接内存分配为例，Netty以Chunk为单位16M申请了一块连续内存，这么一大块内存是以平衡二叉树的形式组织起来的。分配的时候就从这颗树上找合适的节点。池化内存的分配是Netty的最为核心部分，这块的代码很多位运算，不太容易看懂，读的时候需要边调试边分析。</p>
-<h1 id="平衡二叉树"><a href="#平衡二叉树" class="headerlink" title="平衡二叉树"></a>平衡二叉树</h1><p>Netty使用平衡二叉树将申请到的Chunk块组织起来，如下图所示，并使用数组将整个树映射进去，见下文构造函数中memoryMap。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/Netty%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%8F%89%E6%A0%91.png"></p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本文接着撸Distro协议，上文中分析了在Nacos server启动时会进行全量数据同步和数据校验，具体数据即客户端注册节点信息含命名空间、分组名称、服务名称、节点Instance信息等。什么时候会触发增量同步？增量同步都干了些啥，下文接着撸撸增量数据同步。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="增量数据同步"><a href="#增量数据同步" class="headerlink" title="增量数据同步"></a>增量数据同步</h3><ul>
+<li>在Nacos节点启动时通过事件驱动模式订阅了ClientChangedEvent、ClientDisconnectEvent和ClientVerifyFailedEvent事件</li>
+<li>当节点收到ClientChangedEvent事件时，会向集群中其他节点发送更新Client信息请求，其他节点收到后更新缓存</li>
+<li>当节点收到ClientVerifyFailedEvent事件时，向该Event指定的目标节点发起新增该Event指定的Client信息请求，目标节点收到后更新到自己缓存中</li>
+<li>当节点收到ClientDisconnectEvent事件时，会向集群中其他节点发送删除Client信息请求，其他节点收到后将该Client缓存删除</li>
+</ul>
+<h3 id="增量事件触发"><a href="#增量事件触发" class="headerlink" title="增量事件触发"></a>增量事件触发</h3><ul>
+<li>当有服务注册或者注销时会触发ClientEvent.ClientChangedEvent事件，即客户端调用naming.registerInstance或者naming.deregisterInstance</li>
+<li>定时任务每隔3秒钟定时检查缓存中的所有连接，如果超过保鲜期20秒则再次发起连接请求，连接未成功则注销关闭该连接并发布ClientEvent.ClientDisconnectEvent事件</li>
+<li>Nacos集群之间通过每5秒发送心跳校验数据请求（具体为本节点负责Client信息），其他节点接受到校验请求，如果缓存中存在该client表示校验成功，同时更新保鲜时间；否则校验失败，回调返回失败Response，请求节点收到失败的Response后会发布ClientVerifyFailedEvent事件</li>
+</ul>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/d12e9a09/#more" rel="contents">
+              <a class="btn" href="/posts/67c008b5/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -453,7 +741,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/a540a8f2/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/ec5551b4/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -467,7 +755,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/a540a8f2/" class="post-title-link" itemprop="url">SK6# 上海居转户随记</a>
+            <a href="/posts/ec5551b4/" class="post-title-link" itemprop="url">Nacos9# 服务端响应连接和注册源码分析（二）</a>
         </h2>
 
         <div class="post-meta">
@@ -477,7 +765,302 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-03-12 23:55:01" itemprop="dateCreated datePublished" datetime="2021-03-12T23:55:01+08:00">2021-03-12</time>
+              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在《Nacos4# 服务端响应连接和注册源码分析（一）》在服务注册后发布了三个事件ClientEvent.ClientChangedEvent、ClientOperationEvent.ClientRegisterServiceEvent、MetadataEvent.InstanceMetadataEvent。这三个事件后来都干了点啥还没撸。</p>
+<p>Nacos的CP协议使用Distro，中间穿插了几篇关于该协议的主要逻辑，本文接着撸服务端响应。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="ClientRegisterServiceEvent事件"><a href="#ClientRegisterServiceEvent事件" class="headerlink" title="ClientRegisterServiceEvent事件"></a>ClientRegisterServiceEvent事件</h3><ul>
+<li><p>当注册请求到服务端时，服务端会给订阅该服务的Clients发送推送请求，通知实例变了</p>
+</li>
+<li><p>当注册请求到服务端时，服务端发布了客户端注册事件ClientRegisterServiceEvent</p>
+</li>
+<li><p>ClientRegisterServiceEvent事件被ClientServiceIndexesManager订阅后发布服务变更事件ServiceChangedEvent</p>
+</li>
+<li><p>ServiceChangedEvent被NamingSubscriberServiceV2Impl订阅，创建PushDelayTask被PushExecuteTask执行，负责向订阅该服务的订阅者发起推送serviceInfo请求</p>
+</li>
+<li><p>推送的请求被NamingPushRequestHandler处理并发布InstancesChangeEvent，最终回调到我们的代码逻辑AbstractEventListener</p>
+</li>
+</ul>
+<h3 id="ClientChangedEvent-事件"><a href="#ClientChangedEvent-事件" class="headerlink" title="ClientChangedEvent 事件"></a>ClientChangedEvent 事件</h3><ul>
+<li><p>当注册请求到服务端时，该节点会向集群中其他节点增量同步新增的Client信息</p>
+</li>
+<li><p>当注册请求到服务端时，发布ClientChangedEvent事件</p>
+</li>
+<li><p>该事件被DistroClientDataProcessor订阅发起与其他节点的增量同步</p>
+</li>
+</ul>
+<h3 id="InstanceMetadataEvent事件"><a href="#InstanceMetadataEvent事件" class="headerlink" title="InstanceMetadataEvent事件"></a>InstanceMetadataEvent事件</h3><ul>
+<li>当注册请求到服务端时，发布ClientChangedEvent事件，属性expired为false</li>
+<li>NamingMetadataManager订阅了该事件主要判断元数据是否过期</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/ec5551b4/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/765f2ae1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/765f2ae1/" class="post-title-link" itemprop="url">Nacos8# 集群中节点之间健康检查</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-07-03 11:55:01" itemprop="dateCreated datePublished" datetime="2021-07-03T11:55:01+08:00">2021-07-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>当新的节点加入集群或者集群中有节点下线了，集群之间可以通过健康检查发现。健康检查的频率是怎么样的？节点的状态又是如何变动的？状态的变动又会触发什么动作。带着这些问题本文捋一捋。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="健康检查"><a href="#健康检查" class="headerlink" title="健康检查"></a>健康检查</h3><ul>
+<li>Nacos节点会向集群其他节点发送健康检查心跳，每一轮频率为2秒</li>
+<li>当健康检查异常时设置为不信任「SUSPICIOUS」状态，超过失败最大次数3次设置为下线「DOWN」状态</li>
+<li>健康检查成功设置该节点为科通信「UP」状态</li>
+<li>无论成功还是失败当节点状态变更时均发布MembersChangeEvent事件</li>
+</ul>
+<h3 id="成员变更事件"><a href="#成员变更事件" class="headerlink" title="成员变更事件"></a>成员变更事件</h3><ul>
+<li>当集群节点成员变更时，MemberChangeListener会收到该事件</li>
+<li>例如回调ClusterRpcClientProxy#onEvent触发refresh</li>
+<li>刷新本节点与集群中其他节点的RPC状态，关闭无效的或者增加新的RPC连接</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/765f2ae1/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/c1f9abd4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/c1f9abd4/" class="post-title-link" itemprop="url">Nacos6# Distro协议全量同步与校验</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-06-26 11:55:01" itemprop="dateCreated datePublished" datetime="2021-06-26T11:55:01+08:00">2021-06-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nacos/" itemprop="url" rel="index"><span itemprop="name">Nacos</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本文接着撸Distro协议，上文中分析了寻址模式。有了地址就要建立连接，有了连接就能通信了。集群之间都交互啥数据？本文就扒一扒全量同步和节点之间数据校验。</p>
+<h1 id="内容提要"><a href="#内容提要" class="headerlink" title="内容提要"></a>内容提要</h1><h3 id="节点间建立RCP连接"><a href="#节点间建立RCP连接" class="headerlink" title="节点间建立RCP连接"></a>节点间建立RCP连接</h3><ul>
+<li>订阅了MembersChangeEvent事件，集群节点有变更能够收到回调通知</li>
+<li>与集群中其他节点建立grpc连接并缓存到Map其中key格式为「Cluster-IP:Port」</li>
+</ul>
+<h3 id="节点间校验数据通信"><a href="#节点间校验数据通信" class="headerlink" title="节点间校验数据通信"></a>节点间校验数据通信</h3><ul>
+<li>节点之间发送校验数据是在全量同步后进行的</li>
+<li>发送校验的频率默认为5秒钟一次</li>
+<li>校验数据包括clientId和version，其中version为保留字段当前为0</li>
+<li>接受到校验数据后如果缓存中存在该client表示校验成功，同时更新保鲜时间，否则校验失败</li>
+</ul>
+<h3 id="全量数据同步"><a href="#全量数据同步" class="headerlink" title="全量数据同步"></a>全量数据同步</h3><ul>
+<li>在节点启动时会从集群中其他节点中的一个节点同步快照数据并缓存在Map中</li>
+<li>缓存的数据类型分类两类分别为HTTP和gRPC</li>
+<li>具体数据即客户端注册节点信息含命名空间、分组名称、服务名称、节点Instance信息等</li>
+<li>集群中每个节点都拥有所有的快照数据</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/c1f9abd4/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/3266629d/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/3266629d/" class="post-title-link" itemprop="url">SK8# 过一种笃定的生活</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-06-22 22:55:01" itemprop="dateCreated datePublished" datetime="2021-06-22T22:55:01+08:00">2021-06-22</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -507,595 +1090,26 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>到了一周中最放松的时刻，回来就10点多了，洗洗涮涮就到了11点了。</p>
-<p>夜神人静了，喝了点碧螺春，老梁坐在沙发上抱着电脑跟大伙聊聊天。</p>
-<p>今天聊聊居转户，申请过程中也是各种查询挺费劲，记录下或许对一些朋友有点用。</p>
+          <p>大家好，我是老梁，一个想分享点干货的家伙。</p>
+<p>喝了一杯菊花枸杞决明子茶，这茶喝起来没啥味道，据说有清肝明目功效。</p>
+<p>老梁坐电脑前跟大伙聊聊天，各位随便看看。</p>
+<h1 id="一"><a href="#一" class="headerlink" title="一"></a>一</h1><h3 id="咳嗽"><a href="#咳嗽" class="headerlink" title="咳嗽"></a>咳嗽</h3><p>咋不喝鸡尾酒了呢？</p>
+<p>前段时间咳嗽跑到三甲医院挂了专家号，专家开了一个多月药，叮嘱说把他开的要都吃光。</p>
+<p>专家说的话，能不听吗？老梁就天天吃，吃了一个多月终于都给吃光了。</p>
+<p>药吃光了，病没好，一吹风就咳两声。</p>
+<p>是药不管用还是药不对病呢？还是身体不行了？</p>
+<p>身体也不至于呀！</p>
+<p>老梁虽然平时没时间锻炼，但每天基本能走1万步以上。</p>
+<p>每周六周天各跑3.5公里，一周也有7公里了。</p>
+<p>总之，咳嗽没好。</p>
+<p>旧的没好新的又开始了，扁桃体又开始发炎，咳嗽前兆！</p>
+<p>跑到大药房，卖药的小姑娘，说让喝点蒲公英颗粒。</p>
+<p>老梁买了四天的，喝了三天，扁桃体发炎好了，咳嗽也好了。</p>
+<p>得谢谢小姑娘这药，比三甲医院的专家开的管用。</p>
+<p>嗯，一个小咳嗽就能折腾你两月，天道有常，多一分敬畏。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/a540a8f2/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd40ab43/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/dd40ab43/" class="post-title-link" itemprop="url">FA2# 集群流控使用场景和实现原理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。</p>
-<h1 id="集群流控使用场景"><a href="#集群流控使用场景" class="headerlink" title="集群流控使用场景"></a>集群流控使用场景</h1><h3 id="场景一-需要控制调用总量"><a href="#场景一-需要控制调用总量" class="headerlink" title="场景一  需要控制调用总量"></a>场景一  需要控制调用总量</h3><p>某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提供服务，第三方流量有限制，需要对总量进行管控。部署的节点可能扩缩容，这种单纯通过单机限流措施难以凑效。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/dd40ab43/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8631788a/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/8631788a/" class="post-title-link" itemprop="url">Netty14# 池化内存之线程缓存</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在前面文章『Netty12# 池化内存框架流程』Netty会将不同的内存尺寸缓存起来，每个线程绑定了专属逻辑内存区域（PoolArena），减少资源竞争。每个线程绑定了缓存PoolThreadCache，内存分配时，先从当前线程绑定的PoolThreadCache缓存分配。下图为涉及到相关类的关系图：</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6%20(3).png"></p>
-<p>工作过程：</p>
-<p>@1 通过引导类传入NioEventLoopGroup，线程工厂创建的线程均为FastThreadLocalThread</p>
-<p>@2 FastThreadLocalThread持有InternalThreadLocalMap（内部维护一个对象数组）</p>
-<p>@3 当通过PooledByteBufAllocator#newDirectBuffer分配内存时，通过调用PoolThreadLocalCache#get()完成对InternalThreadLocalMap的第一次填充，对象数组下标为线程索引号，其对应的值为PoolThreadCache。</p>
-<p>@4 PoolThreadCache是被当前线程缓存的对象</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/8631788a/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/48a2a5be/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/48a2a5be/" class="post-title-link" itemprop="url">SK5# 丢掉幻想准备战斗</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-04 23:55:01" itemprop="dateCreated datePublished" datetime="2021-03-04T23:55:01+08:00">2021-03-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
-<p>明天请假办点事，夜神人静了，喝了点白开水，到了一周中最放松的时候，老梁确放松不起来。</p>
-<p>丢掉幻想，准备战斗！这句常见于官方辞令，老梁觉得用到个人身上也不违和，朗朗上口的，那就拿来用用。</p>
-<p>那就最近也发生的事情和想法聊一下。不一定对，各位随便看看。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/48a2a5be/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/0/" class="post-title-link" itemprop="url">未命名</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-02 14:43:42" itemprop="dateCreated datePublished" datetime="2021-03-02T14:43:42+08:00">2021-03-02</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:14:26" itemprop="dateModified" datetime="2021-08-01T14:14:26+08:00">2021-08-01</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <hr>
-<p>title:Q1# 问题整理20210529<br>categories:Questions<br>tags:Questions<br>date:2021-05-29 11:55:01</p>
-<hr>
-<p>业务要发展，功能要增强，基础设施要完善，变更就无法避免，带来新功能的同时也带来了风险。整理下近期碰到的和被问的几个问题。</p>
-<h1 id="问题一"><a href="#问题一" class="headerlink" title="问题一"></a>问题一</h1><p>​        Zookeeper几乎每年都能听到有公司踩到坑，故事往往是这样：@1 多个业务线共用zk集群，某个新上的功能把zk当缓存用，大量创建zk路径，造成zk不堪重负瘫痪；@2 某个新上的功能往zk集群中写入过大消息，单条消息好几兆，造成zk集群性能下降，甚至带宽、磁盘被打满。</p>
-<p>​        知道可能的坑咱肯定不能再去踩了，重要中间件的独立zk集群彻底隔离，上面的问题基本可以避免。今天的故事却发生在watch的数量上。</p>
-<p><strong>现象</strong> </p>
-<p>​        从4月中旬左右发现zk的watch水位在翻倍增长，从200多万到400多万一直翻到800多万，一直到五一之后的12000万。watch水位的升高会影响与zk通信的延迟。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20210529114757.png"></p>
-<p><strong>原因</strong> </p>
-<p>​    SDK中有使用一个公共主题用于客户端行为收集，该主题下会被注册临时节点，临时节点会被watch用于一个特定功能。在卡点升级过程中随着服务应用的接入，注册的节点越来越多。例如：3000个临时节点每个节点都会有3000个watch数量，就会有3000的平方个watch数量，就是900万个watch数量</p>
-<p><strong>解决</strong> </p>
-<p>​    止血方案： 删除公共主题下的临时节点，watch数量水位恢复正常</p>
-<p>​    根除方案：剔除SDK中对注册节点的watch，例如：curator中用NodeCacheListener替代TreeCacheListener，同时移除关联节点的wath功能，或者对公共主题进行过滤，不再注册节点</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bf0be4d0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/bf0be4d0/" class="post-title-link" itemprop="url">Netty13# 池化内存分配器</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-02-19 11:55:01" itemprop="dateCreated datePublished" datetime="2021-02-19T11:55:01+08:00">2021-02-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>PooledByteBufAllocator作为池化内存分配的入口，提供了众多的配置参数和便捷方法。这篇主要撸下他们大体都啥含义、干啥用的。为后面池化内存其他组件做铺垫。</p>
-<h1 id="成员变量说明"><a href="#成员变量说明" class="headerlink" title="成员变量说明"></a>成员变量说明</h1><p>下面的成员变量基本都提供了默认值，可以通过参数去自定义，下面表格给出具体说明。</p>
-<table>
-<thead>
-<tr>
-<th>成员变量</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>DEFAULT_NUM_HEAP_ARENA</td>
-<td>PoolAreana（堆内存）个数，默认为核数的2倍，可以由参数-Dio.netty.allocator.numHeapArenas指定</td>
-</tr>
-<tr>
-<td>DEFAULT_NUM_DIRECT_ARENA</td>
-<td>PoolAreana（堆外内存）个数默认为核数的2倍，堆外内存，可以通过-Dio.netty.allocator.numDirectArenas指定</td>
-</tr>
-<tr>
-<td>DEFAULT_PAGE_SIZE</td>
-<td>默认pageSize=8K，可以通过-Dio.netty.allocator.pageSize，需大于4096且为2的倍数</td>
-</tr>
-<tr>
-<td>DEFAULT_MAX_ORDER</td>
-<td>二叉树最高层数，取值范围为0~14，默认为11，可以通过-Dio.netty.allocator.maxOrder参数指定</td>
-</tr>
-<tr>
-<td>DEFAULT_TINY_CACHE_SIZE</td>
-<td>默认tiny类型缓存池大小512，可以通过-Dio.netty.allocator.tinyCacheSize指定</td>
-</tr>
-<tr>
-<td>DEFAULT_SMALL_CACHE_SIZE</td>
-<td>默认small类型缓存池大小为256，可以通过-Dio.netty.allocator.smallCacheSize指定</td>
-</tr>
-<tr>
-<td>DEFAULT_NORMAL_CACHE_SIZE</td>
-<td>默认normal类型缓存池大小为64，可以通过-Dio.netty.allocator.normalCacheSize指定</td>
-</tr>
-<tr>
-<td>DEFAULT_MAX_CACHED_BUFFER_CAPACITY</td>
-<td>默认为32KB，用于限制normal缓存数组的长度，可以通过-Dio.netty.allocator.maxCachedBufferCapacity指定</td>
-</tr>
-<tr>
-<td>DEFAULT_CACHE_TRIM_INTERVAL</td>
-<td>默认8192，分配次数阈值，超过后释放内存池，可以通过-Dio.netty.allocator.cacheTrimInterval指定</td>
-</tr>
-<tr>
-<td>DEFAULT_CACHE_TRIM_INTERVAL_MILLIS</td>
-<td>默认0不开启，定时释放内存池，可以通过-Dio.netty.allocator.cacheTrimIntervalMillis指定</td>
-</tr>
-<tr>
-<td>DEFAULT_USE_CACHE_FOR_ALL_THREADS</td>
-<td>默认true，使用线程缓存，可以通过-Dio.netty.allocator.useCacheForAllThread制定</td>
-</tr>
-<tr>
-<td>DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT</td>
-<td>直接内存的校准对齐参数，分配内存时按位与（&amp;）校准。默认0不校准，可以通过-Dio.netty.allocator.directMemoryCacheAlignment指定</td>
-</tr>
-<tr>
-<td>DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK</td>
-<td>默认1023，指定PoolChunk缓存ByteBuffer对象的最大数量，可以通过-Dio.netty.allocator.maxCachedByteBuffersPerChunk指定</td>
-</tr>
-<tr>
-<td>MIN_PAGE_SIZE</td>
-<td>校验用的，PageSize不能小于4KB</td>
-</tr>
-<tr>
-<td>MAX_CHUNK_SIZE</td>
-<td>校验用的，Chunk的边界值，(((long) Integer.MAX_VALUE + 1) / 2)</td>
-</tr>
-<tr>
-<td>heapArenas</td>
-<td>Arena数组，元素为HeapArena</td>
-</tr>
-<tr>
-<td>directArenas</td>
-<td>Arena数组，元素为DirectArena</td>
-</tr>
-<tr>
-<td>PooledByteBufAllocatorMetric metric</td>
-<td>暴露统计指标，例如：用了多少堆内存、用了多少堆外直接内存等</td>
-</tr>
-</tbody></table>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/bf0be4d0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/80419269/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/80419269/" class="post-title-link" itemprop="url">Netty12# 池化内存框架流程</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-02-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-02-16T11:55:01+08:00">2021-02-16</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文简要梳理为什么使用池化内存？Netty使用池化内存从哪些方面提升了效率？梳理了池化内存的核心组件大体含义以及内存分配流程，勾勒池化内存的整体框架。后面文章会详细拆解每个点是如何实现的。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/80419269/#more" rel="contents">
+              <a class="btn" href="/posts/3266629d/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1118,7 +1132,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1184,7 +1198,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">120</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1229,7 +1243,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

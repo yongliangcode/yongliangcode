@@ -184,7 +184,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/c4a1b302/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/f75406c8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -198,7 +198,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/c4a1b302/" class="post-title-link" itemprop="url">MQ34# RocketMQ--ConsumeQueue文件与Index文件</a>
+            <a href="/posts/f75406c8/" class="post-title-link" itemprop="url">MQ44# RocketMQ最近几个经常被问的问题</a>
         </h2>
 
         <div class="post-meta">
@@ -208,7 +208,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:58:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:58:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-25 20:55:01" itemprop="dateCreated datePublished" datetime="2021-01-25T20:55:01+08:00">2021-01-25</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -238,14 +238,11 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>消息消费时先从ConsumeQueue中获取物理偏移量，再根据物理偏移量从commitLog中获取具体消息；消息检索时会用到索引文件，其中值得思考的问题：</p>
-<p>1.ConsumeQueue构建流程是怎样的？</p>
-<p>2.ConsumeQueue数据结构是怎样的？</p>
-<p>3.Index索引文件构建流程怎样的？</p>
-<p>4.Index数据结构时怎么样的？</p>
+          <h1 id="常见问题一"><a href="#常见问题一" class="headerlink" title="常见问题一"></a>常见问题一</h1><p><strong>问：</strong> RocketMQ消费者订阅了tag，但却收不到消息无法消费，并且根据 msgid 去查询，发现这条消息的状态为 CONSUMED_BUT_FILTERED，那这是为什么？</p>
+<p><strong>答：</strong> 在RocketMQ中，一个消费组能同时订阅多个 tag，但一个消费组的不同消费者不能分开订阅不同的tag，即同一个消费组的订阅关系必须保持一样。例如：常见错误使用方式同一个项目中，一段消费代码订阅tagA，然后拷贝到这段代码再更改为tagB。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/c4a1b302/#more" rel="contents">
+              <a class="btn" href="/posts/f75406c8/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -269,7 +266,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9c431d59/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/2e57625b/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -283,7 +280,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/9c431d59/" class="post-title-link" itemprop="url">MQ33# RocketMQ消费--Broker端处理逻辑</a>
+            <a href="/posts/2e57625b/" class="post-title-link" itemprop="url">Netty9# Netty抽象内存分配器实现原理</a>
         </h2>
 
         <div class="post-meta">
@@ -293,14 +290,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:56:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:56:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-16 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-16T11:55:01+08:00">2021-01-16</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -308,7 +305,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -323,12 +320,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.Broker是如何处理消费流程的？</p>
-<p>2.消费进度是如何流转的？</p>
-<p>说明：本文分析均为PUSH消费模式</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p> 本文通过分析抽象内存分配器API梳理其基于堆内存、堆外内存分配的实现原理。最后走查了CompositeByteBuf这种类似数据库视图的实现原理。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/9c431d59/#more" rel="contents">
+              <a class="btn" href="/posts/2e57625b/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -352,7 +347,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/87a2ceec/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/9bf5e4df/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -366,7 +361,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/87a2ceec/" class="post-title-link" itemprop="url">MQ32# RocketMQ客户端消费--ProcessQueue处理队列</a>
+            <a href="/posts/9bf5e4df/" class="post-title-link" itemprop="url">FA1# 微服务流控防护场景与应对措施</a>
         </h2>
 
         <div class="post-meta">
@@ -376,14 +371,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:55:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-09 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-09T11:55:01+08:00">2021-01-09</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:04:40" itemprop="dateModified" datetime="2021-02-10T10:04:40+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -391,7 +386,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
                 </span>
             </span>
 
@@ -406,11 +401,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>在消费消息时处处能看到处理队列ProcessQueue的身影，既然随处可见也一定很重要，那有必要分析下为何重要了。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1.ProcessQueue提供哪些方法？</span><br><span class="line"></span><br><span class="line">2.这些方法的作用是什么？</span><br><span class="line"></span><br><span class="line">3.哪里调用了这些方法？</span><br></pre></td></tr></table></figure>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>微服务成了互联网架构的标配模式，对微服务之间的调用的流量治理和管控就尤为重要。哪些场景需要流量防控，针对这些场景又有哪些应对措施。有没有一个通用的措施来降低风险呢？这篇文章咱就聊聊这个。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/87a2ceec/#more" rel="contents">
+              <a class="btn" href="/posts/9bf5e4df/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -434,7 +428,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/55c56ee4/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/43fa99ab/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -448,7 +442,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/55c56ee4/" class="post-title-link" itemprop="url">MQ30# RocketMQ客户端PUSH消费--并发消费与顺序消费</a>
+            <a href="/posts/43fa99ab/" class="post-title-link" itemprop="url">SK4# 让心静下来</a>
         </h2>
 
         <div class="post-meta">
@@ -458,14 +452,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-04 23:55:01" itemprop="dateCreated datePublished" datetime="2021-01-04T23:55:01+08:00">2021-01-04</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -473,7 +467,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -488,12 +482,18 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="消息拉取与处理"><a href="#消息拉取与处理" class="headerlink" title="消息拉取与处理"></a>消息拉取与处理</h1><p><strong>消息拉取</strong></p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/20201219140825.png"></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">小结：PullMessageService处理拉取消息请求。通过组织RequetHeader需要包含从哪里开始拉取（ConsumerGroup、Topic，Queue，queueOffset）等信息，向Broker发起请求，取回消息后对消息进行处理。当该Queue的消息数量超过1000，或者最小与最大偏移量之间的差距超过默认2000也会触发限流，即：延迟50毫秒放入请求队列。也可以通过挂起消费线程来延迟（1秒）消息拉取，从而达到消费限流作用。</span><br></pre></td></tr></table></figure>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点鸡尾酒，又到了一周中最放松的时候，咱接着聊聊天。</p>
+<p>上周文章《苍天绕过谁》，一个读者朋友看了发微信给老梁，问我那朋友怎么走出来的，他最近想太多，有些睡眠障碍。</p>
+<p>写着写着咋感觉有点像苦情文了，好在有读者朋友说虽然不是技术文章，但他受益匪浅。</p>
+<p>嗯嗯，有些帮助就好，老梁想着文章能有点思考、有点故事。</p>
+<p>除了积累点技术外，也积累些生活思考，在小故事中的一点思考。</p>
+<p>如何度过困难期呢？困难千千万万，每个人都不同？困难有大有小，多大的事算困难？</p>
+<p>这事老梁其实也不知道，可不是么？帮人度苦度难那是菩萨的事情呀。。。</p>
+<p>把天聊死了，还能聊不？老梁想了想，让我给讲两个故事吧。。。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/55c56ee4/#more" rel="contents">
+              <a class="btn" href="/posts/43fa99ab/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -517,7 +517,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd191b8b/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/bb2245d5/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -531,7 +531,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/dd191b8b/" class="post-title-link" itemprop="url">MQ31# RocketMQ客户端PUSH消费--负载均衡</a>
+            <a href="/posts/bb2245d5/" class="post-title-link" itemprop="url">SK3# 苍天饶过谁</a>
         </h2>
 
         <div class="post-meta">
@@ -541,14 +541,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:52:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:52:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-03 23:55:01" itemprop="dateCreated datePublished" datetime="2021-01-03T23:55:01+08:00">2021-01-03</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -556,7 +556,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -571,12 +571,14 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.主题队列是如何分配的？</p>
-<p>2.什么时候会进行负载均衡？</p>
-<p>3.负载均衡后是否会导致消息重复消费？</p>
+          <h2 id="一"><a href="#一" class="headerlink" title="一"></a>一</h2><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点女儿红，又到了一周中最放松的时候，咱接着聊聊天。</p>
+<p>上周文章《仰望星空》，老梁说多看看历史和生活中的星星，让他们给咱照亮前进的路。</p>
+<p>有朋友怼老梁，管看星星有啥用，看就能解决问题了？该踩的坑还要踩，该流的泪还要流。</p>
+<p>老梁想了想，可不是么？该受的难还得受，苍天绕过谁。。。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/dd191b8b/#more" rel="contents">
+              <a class="btn" href="/posts/bb2245d5/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -600,7 +602,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/3b8a1c43/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8a7728e3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -614,7 +616,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/3b8a1c43/" class="post-title-link" itemprop="url">MQ29# RocketMQ客户端PUSH消费概览</a>
+            <a href="/posts/8a7728e3/" class="post-title-link" itemprop="url">SK1# 仰望星空</a>
         </h2>
 
         <div class="post-meta">
@@ -624,14 +626,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:51:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:51:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-02 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-02T22:47:01+08:00">2021-01-02</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -639,7 +641,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -654,10 +656,15 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>PUSH消费整体流程是怎么样的？</p>
+          <h1 id="仰望星空"><a href="#仰望星空" class="headerlink" title="仰望星空"></a>仰望星空</h1><p>大家好，我是老梁，一个想跟大伙分享点干货的家伙。</p>
+<p>今天周末，晚上喝了点啤酒，又到了一周中最放松的时刻，咱接着聊聊天。</p>
+<p>上周写了篇小文《给老板画饼》，老板看了后怼了一句，脚踏实地和仰望星空其实缺一不可。</p>
+<p>老梁想了想，他是对的。老梁我就佩服他这点，总能发现你的问题所在，指出前进的方向。</p>
+<p>嗯，不是谁都能当老板。</p>
+<p>老梁仰望星空，看到那些闪闪发光的星星……</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/3b8a1c43/#more" rel="contents">
+              <a class="btn" href="/posts/8a7728e3/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -681,7 +688,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/72491306/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/17c9a786/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -695,7 +702,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/72491306/" class="post-title-link" itemprop="url">MQ28# RocketMQ存储--主从同步</a>
+            <a href="/posts/17c9a786/" class="post-title-link" itemprop="url">Netty8# Netty之ByteBuf初体验</a>
         </h2>
 
         <div class="post-meta">
@@ -705,14 +712,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:49:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:49:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-02 11:55:01" itemprop="dateCreated datePublished" datetime="2021-01-02T11:55:01+08:00">2021-01-02</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -720,7 +727,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -735,11 +742,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.消息存储在Master上了，如何同步到Slave上了呢？</p>
-<p>2.同步复制和异步复制流程是怎么样的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>字节的流动形成了流，Netty作为优秀的通信框架他的字节是如何流动的，本文就理一下这个事。梳理完Netty的字节流动与JDK提供的ByteBuffer一对比看下Netty方便在哪里。本分从官方文档概念原理入手梳理，然后看下源码解读下这些原理如何实现的，体验一把Netty写入数据自动扩容，探究下这个过程如何实现的。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/72491306/#more" rel="contents">
+              <a class="btn" href="/posts/17c9a786/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -763,7 +769,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/b973d41f/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/4eda328d/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -777,7 +783,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/b973d41f/" class="post-title-link" itemprop="url">MQ27# RocketMQ存储--同步刷盘和异步刷盘</a>
+            <a href="/posts/4eda328d/" class="post-title-link" itemprop="url">SK1# 给老板画饼</a>
         </h2>
 
         <div class="post-meta">
@@ -787,14 +793,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:47:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:47:01+08:00">2020-12-20</time>
+              <time title="创建时间：2021-01-01 22:47:01" itemprop="dateCreated datePublished" datetime="2021-01-01T22:47:01+08:00">2021-01-01</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:06:23" itemprop="dateModified" datetime="2021-02-10T10:06:23+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -802,7 +808,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/%E6%80%9D%E8%80%83%E9%9A%8F%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">思考随记</span></a>
                 </span>
             </span>
 
@@ -817,12 +823,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题思考"><a href="#问题思考" class="headerlink" title="问题思考"></a>问题思考</h1><p>1.同步刷盘是怎么工作的？</p>
-<p>2.异步刷盘是怎么工作的？</p>
-<p>3.上篇文章的疑问，写入堆外内存的消息如何落盘的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>大家好，我是老梁，一个想跟大家分享点干活的家伙。</p>
+<p>今天周末，这上海的天也冷了，晚上喝了点羊汤，到了一周中最放松的时刻。</p>
+<p>今天不聊技术，咱聊聊给老板画饼。 </p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/b973d41f/#more" rel="contents">
+              <a class="btn" href="/posts/4eda328d/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -846,7 +852,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/52ef32ad/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8c88e43/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -860,7 +866,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/52ef32ad/" class="post-title-link" itemprop="url">MQ26# RocketMQ存储--消息追加</a>
+            <a href="/posts/8c88e43/" class="post-title-link" itemprop="url">Netty7# Netty之事件传递</a>
         </h2>
 
         <div class="post-meta">
@@ -870,14 +876,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:45:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:45:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-26 11:55:01" itemprop="dateCreated datePublished" datetime="2020-12-26T11:55:01+08:00">2020-12-26</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-10 10:45:32" itemprop="dateModified" datetime="2021-02-10T10:45:32+08:00">2021-02-10</time>
+                <time title="修改时间：2021-02-10 10:04:09" itemprop="dateModified" datetime="2021-02-10T10:04:09+08:00">2021-02-10</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -885,7 +891,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/RocketMQ/" itemprop="url" rel="index"><span itemprop="name">RocketMQ</span></a>
+                  <a href="/categories/Netty/" itemprop="url" rel="index"><span itemprop="name">Netty</span></a>
                 </span>
             </span>
 
@@ -900,11 +906,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><p>1.消息追加到何处了呢？</p>
-<p>2.消息格式是怎么样的？</p>
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>前面的文章中写了Channel实例化、Channel初始化、Channel注册、异步通知机制、客户端发起连接、事件的轮询和处理机制。Netty作为client/server高效通信框架，事件在ChannelPipeline是如何传递的，本文就聊聊这事。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/52ef32ad/#more" rel="contents">
+              <a class="btn" href="/posts/8c88e43/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -928,7 +933,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/708c22d7/">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/86dc035b/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -942,7 +947,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/posts/708c22d7/" class="post-title-link" itemprop="url">MQ25# RocketMQ存储--映射文件预热</a>
+            <a href="/posts/86dc035b/" class="post-title-link" itemprop="url">MQ43# Raft一致性算法整理</a>
         </h2>
 
         <div class="post-meta">
@@ -952,7 +957,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-12-20 20:42:01" itemprop="dateCreated datePublished" datetime="2020-12-20T20:42:01+08:00">2020-12-20</time>
+              <time title="创建时间：2020-12-20 23:55:01" itemprop="dateCreated datePublished" datetime="2020-12-20T23:55:01+08:00">2020-12-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -982,13 +987,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>1.为什么创建文件（commitLog）时要预热？</p>
-<p>2.为什么要写入1G大小的假值（0）呢？</p>
-<p>3.为什么要锁定内存？</p>
-<p>4.预热流程是怎么样的？</p>
+          <h1 id="Raft概述"><a href="#Raft概述" class="headerlink" title="Raft概述"></a>Raft概述</h1><h2 id="Raft定义"><a href="#Raft定义" class="headerlink" title="Raft定义"></a>Raft定义</h2><p>Raft是一种用来管理日志复制的一致性算法。一致性算法允许一组机器像一个整体一样工作，即使其中的一些机器出了错误也能正常工作。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/posts/708c22d7/#more" rel="contents">
+              <a class="btn" href="/posts/86dc035b/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1011,7 +1013,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/5/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/7/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/5/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/7/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1077,7 +1079,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">120</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1122,7 +1124,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

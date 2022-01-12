@@ -351,89 +351,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd40ab43/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/dd40ab43/" class="post-title-link" itemprop="url">FA2# 集群流控使用场景和实现原理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。</p>
-<h1 id="集群流控使用场景"><a href="#集群流控使用场景" class="headerlink" title="集群流控使用场景"></a>集群流控使用场景</h1><h3 id="场景一-需要控制调用总量"><a href="#场景一-需要控制调用总量" class="headerlink" title="场景一  需要控制调用总量"></a>场景一  需要控制调用总量</h3><p>某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提供服务，第三方流量有限制，需要对总量进行管控。部署的节点可能扩缩容，这种单纯通过单机限流措施难以凑效。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/dd40ab43/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/8631788a/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -498,6 +415,89 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/8631788a/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/dd40ab43/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/dd40ab43/" class="post-title-link" itemprop="url">FA2# 集群流控使用场景和实现原理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-06 11:55:01" itemprop="dateCreated datePublished" datetime="2021-03-06T11:55:01+08:00">2021-03-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-01 14:11:03" itemprop="dateModified" datetime="2021-08-01T14:11:03+08:00">2021-08-01</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%96%B9%E6%A1%88%E8%AE%BE%E8%AE%A1/" itemprop="url" rel="index"><span itemprop="name">方案设计</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>资源是有限的，预测是必要的，然而意外也是可能发生的。我们可以看到一些重大生产事故往往是被突发的流量冲跨的，对流量的治理和防护就尤为重要。防患于未然，保障服务高可用，需要引起重视。另外我们也需要对标行业一流治理能力，本文介绍下高可用中另外一个成员，集群限流。</p>
+<h1 id="集群流控使用场景"><a href="#集群流控使用场景" class="headerlink" title="集群流控使用场景"></a>集群流控使用场景</h1><h3 id="场景一-需要控制调用总量"><a href="#场景一-需要控制调用总量" class="headerlink" title="场景一  需要控制调用总量"></a>场景一  需要控制调用总量</h3><p>某些场景下，需要对APP应用某些资源（接口）的调用总量设置限制。例如：该APP由于依赖了第三方提供服务，第三方流量有限制，需要对总量进行管控。部署的节点可能扩缩容，这种单纯通过单机限流措施难以凑效。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/%E5%9C%BA%E6%99%AF%E4%B8%80%20%20%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6%E8%B0%83%E7%94%A8%E6%80%BB%E9%87%8F.png"></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/dd40ab43/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>

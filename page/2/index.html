@@ -215,7 +215,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:46:52" itemprop="dateModified" datetime="2022-01-12T11:46:52+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -427,107 +427,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:44:13" itemprop="dateModified" datetime="2022-01-12T11:44:13+08:00">2022-01-12</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">title: Mesh1# istio安装与部署</span><br><span class="line">categories: ServiceMesh</span><br><span class="line">tags: ServiceMesh</span><br><span class="line">date: 2021-09-21 11:55:01</span><br></pre></td></tr></table></figure>
-
-
-
-<h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Istio作为service mesh控制面的实施标准，先部署起来。然而会有一个坑要注意，否则无法访问到页面。这个坑是个示例的bug，已被人提了issue，我也被坑了一把。</p>
-<h1 id="一、准备工作"><a href="#一、准备工作" class="headerlink" title="一、准备工作"></a>一、准备工作</h1><p><strong>1.安装Docker</strong> </p>
-<p>通过命令行或者直接下载，由于网络原因我直接下载安装 ，下载地址：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https:&#x2F;&#x2F;hub.docker.com&#x2F;editions&#x2F;community&#x2F;docker-ce-desktop-mac</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>2.驱动安装</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -LO https:&#x2F;&#x2F;storage.googleapis.com&#x2F;minikube&#x2F;releases&#x2F;latest&#x2F;docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod +x docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mv docker-machine-driver-hyperkit &#x2F;usr&#x2F;local&#x2F;bin&#x2F;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo chown root:wheel &#x2F;usr&#x2F;local&#x2F;bin&#x2F;docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo chmod u+s &#x2F;usr&#x2F;local&#x2F;bin&#x2F;docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
-
-
-
-<p><strong>3.安装minikube</strong> </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -Lo minikube https:&#x2F;&#x2F;storage.googleapis.com&#x2F;minikube&#x2F;releases&#x2F;latest&#x2F;minikube-linux-amd64 &amp;&amp; chmod +x minikube &amp;&amp; sudo mv minikube &#x2F;usr&#x2F;local&#x2F;bin&#x2F;</span><br></pre></td></tr></table></figure>
-
-<p><strong>验证版本</strong> </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ minikube version</span><br><span class="line">minikube version: v1.22.0</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/posts/0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="瓜农老梁">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/posts/0/" class="post-title-link" itemprop="url">未命名</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-08-20 16:45:28" itemprop="dateCreated datePublished" datetime="2021-08-20T16:45:28+08:00">2021-08-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:45:33" itemprop="dateModified" datetime="2022-01-12T11:45:33+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
               </span>
 
           
@@ -642,7 +542,107 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:44:24" itemprop="dateModified" datetime="2022-01-12T11:44:24+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">title: Mesh1# istio安装与部署</span><br><span class="line">categories: ServiceMesh</span><br><span class="line">tags: ServiceMesh</span><br><span class="line">date: 2021-09-21 11:55:01</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>Istio作为service mesh控制面的实施标准，先部署起来。然而会有一个坑要注意，否则无法访问到页面。这个坑是个示例的bug，已被人提了issue，我也被坑了一把。</p>
+<h1 id="一、准备工作"><a href="#一、准备工作" class="headerlink" title="一、准备工作"></a>一、准备工作</h1><p><strong>1.安装Docker</strong> </p>
+<p>通过命令行或者直接下载，由于网络原因我直接下载安装 ，下载地址：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https:&#x2F;&#x2F;hub.docker.com&#x2F;editions&#x2F;community&#x2F;docker-ce-desktop-mac</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>2.驱动安装</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -LO https:&#x2F;&#x2F;storage.googleapis.com&#x2F;minikube&#x2F;releases&#x2F;latest&#x2F;docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod +x docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mv docker-machine-driver-hyperkit &#x2F;usr&#x2F;local&#x2F;bin&#x2F;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo chown root:wheel &#x2F;usr&#x2F;local&#x2F;bin&#x2F;docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo chmod u+s &#x2F;usr&#x2F;local&#x2F;bin&#x2F;docker-machine-driver-hyperkit</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>3.安装minikube</strong> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -Lo minikube https:&#x2F;&#x2F;storage.googleapis.com&#x2F;minikube&#x2F;releases&#x2F;latest&#x2F;minikube-linux-amd64 &amp;&amp; chmod +x minikube &amp;&amp; sudo mv minikube &#x2F;usr&#x2F;local&#x2F;bin&#x2F;</span><br></pre></td></tr></table></figure>
+
+<p><strong>验证版本</strong> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ minikube version</span><br><span class="line">minikube version: v1.22.0</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/posts/0/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yongliangcode.github.io/posts/0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="瓜农老梁">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/posts/0/" class="post-title-link" itemprop="url">未命名</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-20 16:45:28" itemprop="dateCreated datePublished" datetime="2021-08-20T16:45:28+08:00">2021-08-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
               </span>
 
           
@@ -746,7 +746,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:45:02" itemprop="dateModified" datetime="2022-01-12T11:45:02+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
               </span>
 
           
@@ -760,21 +760,25 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">title: Mesh5# Istio服务模型与流量治理要点</span><br><span class="line">categories: Mesh</span><br><span class="line">tags: Mesh</span><br><span class="line">date: 2021-10-16 11:55:01</span><br></pre></td></tr></table></figure>
+          <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">title: Mesh7# wasm扩展Envoy使用详解</span><br><span class="line">categories: Mesh</span><br><span class="line">tags: Mesh</span><br><span class="line">date: 2021-11-07 11:55:01</span><br></pre></td></tr></table></figure>
 
 
 
-<h1 id="Istio服务模型"><a href="#Istio服务模型" class="headerlink" title="Istio服务模型"></a>Istio服务模型</h1><p>服务（Service）与版本（Version）：Istio中的服务在kubernetes中以service形式存在，可定义不同的服务版本。通过Deployment创建工作负载，通过Service关联这些负载，域名或者虚拟IP访问后端Pod。</p>
-<p>服务实例（ServiceInstance）: 一个服务可以包含一组实例，在Kubernetes中用Endpoints实现，一组域名或者IP地址。</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/Istio%E6%9C%8D%E5%8A%A1%E6%A8%A1%E5%9E%8B.drawio.png"></p>
-<p><strong>服务（Service）示例：</strong> </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Service</span><br><span class="line">metadata:</span><br><span class="line">  name: helloworld</span><br><span class="line">  labels:</span><br><span class="line">    app: helloworld</span><br><span class="line">    service: helloworld</span><br><span class="line">spec:</span><br><span class="line">  ports:</span><br><span class="line">  - port: 5000</span><br><span class="line">    name: http</span><br><span class="line">  selector:</span><br><span class="line">    app: helloworld</span><br></pre></td></tr></table></figure>
-
-<p>备注：创建一个名称为helloworld的Service，指向“app: helloworld”的Pods，Kubernetes会自动创建一个和Service同名的Endpoints对象，Selector会持续跟踪映射属于helloworld的Pods。</p>
-<p><strong>工作负载示例：</strong> </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: apps&#x2F;v1</span><br><span class="line">kind: Deployment</span><br><span class="line">metadata:</span><br><span class="line">  name: helloworld-v1</span><br><span class="line">  labels:</span><br><span class="line">    app: helloworld</span><br><span class="line">    version: v1</span><br><span class="line">spec:</span><br><span class="line">  replicas: 1</span><br><span class="line">  selector:</span><br><span class="line">    matchLabels:</span><br><span class="line">      app: helloworld</span><br><span class="line">      version: v1</span><br><span class="line">  template:</span><br><span class="line">    metadata:</span><br><span class="line">      labels:</span><br><span class="line">        app: helloworld</span><br><span class="line">        version: v1</span><br><span class="line">    spec:</span><br><span class="line">      containers:</span><br><span class="line">      - name: helloworld</span><br><span class="line">        image: docker.io&#x2F;istio&#x2F;examples-helloworld-v1</span><br><span class="line">        resources:</span><br><span class="line">          requests:</span><br><span class="line">            cpu: &quot;100m&quot;</span><br><span class="line">        imagePullPolicy: IfNotPresent #Always</span><br><span class="line">        ports:</span><br><span class="line">        - containerPort: 5000</span><br></pre></td></tr></table></figure>
-
-<p>备注：以Deployment方式创建工作负载，关联的版本与镜像。</p>
+<h1 id="一、wasm工作原理"><a href="#一、wasm工作原理" class="headerlink" title="一、wasm工作原理"></a>一、wasm工作原理</h1><p>我们想要网格的服务发现、路由、熔断降级、负载均衡，这些流量治理都在数据面Envoy中执行才行。Envoy也提供的Filter机制来做这些功能，通常有以下方式：</p>
+<ul>
+<li>通过C++代码自定义filter重新编译Envoy</li>
+<li>使用Lua脚本扩展filter</li>
+<li>使用wasm扩展Envoy</li>
+</ul>
+<p>第一种C++编译学习成本过高，维护也困难，第二种适合用于实现简单功能可以，第三种是重点发展方向通过其他语言编写filter，通过wasm编译运行嵌入在Envoy中运行，通过可移植的二进制指令实现，以下特性：</p>
+<ul>
+<li>动态加载到Envoy中执行</li>
+<li>无需修改Envoy代码容易维护</li>
+<li>支持较多开发语言比如tinygo</li>
+<li>进程级隔离在VM沙箱运行部影响Envoy进程</li>
+</ul>
+<p>流量进过Envoy示意图:</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/wasm%20filter%E6%B5%81%E9%87%8F%E8%BF%87%E6%BB%A4%E7%A4%BA%E6%84%8F%E5%9B%BE.png"></p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/0/#more" rel="contents">
@@ -832,7 +836,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:44:34" itemprop="dateModified" datetime="2022-01-12T11:44:34+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
               </span>
 
           
@@ -915,7 +919,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:45:22" itemprop="dateModified" datetime="2022-01-12T11:45:22+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:17" itemprop="dateModified" datetime="2022-01-12T11:50:17+08:00">2022-01-12</time>
               </span>
 
           
@@ -929,25 +933,21 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">title: Mesh7# wasm扩展Envoy使用详解</span><br><span class="line">categories: Mesh</span><br><span class="line">tags: Mesh</span><br><span class="line">date: 2021-11-07 11:55:01</span><br></pre></td></tr></table></figure>
+          <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">title: Mesh5# Istio服务模型与流量治理要点</span><br><span class="line">categories: Mesh</span><br><span class="line">tags: Mesh</span><br><span class="line">date: 2021-10-16 11:55:01</span><br></pre></td></tr></table></figure>
 
 
 
-<h1 id="一、wasm工作原理"><a href="#一、wasm工作原理" class="headerlink" title="一、wasm工作原理"></a>一、wasm工作原理</h1><p>我们想要网格的服务发现、路由、熔断降级、负载均衡，这些流量治理都在数据面Envoy中执行才行。Envoy也提供的Filter机制来做这些功能，通常有以下方式：</p>
-<ul>
-<li>通过C++代码自定义filter重新编译Envoy</li>
-<li>使用Lua脚本扩展filter</li>
-<li>使用wasm扩展Envoy</li>
-</ul>
-<p>第一种C++编译学习成本过高，维护也困难，第二种适合用于实现简单功能可以，第三种是重点发展方向通过其他语言编写filter，通过wasm编译运行嵌入在Envoy中运行，通过可移植的二进制指令实现，以下特性：</p>
-<ul>
-<li>动态加载到Envoy中执行</li>
-<li>无需修改Envoy代码容易维护</li>
-<li>支持较多开发语言比如tinygo</li>
-<li>进程级隔离在VM沙箱运行部影响Envoy进程</li>
-</ul>
-<p>流量进过Envoy示意图:</p>
-<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/wasm%20filter%E6%B5%81%E9%87%8F%E8%BF%87%E6%BB%A4%E7%A4%BA%E6%84%8F%E5%9B%BE.png"></p>
+<h1 id="Istio服务模型"><a href="#Istio服务模型" class="headerlink" title="Istio服务模型"></a>Istio服务模型</h1><p>服务（Service）与版本（Version）：Istio中的服务在kubernetes中以service形式存在，可定义不同的服务版本。通过Deployment创建工作负载，通过Service关联这些负载，域名或者虚拟IP访问后端Pod。</p>
+<p>服务实例（ServiceInstance）: 一个服务可以包含一组实例，在Kubernetes中用Endpoints实现，一组域名或者IP地址。</p>
+<p><img src="https://gitee.com/laoliangcode/md-picture/raw/master/img/Istio%E6%9C%8D%E5%8A%A1%E6%A8%A1%E5%9E%8B.drawio.png"></p>
+<p><strong>服务（Service）示例：</strong> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Service</span><br><span class="line">metadata:</span><br><span class="line">  name: helloworld</span><br><span class="line">  labels:</span><br><span class="line">    app: helloworld</span><br><span class="line">    service: helloworld</span><br><span class="line">spec:</span><br><span class="line">  ports:</span><br><span class="line">  - port: 5000</span><br><span class="line">    name: http</span><br><span class="line">  selector:</span><br><span class="line">    app: helloworld</span><br></pre></td></tr></table></figure>
+
+<p>备注：创建一个名称为helloworld的Service，指向“app: helloworld”的Pods，Kubernetes会自动创建一个和Service同名的Endpoints对象，Selector会持续跟踪映射属于helloworld的Pods。</p>
+<p><strong>工作负载示例：</strong> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: apps&#x2F;v1</span><br><span class="line">kind: Deployment</span><br><span class="line">metadata:</span><br><span class="line">  name: helloworld-v1</span><br><span class="line">  labels:</span><br><span class="line">    app: helloworld</span><br><span class="line">    version: v1</span><br><span class="line">spec:</span><br><span class="line">  replicas: 1</span><br><span class="line">  selector:</span><br><span class="line">    matchLabels:</span><br><span class="line">      app: helloworld</span><br><span class="line">      version: v1</span><br><span class="line">  template:</span><br><span class="line">    metadata:</span><br><span class="line">      labels:</span><br><span class="line">        app: helloworld</span><br><span class="line">        version: v1</span><br><span class="line">    spec:</span><br><span class="line">      containers:</span><br><span class="line">      - name: helloworld</span><br><span class="line">        image: docker.io&#x2F;istio&#x2F;examples-helloworld-v1</span><br><span class="line">        resources:</span><br><span class="line">          requests:</span><br><span class="line">            cpu: &quot;100m&quot;</span><br><span class="line">        imagePullPolicy: IfNotPresent #Always</span><br><span class="line">        ports:</span><br><span class="line">        - containerPort: 5000</span><br></pre></td></tr></table></figure>
+
+<p>备注：以Deployment方式创建工作负载，关联的版本与镜像。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/posts/0/#more" rel="contents">
@@ -1005,7 +1005,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-01-12 11:48:12" itemprop="dateModified" datetime="2022-01-12T11:48:12+08:00">2022-01-12</time>
+                <time title="修改时间：2022-01-12 11:50:16" itemprop="dateModified" datetime="2022-01-12T11:50:16+08:00">2022-01-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
